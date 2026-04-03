@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -17,6 +18,9 @@ import java.time.LocalDateTime;
 public class Company {
     @Id
     private String companyId;
+
+
+    private String employerId;
 
     private String name;
 
@@ -38,4 +42,8 @@ public class Company {
     @Enumerated(EnumType.STRING)
     private StatusCompany statusCompany;
     private LocalDateTime createdAt;
+
+
+    @OneToMany(mappedBy = "company", cascade = CascadeType.ALL)
+    private List<CompanySubscription> subscriptions;
 }

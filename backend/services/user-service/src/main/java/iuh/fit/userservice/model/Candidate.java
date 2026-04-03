@@ -16,10 +16,15 @@ import java.util.List;
 public class Candidate{
    @Id
     private String candidateId;
-    @OneToOne
-    @MapsId
-    @JoinColumn(name = "user_id")
-    private User user;
+ private String email;
+ private String password;
+ private String fullName;
+ private String phone;
+ private String avatar;
+ private LocalDate createdAt;
+ private LocalDate updatedAt;
+ @Enumerated(EnumType.STRING)
+ private Status status;
 
     private LocalDate dateOfBirth;
     private String address;

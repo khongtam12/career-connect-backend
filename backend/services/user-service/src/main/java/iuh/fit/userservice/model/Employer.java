@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Entity
 @Getter
 @Setter
@@ -11,11 +13,16 @@ import lombok.Setter;
 public class Employer {
 
     @Id
-    private String userId;
-    @OneToOne
-    @MapsId
-    @JoinColumn(name = "user_id")
-    private User user;
+    private String employerId;
+    private String email;
+    private String password;
+    private String fullName;
+    private String phone;
+    private String avatar;
+    private LocalDate createdAt;
+    private LocalDate updatedAt;
+    @Enumerated(EnumType.STRING)
+    private Status status;
 
     private String position;
 

@@ -11,22 +11,17 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Entity
 @Table(name = "favourites")
-@IdClass(Favourite.FavouriId.class)
 public class Favourite {
+    @Id
+    private String favouriteId;
     private LocalDateTime createdAt;
-  @Id
     private String candidateId;
-  @Id
+
     @ManyToOne
+
     @JoinColumn(name = "jobId")
     @ToString.Exclude
     private Job job;
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class FavouriId implements Serializable{
-        private String candidateId;
-        private String job;
-    }
+
 
 }

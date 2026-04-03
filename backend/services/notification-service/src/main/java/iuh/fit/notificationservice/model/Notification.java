@@ -17,9 +17,8 @@ public class Notification {
 
     @Id
     private String id;
-
     private String userId;
-
+    private UserType userType;
     private String title;
 
     private String message;

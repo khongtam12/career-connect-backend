@@ -2,20 +2,20 @@ package iuh.fit.paymentservice.model;
 
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.List;
 
+
 @Entity
+@Table(name = "jobpackages")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "jobpackages")
+@AllArgsConstructor
+@Builder
 public class JobPackage {
+
     @Id
     private String packageId;
 
@@ -28,6 +28,6 @@ public class JobPackage {
     private int jobPostLimit;
 
     private String description;
-    @OneToMany(mappedBy = "jobPackage", cascade = CascadeType.ALL)
-    private List<CompanySubscription> subscriptions;
+    @OneToMany(mappedBy = "jobPackage")
+    private List<Payment> payments;
 }

@@ -1,26 +1,27 @@
 package iuh.fit.paymentservice.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-
 @Entity
+@Table(name = "payments")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "payments")
+@AllArgsConstructor
+@Builder
 public class Payment {
+
     @Id
     private String paymentId;
 
-    private String subscriptionId;
+    private String companyId;
 
+    @ManyToOne
+    @JoinColumn(name = "packageId")
+    private JobPackage jobPackage;
     private double amount;
 
     private String transactionCode;
@@ -32,6 +33,4 @@ public class Payment {
     private StatusPayment status;
 
     private LocalDateTime paidAt;
-    @OneToMany(mappedBy = "payment", cascade = CascadeType.ALL)
-    private List<CompanySubscription> subscriptions;
 }
