@@ -11,6 +11,7 @@ import iuh.fit.userservice.dto.request.AuthenticationRequest;
 import iuh.fit.userservice.dto.response.AuthenticationResponse;
 import iuh.fit.userservice.exception.AppException;
 import iuh.fit.userservice.exception.ErrorCode;
+import iuh.fit.userservice.mapper.UserMapper;
 import iuh.fit.userservice.model.Admin;
 import iuh.fit.userservice.model.Candidate;
 import iuh.fit.userservice.model.Employer;
@@ -70,7 +71,7 @@ public class AuthenticationService {
                 if (!passwordEncoder.matches(password, admin.getPassword())) {
                     throw new AppException(ErrorCode.UNAUTHENTICATED);
                 }
-
+                System.out.println(admin.getPassword());
                 return new AuthenticationResponse(
                         admin.getAdminId(),
                         generateToken(admin.getAdminId(), admin.getFullName(), "ADMIN"),
@@ -117,15 +118,18 @@ public class AuthenticationService {
 
         switch (role) {
             case "ADMIN":
-                return adminRepository.findById(userId)
+               Admin admin= adminRepository.findById(userId)
                         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-            case "CANDIDATE":
-                return candidateRepository.findById(userId)
+            return UserMapper.fromAdmin(admin);
+               case "CANDIDATE":
+               Candidate candidate= candidateRepository.findById(userId)
                         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-            case "EMPLOYER":
-                return employerRepository.findById(userId)
+            return UserMapper.fromCandidate(candidate);
+               case "EMPLOYER":
+                Employer employer= employerRepository.findById(userId)
                         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-            default:
+                return UserMapper.fromEmployer(employer);
+                default:
                 throw new AppException(ErrorCode.INVALID_REQUEST);
         }
     }

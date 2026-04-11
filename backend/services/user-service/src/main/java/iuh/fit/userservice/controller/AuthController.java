@@ -3,6 +3,10 @@ package iuh.fit.userservice.controller;
 import com.nimbusds.jose.JOSEException;
 import iuh.fit.userservice.dto.request.AuthenticationRequest;
 import iuh.fit.userservice.service.AuthenticationService;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,10 +23,19 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthenticationRequest request) {
+    public ResponseEntity<?> login(@RequestBody AuthenticationRequest request, HttpServletResponse response
+                                   ) {
 
         var authRes = authService.authenticate(request);
 
+        ResponseCookie cookie=ResponseCookie.from("access_token",authRes.getToken())
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(3600)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE,cookie.toString());
         return ResponseEntity.ok(
                 Map.of(
                         "token", authRes.getToken(),
@@ -31,23 +44,25 @@ public class AuthController {
         );
     }
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(@RequestHeader("Authorization") String authHeader) throws ParseException, JOSEException {
-        if(authHeader==null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(401).body(Map.of("error","Missing token"));
-
-        }
-        String token=authHeader.substring(7);
+    public ResponseEntity<?> getCurrentUser(@CookieValue(name = "access_token",required = false) String token) throws ParseException, JOSEException {
+       if(token==null){
+           return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+       }
         var user=authService.getCurrentUser(token);
         return ResponseEntity.ok(user);
 
 
     }
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            authService.logout(token);
-        }
+    public ResponseEntity<?> logout(HttpServletResponse response) {
+        ResponseCookie cookie=ResponseCookie.from("access_token","")
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(0)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE,cookie.toString());
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 

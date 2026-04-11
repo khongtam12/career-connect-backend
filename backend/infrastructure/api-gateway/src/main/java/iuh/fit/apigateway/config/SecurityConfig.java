@@ -3,6 +3,7 @@ package iuh.fit.apigateway.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
@@ -22,15 +23,27 @@ public class SecurityConfig {
     private String SECRET;
 
     @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+    @Order(1)
+    public SecurityWebFilterChain publicFilterChain(ServerHttpSecurity http) {
+        return http
+                .securityMatcher(pathMatchers(
+                        "/api/user/auth/login"
 
+                ))
+                .csrf(csrf -> csrf.disable())
+                .authorizeExchange(ex -> ex.anyExchange().permitAll())
+                .build();
+    }
+
+    @Bean
+    @Order(2)
+    public SecurityWebFilterChain protectedFilterChain(ServerHttpSecurity http) {
         return http
                 .csrf(csrf -> csrf.disable())
-                .authorizeExchange(exchange -> exchange
-                        .anyExchange().permitAll())
-                 .oauth2ResourceServer(oauth2 ->
-                 oauth2.jwt(jwt -> jwt.jwtDecoder(jwtDecoder()))
-                 )
+                .authorizeExchange(ex -> ex.anyExchange().authenticated())
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt.jwtDecoder(jwtDecoder()))
+                )
                 .build();
     }
 
