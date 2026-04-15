@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/jobpackage")
+@RequestMapping("/api/v1/jobpackage")
 public class JobPackageController {
     @GetMapping
     public String  test (){

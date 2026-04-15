@@ -13,7 +13,7 @@ import java.util.Date;
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@Slf4j
+
 public class TokenCleanupService {
 
     InvalidatedTokenRepository invalidatedTokenRepository;
@@ -21,8 +21,6 @@ public class TokenCleanupService {
     // Chạy mỗi 1 giờ (3600000 milliseconds) để dọn dẹp các token đã hết hạn
     @Scheduled(fixedDelay = 3600000)
     public void cleanupExpiredTokens() {
-        log.info("Starting cleanup of expired tokens...");
         invalidatedTokenRepository.deleteAllExpiredSince(new Date());
-        log.info("Finished cleanup of expired tokens.");
     }
 }

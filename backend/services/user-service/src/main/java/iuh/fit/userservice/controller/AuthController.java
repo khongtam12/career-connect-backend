@@ -14,7 +14,7 @@ import java.text.ParseException;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/user/auth")
+@RequestMapping("/api/v1/user/auth")
 public class AuthController {
     private final AuthenticationService authService;
 
@@ -30,8 +30,8 @@ public class AuthController {
 
         ResponseCookie cookie=ResponseCookie.from("access_token",authRes.getToken())
                 .httpOnly(true)
-                .secure(false)
-                .sameSite("Lax")
+                .secure(true)
+                .sameSite("None")
                 .path("/")
                 .maxAge(3600)
                 .build();
@@ -44,12 +44,23 @@ public class AuthController {
         );
     }
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(@CookieValue(name = "access_token",required = false) String token) throws ParseException, JOSEException {
-       if(token==null){
-           return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-       }
-        var user=authService.getCurrentUser(token);
-        return ResponseEntity.ok(user);
+    public ResponseEntity<?> getCurrentUser(@RequestHeader(value = "Authorization", required = false) String authHeader) throws ParseException, JOSEException {
+        if(authHeader == null || authHeader.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).
+                    body(Map.of("error", "No token provided."));
+        }
+        try {
+            String token = authHeader.substring(7);
+            var user = authService.getCurrentUser(token);
+            return ResponseEntity.ok(user);
+        }catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+
+        }
+
+
+
 
 
     }
@@ -57,8 +68,8 @@ public class AuthController {
     public ResponseEntity<?> logout(HttpServletResponse response) {
         ResponseCookie cookie=ResponseCookie.from("access_token","")
                 .httpOnly(true)
-                .secure(false)
-                .sameSite("Lax")
+                .secure(true)
+                .sameSite("None")
                 .path("/")
                 .maxAge(0)
                 .build();

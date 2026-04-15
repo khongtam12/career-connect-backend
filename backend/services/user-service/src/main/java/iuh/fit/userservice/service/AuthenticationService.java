@@ -40,7 +40,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.time.LocalDateTime;
 
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
@@ -113,7 +112,7 @@ public class AuthenticationService {
     public Object getCurrentUser(String token) throws JOSEException, ParseException, java.text.ParseException {
         var claims = verify(token);
         String userId = claims.getStringClaim("userId");
-        String role = claims.getStringClaim("role");
+        String role = claims.getStringClaim("scope");
 
 
         switch (role) {
@@ -145,9 +144,7 @@ public class AuthenticationService {
                     .expiryTime(expiryTime)
                     .build();
             invalidatedTokenRepository.save(invalidatedToken);
-            log.info("User token invalidated: {}", token);
         } catch (Exception e) {
-            log.warn("Token is invalid or already expired", e);
         }
     }
 
@@ -168,7 +165,6 @@ public class AuthenticationService {
 
         String jti = signedJWT.getJWTClaimsSet().getJWTID();
         if (jti != null && invalidatedTokenRepository.existsById(jti)) {
-            log.warn("Token has been logged out/invalidated");
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
@@ -189,7 +185,7 @@ public class AuthenticationService {
                     .jwtID(java.util.UUID.randomUUID().toString())
                     .claim("userId", UserId)
                     .claim("fullname", FullName)
-                    .claim("role", role)
+                    .claim("scope", role)
                     .build();
             Payload payload = new Payload(jwtClaimsSet.toJSONObject());
 
@@ -199,7 +195,6 @@ public class AuthenticationService {
                 jwsObject.sign(new MACSigner(SIGNER_KEY.getBytes()));
                 return jwsObject.serialize();
             } catch (JOSEException e) {
-                log.error("Cannot create token", e);
 
                 throw new RuntimeException(e);
             }
