@@ -70,9 +70,7 @@ public class SecurityConfig {
 
                 .build();
     }
-
-
-
+    //
     @Bean
     public WebFilter cookieToAuthFilter() {
         return (exchange, chain) -> {
