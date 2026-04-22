@@ -1,40 +1,26 @@
-package iuh.fit.applicationservice.model;
+package iuh.fit.applicationservice.dto.response;
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import iuh.fit.applicationservice.model.StatusApply;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Getter
 @Setter
-@Entity
-@Table(name = "job_applications")
-public class JobApplication {
-    @Id
-    private String id;
+@NoArgsConstructor
+@AllArgsConstructor
+public class JobApplicationResponse {
+    private String applicationId;
     private String jobId;
-
     private String candidateId;
-
     private String cvId;
-
     private String note;
-
-    @Enumerated(EnumType.STRING)
     private StatusApply status;
-
     private LocalDateTime appliedAt;
-
     private LocalDateTime updatedAt;
 
-    public JobApplication() {
-    }
-
-    public JobApplication(String id, String jobId, String candidateId, String cvId, String note, StatusApply status, LocalDateTime appliedAt, LocalDateTime updatedAt) {
-        this.id = id;
+    public JobApplicationResponse(String applicationId, String jobId, String candidateId, String cvId, String note, StatusApply status, LocalDateTime appliedAt, LocalDateTime updatedAt) {
+        this.applicationId = applicationId;
         this.jobId = jobId;
         this.candidateId = candidateId;
         this.cvId = cvId;
@@ -44,12 +30,15 @@ public class JobApplication {
         this.updatedAt = updatedAt;
     }
 
-    public String getId() {
-        return id;
+    public JobApplicationResponse() {
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public String getApplicationId() {
+        return applicationId;
+    }
+
+    public void setApplicationId(String applicationId) {
+        this.applicationId = applicationId;
     }
 
     public String getJobId() {
