@@ -1,29 +1,24 @@
-package iuh.fit.companyservice.model;
+package iuh.fit.companyservice.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import jakarta.persistence.*;
-import lombok.*;
+import iuh.fit.companyservice.model.Company;
+import iuh.fit.companyservice.model.StatusCompany;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
-@Entity
 @Getter
 @Setter
-
 @NoArgsConstructor
-@Table(name = "companies")
-public class Company {
-    @Id
-    private String companyId;
-
+public class CompanyDTO {
+    private String employerId;
     private String name;
-
     private String logo;
     private String taxCode;
     private String website;
-
     private String email;
 
     private String phone;
@@ -35,20 +30,8 @@ public class Company {
     private int companySize;
 
     private int foundedYear;
-    @Enumerated(EnumType.STRING)
-    private StatusCompany statusCompany;
-    private LocalDateTime createdAt;
 
-
-    @OneToMany(mappedBy = "company", cascade = CascadeType.ALL)
-    @JsonManagedReference
-    private List<CompanySubscription> subscriptions = new ArrayList<>();
-
-    public Company() {
-    }
-
-    public Company(String companyId, String name, String logo, String taxCode, String website, String email, String phone, String address, String description, int companySize, int foundedYear, StatusCompany statusCompany, LocalDateTime createdAt, List<CompanySubscription> subscriptions) {
-        this.companyId = companyId;
+    public CompanyDTO(String name, String logo, String taxCode, String website, String email, String phone, String address, String description, int companySize, int foundedYear) {
         this.name = name;
         this.logo = logo;
         this.taxCode = taxCode;
@@ -59,21 +42,14 @@ public class Company {
         this.description = description;
         this.companySize = companySize;
         this.foundedYear = foundedYear;
-        this.statusCompany = statusCompany;
-        this.createdAt = createdAt;
-        this.subscriptions = subscriptions;
     }
 
-    public Company(String companyId) {
-        this.companyId = companyId;
+    public void setEmployerId(String employerId) {
+        this.employerId = employerId;
     }
 
-    public String getCompanyId() {
-        return companyId;
-    }
-
-    public void setCompanyId(String companyId) {
-        this.companyId = companyId;
+    public String getEmployerId() {
+        return employerId;
     }
 
     public String getName() {
@@ -154,29 +130,5 @@ public class Company {
 
     public void setFoundedYear(int foundedYear) {
         this.foundedYear = foundedYear;
-    }
-
-    public StatusCompany getStatusCompany() {
-        return statusCompany;
-    }
-
-    public void setStatusCompany(StatusCompany statusCompany) {
-        this.statusCompany = statusCompany;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public List<CompanySubscription> getSubscriptions() {
-        return subscriptions;
-    }
-
-    public void setSubscriptions(List<CompanySubscription> subscriptions) {
-        this.subscriptions = subscriptions;
     }
 }
