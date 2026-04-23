@@ -23,7 +23,6 @@ import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import org.springframework.web.server.WebFilter;
 
-
 import java.util.List;
 
 @Configuration
@@ -61,8 +60,12 @@ public class SecurityConfig {
                                         "/api/v1/company/verification",
                                         "/api/v1/company/save",
                                         "/api/v1/company/upload/presigned-url"
-
                                 ).hasAuthority("SCOPE_EMPLOYER")
+                                // Job management: chỉ EMPLOYER mới được tạo/sửa/xóa tin
+                                .pathMatchers("/api/v1/job/employer/**")
+                                .hasAuthority("SCOPE_EMPLOYER")
+                                // Job search/detail: cả EMPLOYER và CANDIDATE đều xem được
+                                .pathMatchers("/api/v1/job/health").permitAll()
                                 .pathMatchers("/api/v1/job/**")
                                 .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
                                 .pathMatchers("/api/v1/apply/**")
