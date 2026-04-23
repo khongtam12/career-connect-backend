@@ -3,6 +3,7 @@ package iuh.fit.cvservice.controller;
 import iuh.fit.cvservice.model.CV;
 import iuh.fit.cvservice.service.CVService;
 import iuh.fit.cvservice.service.S3Service;
+import iuh.fit.cvservice.service.PDFExportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,7 @@ public class CVController {
 
     private final CVService cvService;
     private final S3Service s3Service;
+    private final PDFExportService pdfExportService;
 
     @GetMapping("/my-cvs")
     public ResponseEntity<?> getMyCVs(@RequestHeader("X-User-Id") String userId) {
@@ -91,6 +93,22 @@ public class CVController {
             return ResponseEntity.ok(url);
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body("Upload failed: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> exportPDF(@PathVariable UUID id, @CookieValue(value = "access_token", required = false) String token) {
+        try {
+            log.info("Request to export CV {} to PDF", id);
+            byte[] pdf = pdfExportService.exportCVToPDF(id.toString(), token);
+            
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/pdf")
+                    .header("Content-Disposition", "attachment; filename=CV_" + id + ".pdf")
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Error exporting PDF: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }
