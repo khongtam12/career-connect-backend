@@ -70,6 +70,8 @@ public class SecurityConfig {
                                 .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
                                 .pathMatchers("/api/v1/apply/**")
                                 .hasAnyAuthority("SCOPE_CANDIDATE")
+                                .pathMatchers("/api/v1/cvs/**")
+                                .hasAnyAuthority("SCOPE_CANDIDATE")
                                 .pathMatchers("/api/v1/user/auth/me").hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE","SCOPE_ADMIN")
                                 .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
