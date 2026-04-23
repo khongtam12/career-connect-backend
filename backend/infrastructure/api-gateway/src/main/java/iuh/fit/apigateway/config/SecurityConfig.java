@@ -38,6 +38,7 @@ public class SecurityConfig {
         return http
                 .securityMatcher(pathMatchers(
                         "/api/v1/user/auth/login",
+                        "/api/v1/package",
                         "/eureka/**"                ))
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -62,6 +63,10 @@ public class SecurityConfig {
 
 
                                 .pathMatchers("/api/v1/user/admin/**"
+                                .pathMatchers(
+                                        "/api/v1/company/verification",
+                                        "/api/v1/company/save",
+                                        "/api/v1/company/upload/presigned-url"
                                 ).hasAuthority("SCOPE_EMPLOYER")
                                 // Job management: chỉ EMPLOYER mới được tạo/sửa/xóa tin
                                 .pathMatchers("/api/v1/job/employer/**")
@@ -70,6 +75,8 @@ public class SecurityConfig {
                                 .pathMatchers("/api/v1/job/**")
                                 .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
                                 .pathMatchers("/api/v1/apply/**")
+                                .hasAnyAuthority("SCOPE_CANDIDATE")
+                                .pathMatchers("/api/v1/cvs/**")
                                 .hasAnyAuthority("SCOPE_CANDIDATE")
                                 .pathMatchers("/api/v1/user/auth/me").hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE","SCOPE_ADMIN")
                                 .anyExchange().authenticated())
