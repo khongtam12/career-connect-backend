@@ -38,6 +38,7 @@ public class SecurityConfig {
         return http
                 .securityMatcher(pathMatchers(
                         "/api/v1/user/auth/login",
+                        "/api/v1/package",
                         "/eureka/**"                ))
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -60,6 +61,7 @@ public class SecurityConfig {
                                         "/api/v1/company/verification",
                                         "/api/v1/company/save",
                                         "/api/v1/company/upload/presigned-url"
+
                                 ).hasAuthority("SCOPE_EMPLOYER")
                                 .pathMatchers("/api/v1/job/**")
                                 .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
