@@ -1,107 +1,43 @@
 package iuh.fit.jobservice.service;
 
-import iuh.fit.jobservice.dto.IndustrySummary;
 import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
-import iuh.fit.jobservice.model.Job;
-import iuh.fit.jobservice.model.JobType;
-import iuh.fit.jobservice.model.StatusJob;
-import iuh.fit.jobservice.repository.IndustryRepository;
-import iuh.fit.jobservice.repository.JobRepository;
-import iuh.fit.jobservice.specification.JobSpecifications;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
+import iuh.fit.jobservice.dto.request.CreateJobRequest;
+import iuh.fit.jobservice.dto.request.UpdateJobRequest;
+import iuh.fit.jobservice.dto.response.JobResponse;
+import iuh.fit.jobservice.dto.response.JobStatsResponse;
+import iuh.fit.jobservice.dto.response.PageResponse;
 
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
+public interface JobService {
 
-@Service
-public class JobService {
-    private final JobRepository jobRepository;
-    private final IndustryRepository industryRepository;
+    // ===== EMPLOYER =====
+    JobResponse createJob(String employerId, CreateJobRequest request);
 
-    public JobService(JobRepository jobRepository, IndustryRepository industryRepository) {
-        this.jobRepository = jobRepository;
-        this.industryRepository = industryRepository;
-    }
+    JobResponse updateJob(String employerId, String jobId, UpdateJobRequest request);
 
-    public Page<Job> searchJobs(
-        String keyword,
-        String location,
-        String industryId,
-        String fieldId,
-        JobType jobType,
-        StatusJob status,
-        Integer experienceMin,
-        Integer experienceMax,
-        Double salaryMin,
-        Double salaryMax,
-        int page,
-        int size,
-        String sortBy,
-        String sortDir
-    ) {
-        Specification<Job> spec = Specification
-            .where(JobSpecifications.keywordContains(keyword))
-            .and(JobSpecifications.locationContains(location))
-            .and(JobSpecifications.industryEquals(industryId))
-            .and(JobSpecifications.fieldEquals(fieldId))
-            .and(JobSpecifications.jobTypeEquals(jobType))
-            .and(JobSpecifications.statusEquals(status == null ? StatusJob.OPEN : status))
-            .and(JobSpecifications.experienceMin(experienceMin))
-            .and(JobSpecifications.experienceMax(experienceMax))
-            .and(JobSpecifications.salaryMin(salaryMin))
-            .and(JobSpecifications.salaryMax(salaryMax));
+    void deleteJob(String employerId, String jobId);
 
-        Pageable pageable = PageRequest.of(
-            Math.max(page, 0),
-            Math.max(size, 1),
-            Sort.by(resolveSortDirection(sortDir), resolveSortField(sortBy))
-        );
+    PageResponse<JobResponse> getMyJobs(String employerId, String search, String status, int page, int size);
 
-        return jobRepository.findAll(spec, pageable);
-    }
+    JobStatsResponse getMyStats(String employerId);
 
-    public JobFilterOptions getFilterOptions() {
-        List<JobType> jobTypes = Arrays.asList(JobType.values());
-        List<StatusJob> statuses = Arrays.asList(StatusJob.values());
-        List<String> locations = jobRepository.findDistinctLocations();
-        List<IndustrySummary> industries = industryRepository.findAll().stream()
-            .map(industry -> new IndustrySummary(industry.getIndustryId(), industry.getName()))
-            .toList();
+    JobResponse pushToTop(String employerId, String jobId);
 
-        return new JobFilterOptions(jobTypes, statuses, locations, industries);
-    }
+    JobResponse employerChangeStatus(String employerId, String jobId, String newStatus);
 
-    public JobStats getStats() {
-        long totalJobs = jobRepository.count();
-        long openJobs = jobRepository.countByStatus(StatusJob.OPEN);
-        long newJobs24h = jobRepository.countByCreatedAtAfter(LocalDateTime.now().minusHours(24));
-        return new JobStats(totalJobs, openJobs, newJobs24h);
-    }
+    // ===== ADMIN =====
+    JobResponse adminChangeStatus(String adminId, String jobId, String newStatus);
 
-    private Sort.Direction resolveSortDirection(String sortDir) {
-        if (sortDir == null) {
-            return Sort.Direction.DESC;
-        }
-        return "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
-    }
+    // ===== SYSTEM =====
+    int expireOverdueJobs();
 
-    private String resolveSortField(String sortBy) {
-        if (sortBy == null) {
-            return "createdAt";
-        }
-        return switch (sortBy) {
-            case "salaryMax" -> "salaryMax";
-            case "salaryMin" -> "salaryMin";
-            case "deadline" -> "deadline";
-            case "experienceRequired" -> "experienceRequired";
-            default -> "createdAt";
-        };
-    }
+    // ===== PUBLIC =====
+    JobResponse getJobById(String jobId);
+
+    PageResponse<JobResponse> searchJobs(String search, String industry, String jobType, String location, int page, int size);
+
+    // ===== EXTRA (giữ từ HEAD) =====
+    JobFilterOptions getFilterOptions();
+
+    JobStats getStats();
 }
