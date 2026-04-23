@@ -37,6 +37,10 @@ public class SecurityConfig {
         return http
                 .securityMatcher(pathMatchers(
                         "/api/v1/user/auth/login",
+                        "/api/v1/user/auth/register",
+                        "/api/v1/job/search",
+                        "/api/v1/job/filters",
+                        "/api/v1/job/stats",
                         "/api/v1/package",
                         "/eureka/**"                ))
                 .csrf(csrf -> csrf.disable())
