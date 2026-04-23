@@ -8,8 +8,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
+
 public class CreateJobApplicationRequest {
 
     @NotBlank(message = "Job ID is required")
