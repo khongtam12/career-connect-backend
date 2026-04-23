@@ -18,8 +18,7 @@ public class Favourite {
     private String candidateId;
 
     @ManyToOne
-
-    @JoinColumn(name = "jobId")
+    @JoinColumn(name = "job_id")
     @ToString.Exclude
     private Job job;
 
