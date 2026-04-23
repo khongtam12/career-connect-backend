@@ -61,15 +61,18 @@ public class SecurityConfig {
                                 ).hasAuthority("SCOPE_EMPLOYER")
                                 .pathMatchers("/api/v1/job/**")
                                 .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
+                                .pathMatchers("/api/v1/apply/**")
+                                .hasAnyAuthority("SCOPE_CANDIDATE")
                                 .pathMatchers("/api/v1/user/auth/me").hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE","SCOPE_ADMIN")
                                 .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtDecoder(jwtDecoder()))
                 )
                 .addFilterBefore(cookieToAuthFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
-
+                .addFilterBefore(userHeaderFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
     }
+
     //
     @Bean
     public WebFilter cookieToAuthFilter() {
@@ -91,6 +94,23 @@ public class SecurityConfig {
 
             return chain.filter(exchange);
         };
+    }
+    @Bean
+    public WebFilter userHeaderFilter() {
+        return (exchange, chain) ->
+                exchange.getPrincipal()
+                        .flatMap(principal -> {
+
+                            String userId = principal.getName();
+
+                            ServerHttpRequest request = exchange.getRequest()
+                                    .mutate()
+                                    .header("X-User-Id", userId)
+                                    .build();
+
+                            return chain.filter(exchange.mutate().request(request).build());
+                        })
+                        .switchIfEmpty(chain.filter(exchange));
     }
 
 
