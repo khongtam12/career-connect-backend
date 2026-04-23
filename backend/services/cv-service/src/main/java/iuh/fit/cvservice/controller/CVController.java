@@ -1,9 +1,11 @@
 package iuh.fit.cvservice.controller;
 
+import iuh.fit.cvservice.dto.AIReviewResponse;
 import iuh.fit.cvservice.model.CV;
+import iuh.fit.cvservice.service.AIService;
 import iuh.fit.cvservice.service.CVService;
-import iuh.fit.cvservice.service.S3Service;
 import iuh.fit.cvservice.service.PDFExportService;
+import iuh.fit.cvservice.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -12,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -24,60 +25,36 @@ public class CVController {
     private final CVService cvService;
     private final S3Service s3Service;
     private final PDFExportService pdfExportService;
+    private final AIService aiService;
 
     @GetMapping("/my-cvs")
     public ResponseEntity<?> getMyCVs(@RequestHeader("X-User-Id") String userId) {
-        try {
-            log.info("Fetching CVs for user: {}", userId);
-            List<CV> cvs = cvService.getCVsByUserId(UUID.fromString(userId));
-            log.info("Found {} CVs for user {}", cvs.size(), userId);
-            return ResponseEntity.ok(cvs);
-        } catch (Exception e) {
-            log.error("Error fetching CVs for user {}: ", userId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
-        }
+        log.info("Fetching CVs for user: {}", userId);
+        return ResponseEntity.ok(cvService.getCVsByUserId(UUID.fromString(userId)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getCVById(@PathVariable UUID id) {
+    public ResponseEntity<CV> getCVById(@PathVariable UUID id) {
         try {
-            log.info("Fetching CV by ID: {}", id);
-            CV cv = cvService.getCVById(id);
-            log.info("Returning CV details: {}", cv);
-            return ResponseEntity.ok(cv);
+            return ResponseEntity.ok(cvService.getCVById(id));
         } catch (Exception e) {
-            log.error("Error fetching CV {}: ", id, e);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            return ResponseEntity.notFound().build();
         }
     }
 
     @PostMapping
-    public ResponseEntity<?> createCV(@RequestBody CV cv, @RequestHeader("X-User-Id") String userId) {
-        try {
-            log.info("Receiving new CV for user {}: {}", userId, cv);
-            cv.setUserId(UUID.fromString(userId));
-            CV savedCV = cvService.saveCV(cv);
-            log.info("Successfully saved CV with ID: {}", savedCV.getId());
-            return ResponseEntity.ok(savedCV);
-        } catch (Exception e) {
-            log.error("Error creating CV: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
-        }
+    public ResponseEntity<CV> saveCV(@RequestBody CV cv, @RequestHeader("X-User-Id") String userId) {
+        log.info("Saving CV for user: {}", userId);
+        cv.setUserId(UUID.fromString(userId));
+        return ResponseEntity.ok(cvService.saveCV(cv));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateCV(@PathVariable UUID id, @RequestBody CV cv, @RequestHeader("X-User-Id") String userId) {
-        try {
-            log.info("Receiving update for CV {} (user {}): {}", id, userId, cv);
-            cv.setId(id);
-            cv.setUserId(UUID.fromString(userId));
-            CV updatedCV = cvService.saveCV(cv);
-            log.info("Successfully updated CV: {}", updatedCV.getId());
-            return ResponseEntity.ok(updatedCV);
-        } catch (Exception e) {
-            log.error("Error updating CV: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
-        }
+    public ResponseEntity<CV> updateCV(@PathVariable UUID id, @RequestBody CV cv, @RequestHeader("X-User-Id") String userId) {
+        log.info("Updating CV {} for user: {}", id, userId);
+        cv.setId(id);
+        cv.setUserId(UUID.fromString(userId));
+        return ResponseEntity.ok(cvService.saveCV(cv));
     }
 
     @DeleteMapping("/{id}")
@@ -110,5 +87,12 @@ public class CVController {
             log.error("Error exporting PDF: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    @PostMapping("/{id}/ai-review")
+    public ResponseEntity<AIReviewResponse> reviewCV(@PathVariable UUID id) {
+        log.info("Request AI review for CV: {}", id);
+        CV cv = cvService.getCVById(id);
+        return ResponseEntity.ok(aiService.reviewCV(cv));
     }
 }

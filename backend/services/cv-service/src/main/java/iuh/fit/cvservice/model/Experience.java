@@ -1,34 +1,37 @@
 package iuh.fit.cvservice.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
+import org.hibernate.annotations.UuidGenerator;
+
+import java.util.UUID;
 
 @Entity
 @Table(name = "cv_experiences")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Experience {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @UuidGenerator
+    private UUID id;
 
     private String company;
     private String role;
-    @Column(name = "start_date")
-    private String start; // ISO month string (yyyy-MM)
-    @Column(name = "end_date")
-    private String end;   // ISO month string or empty
-    @Column(name = "description", columnDefinition = "TEXT")
-    private String desc;
+    private String startDate;
+    private String endDate;
+    
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cv_id")
-    @JsonIgnore
-    @ToString.Exclude
+    @JsonBackReference
     private CV cv;
 }

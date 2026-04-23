@@ -16,8 +16,17 @@ public class CVService {
 
     private final CVRepository cvRepository;
 
+    @Transactional(readOnly = true)
     public List<CV> getCVsByUserId(UUID userId) {
-        return cvRepository.findByUserId(userId);
+        List<CV> cvs = cvRepository.findByUserId(userId);
+        cvs.forEach(cv -> {
+            cv.getSkills().size();
+            cv.getExperiences().size();
+            cv.getEducations().size();
+            cv.getProjects().size();
+            cv.getCertificates().size();
+        });
+        return cvs;
     }
 
     public CV getCVById(UUID id) {
@@ -26,8 +35,16 @@ public class CVService {
 
     @Transactional
     public CV saveCV(CV cv) {
+        CV savedCV;
         if (cv.getId() == null) {
             cv.setUpdatedAt(LocalDateTime.now());
+            // For new CV, ensure relationships are set
+            if (cv.getSkills() != null) cv.getSkills().forEach(s -> s.setCv(cv));
+            if (cv.getExperiences() != null) cv.getExperiences().forEach(e -> e.setCv(cv));
+            if (cv.getEducations() != null) cv.getEducations().forEach(e -> e.setCv(cv));
+            if (cv.getProjects() != null) cv.getProjects().forEach(p -> p.setCv(cv));
+            if (cv.getCertificates() != null) cv.getCertificates().forEach(c -> c.setCv(cv));
+            savedCV = cvRepository.save(cv);
         } else {
             CV existingCV = getCVById(cv.getId());
             // Update basic info
@@ -47,8 +64,7 @@ public class CVService {
             existingCV.setLinkedin(cv.getLinkedin());
             existingCV.setSummary(cv.getSummary());
 
-            // Handle sub-sections (Orphan removal will handle deletion)
-            // Clear and re-add to ensure data consistency
+            // Handle sub-sections (Set is better for orphan removal)
             existingCV.getSkills().clear();
             if (cv.getSkills() != null) {
                 cv.getSkills().forEach(s -> s.setCv(existingCV));
@@ -79,17 +95,17 @@ public class CVService {
                 existingCV.getCertificates().addAll(cv.getCertificates());
             }
 
-            return cvRepository.save(existingCV);
+            savedCV = cvRepository.save(existingCV);
         }
 
-        // For new CV, ensure relationships are set
-        if (cv.getSkills() != null) cv.getSkills().forEach(s -> s.setCv(cv));
-        if (cv.getExperiences() != null) cv.getExperiences().forEach(e -> e.setCv(cv));
-        if (cv.getEducations() != null) cv.getEducations().forEach(e -> e.setCv(cv));
-        if (cv.getProjects() != null) cv.getProjects().forEach(p -> p.setCv(cv));
-        if (cv.getCertificates() != null) cv.getCertificates().forEach(c -> c.setCv(cv));
+        // Initialize collections for the JSON response
+        if (savedCV.getSkills() != null) savedCV.getSkills().size();
+        if (savedCV.getExperiences() != null) savedCV.getExperiences().size();
+        if (savedCV.getEducations() != null) savedCV.getEducations().size();
+        if (savedCV.getProjects() != null) savedCV.getProjects().size();
+        if (savedCV.getCertificates() != null) savedCV.getCertificates().size();
 
-        return cvRepository.save(cv);
+        return savedCV;
     }
 
     @Transactional
