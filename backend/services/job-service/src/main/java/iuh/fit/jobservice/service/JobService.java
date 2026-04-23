@@ -4,6 +4,7 @@ import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
+import iuh.fit.jobservice.dto.response.JobDetailResponse;
 import iuh.fit.jobservice.dto.response.JobResponse;
 import iuh.fit.jobservice.dto.response.JobStatsResponse;
 import iuh.fit.jobservice.dto.response.PageResponse;
@@ -32,7 +33,7 @@ public interface JobService {
     int expireOverdueJobs();
 
     // ===== PUBLIC =====
-    JobResponse getJobById(String jobId);
+    JobDetailResponse getJobDetail(String jobId);
 
     PageResponse<JobResponse> searchJobs(String search, String industry, String jobType, String location, int page, int size);
 

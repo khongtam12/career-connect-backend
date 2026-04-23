@@ -4,6 +4,7 @@ import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
+import iuh.fit.jobservice.dto.response.JobDetailResponse;
 import iuh.fit.jobservice.dto.response.JobResponse;
 import iuh.fit.jobservice.dto.response.JobStatsResponse;
 import iuh.fit.jobservice.dto.response.PageResponse;
@@ -171,12 +172,12 @@ public class JobController {
 
     // xem chi tiết
     @GetMapping("/{jobId}")
-    public ResponseEntity<?> getJobById(@PathVariable String jobId) {
+    public ResponseEntity<JobDetailResponse> getJobById(@PathVariable String jobId) {
         try {
-            JobResponse response = jobService.getJobById(jobId);
+            JobDetailResponse response = jobService.getJobDetail(jobId);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body((JobDetailResponse) Map.of("error", e.getMessage()));
         }
     }
 

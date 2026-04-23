@@ -1,17 +1,23 @@
 package iuh.fit.jobservice.service.impl;
 
+import iuh.fit.jobservice.client.CompanyServiceClient;
+import iuh.fit.jobservice.dto.CompanyDTO;
+import iuh.fit.jobservice.dto.IndustryDTO;
 import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
+import iuh.fit.jobservice.dto.response.JobDetailResponse;
 import iuh.fit.jobservice.dto.response.JobResponse;
 import iuh.fit.jobservice.dto.response.JobStatsResponse;
 import iuh.fit.jobservice.dto.response.PageResponse;
 import iuh.fit.jobservice.exception.JobStatusException;
 import iuh.fit.jobservice.mapper.JobMapper;
+import iuh.fit.jobservice.model.Industry;
 import iuh.fit.jobservice.model.Job;
 import iuh.fit.jobservice.model.JobType;
 import iuh.fit.jobservice.model.StatusJob;
+import iuh.fit.jobservice.repository.IndustryRepository;
 import iuh.fit.jobservice.repository.JobRepository;
 import iuh.fit.jobservice.service.JobService;
 import iuh.fit.jobservice.service.JobStatusTransition;
@@ -36,9 +42,13 @@ import java.util.UUID;
 public class JobServiceImpl implements JobService {
 
 	private final JobRepository jobRepository;
+	private final IndustryRepository industryRepository;
+	private final CompanyServiceClient companyServiceClient;
 
-	public JobServiceImpl(JobRepository jobRepository) {
+	public JobServiceImpl(JobRepository jobRepository, IndustryRepository industryRepository, CompanyServiceClient companyServiceClient) {
 		this.jobRepository = jobRepository;
+		this.industryRepository = industryRepository;
+		this.companyServiceClient = companyServiceClient;
 	}
 
 	@Override
@@ -303,13 +313,37 @@ public class JobServiceImpl implements JobService {
 
 	@Override
 	@Transactional
-	public JobResponse getJobById(String jobId) {
-		Job job = getJobOrThrow(jobId);
-		job.setViews(job.getViews() + 1);
-		job.setUpdatedAt(LocalDateTime.now());
-		Job saved = jobRepository.save(job);
-		return JobMapper.toResponse(saved);
-	}
+	public JobDetailResponse getJobDetail(String jobId) {
+        Job job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc: " + jobId));
+        IndustryDTO industryDTO = null;
+        Industry industry = null;
+        if (job.getIndustry() != null) {
+            industry = industryRepository.findById(job.getIndustryId()).orElse(null);
+        }
+        if (industry != null) {
+            industryDTO = new IndustryDTO(
+                    industry.getIndustryId(), industry.getName(), industry.getDescription()
+            );
+        }
+		CompanyDTO companyDTO = null;
+		if (job.getCompanyId() != null) {
+			try {
+				companyDTO = companyServiceClient.getCompanyById(job.getCompanyId());
+			} catch (Exception e) {
+				System.err.println("Lỗi gọi company-service: " + e.getMessage());
+			}
+		}
+		return new JobDetailResponse(job.getJobId(),job.getTitle(),job.getDescription(),job.getCandidateRequirements(),
+									job.getSalaryDetail(),job.getBenefitsDetail(),job.getWorkSchedule(),job.getLocation(),
+									job.getSalaryMin(),job.getSalaryMax(),job.isSalaryNegotiable(),job.getExperience(),
+									job.getDeadline(),job.getCreatedAt(),job.getUpdatedAt(),job.getViews(),job.getNumberOfApplications(),
+									job.isTop(),job.getDeletedAt(),job.getRank(),job.getEducation(),job.getQuantity(),job.getAgeRange(),
+									job.getIndustry(),job.getStatus(),job.getJobType(),job.getRequirementTags(),job.getBenefitTags(),
+									job.getSpecialties(),job.getRelatedCategories(),job.getSkills(),companyDTO,industryDTO
+				);
+
+    }
 
 	@Override
 	public PageResponse<JobResponse> searchJobs(String search, String industry, String jobType, String location, int page, int size) {
