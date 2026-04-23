@@ -23,21 +23,36 @@ public class Job {
 
     private String companyId;
 
+    // Employer (người đăng tin) — lấy từ X-User-Id header
+    private String employerId;
+
     private String title;
 
+    @Column(columnDefinition = "TEXT")
     private String description;
 
-    private String requirement;
+    @Column(columnDefinition = "TEXT")
+    private String candidateRequirements;
 
-    private String benefit;
+    @Column(columnDefinition = "TEXT")
+    private String salaryDetail;
+
+    @Column(columnDefinition = "TEXT")
+    private String benefitsDetail;
+
+    @Column(columnDefinition = "TEXT")
+    private String workSchedule;
+
+    private String location;
 
     private double salaryMin;
 
     private double salaryMax;
 
-    private String location;
+    private boolean salaryNegotiable;
 
-    private int experienceRequired;
+    @Column(name = "experience_required", nullable = false)
+    private String experience;
 
     private LocalDate deadline;
 
@@ -45,7 +60,24 @@ public class Job {
 
     private LocalDateTime updatedAt;
 
+    private int views;
+
     private int numberOfApplications;
+
+    private boolean isTop;
+
+    private LocalDateTime deletedAt; // null = chưa xóa, có giá trị = đã xóa mềm
+
+    // Thông tin chung
+    private String rank;
+
+    private String education;
+
+    private int quantity;
+
+    private String ageRange;
+
+    private String industry;
 
     @Enumerated(EnumType.STRING)
     private StatusJob status;
@@ -53,7 +85,22 @@ public class Job {
     @Enumerated(EnumType.STRING)
     private JobType jobType;
 
-    private String industryId;
+    // Tags — stored as JSON arrays
+    @Column(columnDefinition = "TEXT")
+    private String requirementTags;
+
+    @Column(columnDefinition = "TEXT")
+    private String benefitTags;
+
+    @Column(columnDefinition = "TEXT")
+    private String specialties;
+
+    @Column(columnDefinition = "TEXT")
+    private String relatedCategories;
+
+    @Column(columnDefinition = "TEXT")
+    private String skills;
+
     @OneToMany(mappedBy = "job", cascade = CascadeType.ALL)
     private List<Favourite> favourites;
 }
