@@ -21,12 +21,13 @@ import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/v1/company")
-@RequiredArgsConstructor
+
 public class CompanyController {
     private final CompanyRepository companyRepository;
     private final CompanyService companyService;
 
-    public CompanyController(CompanyService companyService) {
+    public CompanyController(CompanyRepository companyRepository, CompanyService companyService) {
+        this.companyRepository = companyRepository;
         this.companyService = companyService;
     }
 
@@ -40,17 +41,15 @@ return "Company service is working";
     public ResponseEntity<Company> getCompanyById(@PathVariable String companyId) {
         return companyRepository.findById(companyId)
                 .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.notFound().build()
+                );
+    };
+
     @PostMapping("/save")
     public ResponseEntity<Company> saveCompany(@RequestBody CompanyDTO dto){
-
-
         Company company = CompanyMapper.toConvertCompany(dto);
         Company saved = companyService.saveCompany(company,dto.getEmployerId());
-
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
-
-
     }
 
 }
