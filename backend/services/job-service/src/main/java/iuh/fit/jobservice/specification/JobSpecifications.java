@@ -8,6 +8,10 @@ import org.springframework.data.jpa.domain.Specification;
 public final class JobSpecifications {
     private JobSpecifications() {}
 
+    public static Specification<Job> notDeleted() {
+        return (root, query, cb) -> cb.isNull(root.get("deletedAt"));
+    }
+
     public static Specification<Job> keywordContains(String keyword) {
         return (root, query, cb) -> {
             if (keyword == null || keyword.isBlank()) {

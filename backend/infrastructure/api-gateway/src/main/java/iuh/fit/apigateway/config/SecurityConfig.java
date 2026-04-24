@@ -66,7 +66,8 @@ public class SecurityConfig {
                                 .pathMatchers(org.springframework.http.HttpMethod.OPTIONS).permitAll()
 
 
-                                .pathMatchers("/api/v1/user/admin/**"
+                                .pathMatchers("/api/v1/user/admin/**")
+                                .hasAuthority("SCOPE_ADMIN")
                                 .pathMatchers(
                                         "/api/v1/company/verification",
                                         "/api/v1/company/save",
