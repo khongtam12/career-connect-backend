@@ -23,7 +23,7 @@ public class Payment {
     @JoinColumn(name = "packageId")
     private JobPackage jobPackage;
     private double amount;
-
+    private int durationDays;
     private String transactionCode;
 
     @Enumerated(EnumType.STRING)

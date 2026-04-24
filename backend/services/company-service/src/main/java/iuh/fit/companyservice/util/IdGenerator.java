@@ -19,6 +19,9 @@ public class IdGenerator {
     public static String generatorIdCompannyVerified() {
         return "VR" + "-" + UUID.randomUUID();
     }
+    public static String generatorIdCompannySubscription() {
+        return "CMPSB" + "-" + UUID.randomUUID();
+    }
 
 
 }

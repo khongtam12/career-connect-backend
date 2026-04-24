@@ -38,6 +38,7 @@ public class SecurityConfig {
                 .securityMatcher(pathMatchers(
                         "/api/v1/user/auth/login",
                         "/api/v1/package",
+                        "/api/v1/package/payments/vnpay-callback",
                         "/eureka/**"                ))
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -59,7 +60,8 @@ public class SecurityConfig {
                                 .pathMatchers(
                                         "/api/v1/company/verification",
                                         "/api/v1/company/save",
-                                        "/api/v1/company/upload/presigned-url"
+                                        "/api/v1/company/upload/presigned-url",
+                                        "/api/v1/package/payments/**"
                                 ).hasAuthority("SCOPE_EMPLOYER")
                                 // Job management: chỉ EMPLOYER mới được tạo/sửa/xóa tin
                                 .pathMatchers("/api/v1/job/employer/**")

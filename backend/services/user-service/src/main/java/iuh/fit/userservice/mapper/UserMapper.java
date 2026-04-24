@@ -13,7 +13,8 @@ public class UserMapper {
                             admin.getFullName(),
                             admin.getPhone(),
                             admin.getAvatar(),
-                            "ADMIN"
+                            "ADMIN",
+                            null
                 );
     }
     public static UserDTO fromCandidate(Candidate candidate){
@@ -22,7 +23,8 @@ public class UserMapper {
                 candidate.getFullName(),
                 candidate.getPhone(),
                 candidate.getAvatar(),
-                "CANDIDATE"
+                "CANDIDATE",
+                null
         );
     }
     public static UserDTO fromEmployer(Employer employer){
@@ -31,7 +33,8 @@ public class UserMapper {
                 employer.getFullName(),
                 employer.getPhone(),
                 employer.getAvatar(),
-                "EMPLOYER"
+                "EMPLOYER",
+                employer.getCompanyId()
         );
     }
 }
