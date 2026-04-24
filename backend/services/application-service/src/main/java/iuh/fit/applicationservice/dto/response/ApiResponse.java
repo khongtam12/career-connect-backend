@@ -5,8 +5,6 @@ import lombok.*;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {
@@ -14,13 +12,13 @@ public class ApiResponse<T> {
     private int status;
     private String message;
     private T data;
-    private long timestamp;
+
 
     public ApiResponse(int status, String message, T data) {
         this.status = status;
         this.message = message;
         this.data = data;
-        this.timestamp = System.currentTimeMillis();
+
     }
 
     public ApiResponse() {
@@ -50,11 +48,5 @@ public class ApiResponse<T> {
         this.data = data;
     }
 
-    public long getTimestamp() {
-        return timestamp;
-    }
 
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
-    }
 }

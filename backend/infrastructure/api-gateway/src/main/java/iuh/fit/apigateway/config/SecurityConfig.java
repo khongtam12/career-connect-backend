@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpCookie;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
@@ -37,6 +38,10 @@ public class SecurityConfig {
         return http
                 .securityMatcher(pathMatchers(
                         "/api/v1/user/auth/login",
+                        "/api/v1/user/auth/register",
+                        "/api/v1/job/search",
+                        "/api/v1/job/filters",
+                        "/api/v1/job/stats",
                         "/api/v1/package",
                         "/api/v1/package/payments/vnpay-callback",
                         "/eureka/**"                ))
@@ -56,7 +61,14 @@ public class SecurityConfig {
                 .authorizeExchange(
 
                         ex -> ex
+
+                                .pathMatchers("/api/v1/job/health").permitAll()
+                                .pathMatchers(HttpMethod.GET, "/api/v1/job/*").permitAll()
                                 .pathMatchers(org.springframework.http.HttpMethod.OPTIONS).permitAll()
+
+
+                                .pathMatchers("/api/v1/user/admin/**")
+                                .hasAuthority("SCOPE_ADMIN")
                                 .pathMatchers(
                                         "/api/v1/company/verification",
                                         "/api/v1/company/save",
@@ -67,10 +79,11 @@ public class SecurityConfig {
                                 .pathMatchers("/api/v1/job/employer/**")
                                 .hasAuthority("SCOPE_EMPLOYER")
                                 // Job search/detail: cả EMPLOYER và CANDIDATE đều xem được
-                                .pathMatchers("/api/v1/job/health").permitAll()
                                 .pathMatchers("/api/v1/job/**")
                                 .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
                                 .pathMatchers("/api/v1/apply/**")
+                                .hasAnyAuthority("SCOPE_CANDIDATE")
+                                .pathMatchers("/api/v1/cvs/**")
                                 .hasAnyAuthority("SCOPE_CANDIDATE")
                                 .pathMatchers("/api/v1/user/auth/me").hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE","SCOPE_ADMIN")
                                 .anyExchange().authenticated())

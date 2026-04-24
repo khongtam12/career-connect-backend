@@ -4,6 +4,7 @@ import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
+import iuh.fit.jobservice.dto.response.JobDetailResponse;
 import iuh.fit.jobservice.dto.response.JobResponse;
 import iuh.fit.jobservice.dto.response.JobStatsResponse;
 import iuh.fit.jobservice.dto.response.PageResponse;
@@ -171,12 +172,12 @@ public class JobController {
 
     // xem chi tiết
     @GetMapping("/{jobId}")
-    public ResponseEntity<?> getJobById(@PathVariable String jobId) {
+    public ResponseEntity<JobDetailResponse> getJobById(@PathVariable String jobId) {
         try {
-            JobResponse response = jobService.getJobById(jobId);
+            JobDetailResponse response = jobService.getJobDetail(jobId);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body((JobDetailResponse) Map.of("error", e.getMessage()));
         }
     }
 
@@ -184,14 +185,39 @@ public class JobController {
     @GetMapping("/search")
     public ResponseEntity<?> searchJobs(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String industry,
+            @RequestParam(required = false) String industryId,
             @RequestParam(required = false) String jobType,
             @RequestParam(required = false) String location,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer experienceMin,
+            @RequestParam(required = false) Integer experienceMax,
+            @RequestParam(required = false) Double salaryMin,
+            @RequestParam(required = false) Double salaryMax,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        PageResponse<JobResponse> response =
-                jobService.searchJobs(search, industry, jobType, location, page, size);
+        String resolvedKeyword = keyword != null ? keyword : search;
+        String resolvedIndustry = industryId != null ? industryId : industry;
+
+        PageResponse<JobResponse> response = jobService.searchJobs(
+            resolvedKeyword,
+            resolvedIndustry,
+            jobType,
+            location,
+            status,
+            experienceMin,
+            experienceMax,
+            salaryMin,
+            salaryMax,
+            sortBy,
+            sortDir,
+            page,
+            size
+        );
         return ResponseEntity.ok(response);
     }
 }

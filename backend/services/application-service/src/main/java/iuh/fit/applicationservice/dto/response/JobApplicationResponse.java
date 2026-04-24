@@ -7,8 +7,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
+
 public class JobApplicationResponse {
     private String applicationId;
     private String jobId;
