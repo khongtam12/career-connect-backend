@@ -35,7 +35,21 @@ public interface JobService {
     // ===== PUBLIC =====
     JobDetailResponse getJobDetail(String jobId);
 
-    PageResponse<JobResponse> searchJobs(String search, String industry, String jobType, String location, int page, int size);
+        PageResponse<JobResponse> searchJobs(
+            String keyword,
+            String industryId,
+            String jobType,
+            String location,
+            String status,
+            Integer experienceMin,
+            Integer experienceMax,
+            Double salaryMin,
+            Double salaryMax,
+            String sortBy,
+            String sortDir,
+            int page,
+            int size
+        );
 
     // ===== EXTRA (giữ từ HEAD) =====
     JobFilterOptions getFilterOptions();

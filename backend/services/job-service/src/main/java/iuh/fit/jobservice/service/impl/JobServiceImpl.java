@@ -3,6 +3,7 @@ package iuh.fit.jobservice.service.impl;
 import iuh.fit.jobservice.client.CompanyServiceClient;
 import iuh.fit.jobservice.dto.CompanyDTO;
 import iuh.fit.jobservice.dto.IndustryDTO;
+import iuh.fit.jobservice.dto.IndustrySummary;
 import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
@@ -22,12 +23,15 @@ import iuh.fit.jobservice.repository.JobRepository;
 import iuh.fit.jobservice.service.JobService;
 import iuh.fit.jobservice.service.JobStatusTransition;
 import iuh.fit.jobservice.service.JobStatusTransition.Role;
+import iuh.fit.jobservice.specification.JobSpecifications;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.text.Normalizer;
 import java.time.LocalDate;
@@ -346,21 +350,57 @@ public class JobServiceImpl implements JobService {
     }
 
 	@Override
-	public PageResponse<JobResponse> searchJobs(String search, String industry, String jobType, String location, int page, int size) {
-		Pageable pageable = PageRequest.of(safePage(page), safeSize(size));
+	public PageResponse<JobResponse> searchJobs(
+			String keyword,
+			String industryId,
+			String jobType,
+			String location,
+			String status,
+			Integer experienceMin,
+			Integer experienceMax,
+			Double salaryMin,
+			Double salaryMax,
+			String sortBy,
+			String sortDir,
+			int page,
+			int size
+	) {
+		Pageable pageable = PageRequest.of(
+				safePage(page),
+				safeSize(size),
+				buildSort(sortBy, sortDir)
+		);
 
-		String normalizedSearch = normalizeForQuery(search);
-		String normalizedIndustry = normalizeForQuery(industry);
-		String normalizedJobType = normalizeJobTypeFilter(jobType);
+		String normalizedKeyword = normalizeForQuery(keyword);
 		String normalizedLocation = normalizeForQuery(location);
 
-		Page<Job> jobsPage = jobRepository.searchActiveJobs(
-				normalizedSearch,
-				normalizedIndustry,
-				normalizedJobType,
-				normalizedLocation,
-				pageable
-		);
+		Specification<Job> spec = Specification.where(JobSpecifications.notDeleted());
+
+		StatusJob statusFilter = normalizeStatusFilter(status) != null
+				? parseStatus(status)
+				: StatusJob.ACTIVE;
+		spec = spec.and(JobSpecifications.statusEquals(statusFilter));
+
+		if (normalizedKeyword != null) {
+			spec = spec.and(JobSpecifications.keywordContains(normalizedKeyword));
+		}
+		if (normalizedLocation != null) {
+			spec = spec.and(JobSpecifications.locationContains(normalizedLocation));
+		}
+		if (industryId != null && !industryId.isBlank()) {
+			spec = spec.and(JobSpecifications.industryEquals(industryId.trim()));
+		}
+		if (jobType != null && !jobType.isBlank()) {
+			spec = spec.and(JobSpecifications.jobTypeEquals(parseJobType(jobType)));
+		}
+		if (salaryMin != null) {
+			spec = spec.and(JobSpecifications.salaryMin(salaryMin));
+		}
+		if (salaryMax != null) {
+			spec = spec.and(JobSpecifications.salaryMax(salaryMax));
+		}
+
+		Page<Job> jobsPage = jobRepository.findAll(spec, pageable);
 
 		return PageResponse.<JobResponse>builder()
 				.content(jobsPage.getContent().stream().map(JobMapper::toResponse).toList())
@@ -523,13 +563,43 @@ public class JobServiceImpl implements JobService {
 
 	@Override
 	public JobFilterOptions getFilterOptions() {
-		// nếu bạn chưa có IndustryRepository thì tạm thời trả rỗng
+		List<IndustrySummary> industries = industryRepository.findAll().stream()
+				.map(industry -> new IndustrySummary(industry.getIndustryId(), industry.getName()))
+				.toList();
+
 		return new JobFilterOptions(
 				List.of(JobType.values()),
 				List.of(StatusJob.values()),
 				jobRepository.findDistinctLocations(),
-				List.of() // industries (có thể thêm sau)
+				industries
 		);
+	}
+
+	private Sort buildSort(String sortBy, String sortDir) {
+		Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+		String sortField;
+		switch (sortBy != null ? sortBy.trim() : "") {
+			case "salaryMax":
+				sortField = "salaryMax";
+				break;
+			case "salaryMin":
+				sortField = "salaryMin";
+				break;
+			case "deadline":
+				sortField = "deadline";
+				break;
+			case "createdAt":
+			default:
+				sortField = "createdAt";
+				break;
+		}
+
+		Sort sort = Sort.by(Sort.Order.desc("isTop"));
+		sort = sort.and(Sort.by(new Sort.Order(direction, sortField)));
+		if (!"createdAt".equals(sortField)) {
+			sort = sort.and(Sort.by(Sort.Order.desc("createdAt")));
+		}
+		return sort;
 	}
 
 	@Override
