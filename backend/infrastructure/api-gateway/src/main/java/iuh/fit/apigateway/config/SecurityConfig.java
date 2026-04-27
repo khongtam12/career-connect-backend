@@ -66,7 +66,9 @@ public class SecurityConfig {
                                 .pathMatchers(org.springframework.http.HttpMethod.OPTIONS).permitAll()
 
 
-                                .pathMatchers("/api/v1/user/admin/**")
+                                .pathMatchers("/api/v1/user/admin/**", 
+                                              "/api/v1/company/pending-approvals",
+                                              "/api/v1/company/approval")
                                 .hasAuthority("SCOPE_ADMIN")
                                 .pathMatchers(
                                         "/api/v1/company/verification",
@@ -140,6 +142,7 @@ public class SecurityConfig {
 
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
+                "http://localhost:5174",
                 "http://localhost:3000"
         ));
 
