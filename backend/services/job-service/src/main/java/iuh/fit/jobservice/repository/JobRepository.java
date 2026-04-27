@@ -18,73 +18,69 @@ import java.util.Optional;
 @Repository
 public interface JobRepository extends JpaRepository<Job, String>, JpaSpecificationExecutor<Job> {
 
-    // ===== HEAD (giữ lại) =====
+        // ===== HEAD (giữ lại) =====
 
-    @Query("select distinct j.location from Job j where j.location is not null and j.location <> ''")
-    List<String> findDistinctLocations();
+        @Query("select distinct j.location from Job j where j.location is not null and j.location <> ''")
+        List<String> findDistinctLocations();
 
-    long countByStatus(StatusJob status);
+        long countByStatus(StatusJob status);
 
-    long countByCreatedAtAfter(LocalDateTime createdAt);
+        long countByCreatedAtAfter(LocalDateTime createdAt);
 
-    // ===== FEATURE (giữ full) =====
+        // ===== FEATURE (giữ full) =====
 
-    // tìm job chưa bị xóa mềm
-    @Query("SELECT j FROM Job j WHERE j.jobId = :jobId AND j.deletedAt IS NULL")
-    Optional<Job> findActiveById(@Param("jobId") String jobId);
+        // tìm job chưa bị xóa mềm
+        @Query("SELECT j FROM Job j WHERE j.jobId = :jobId AND j.deletedAt IS NULL")
+        Optional<Job> findActiveById(@Param("jobId") String jobId);
 
-    // đếm theo status (chưa xóa)
-    @Query("SELECT COUNT(j) FROM Job j WHERE j.employerId = :employerId AND j.status = :status AND j.deletedAt IS NULL")
-    long countByEmployerIdAndStatus(@Param("employerId") String employerId,
-                                    @Param("status") StatusJob status);
+        // đếm theo status (chưa xóa)
+        @Query("SELECT COUNT(j) FROM Job j WHERE j.employerId = :employerId AND j.status = :status AND j.deletedAt IS NULL")
+        long countByEmployerIdAndStatus(@Param("employerId") String employerId,
+                        @Param("status") StatusJob status);
 
-    // danh sách tin employer có filter + phân trang (native)
-    @Query(value = "SELECT * FROM jobs j WHERE j.employer_id = :employerId " +
-            "AND j.deleted_at IS NULL " +
-            "AND (:status IS NULL OR j.status = :status) " +
-            "AND (:search IS NULL OR j.title ILIKE CONCAT('%', :search, '%')) " +
-            "ORDER BY j.is_top DESC, j.created_at DESC",
-            countQuery = "SELECT count(*) FROM jobs j WHERE j.employer_id = :employerId " +
-                    "AND j.deleted_at IS NULL " +
-                    "AND (:status IS NULL OR j.status = :status) " +
-                    "AND (:search IS NULL OR j.title ILIKE CONCAT('%', :search, '%'))",
-            nativeQuery = true)
-    Page<Job> findByEmployerWithFilter(
-            @Param("employerId") String employerId,
-            @Param("status") String status,
-            @Param("search") String search,
-            Pageable pageable
-    );
+        // danh sách tin employer có filter + phân trang (native)
+        @Query(value = "SELECT * FROM jobs j WHERE j.employer_id = :employerId " +
+                        "AND j.deleted_at IS NULL " +
+                        "AND (:status IS NULL OR j.status = :status) " +
+                        "AND (:search IS NULL OR j.title LIKE CONCAT('%', :search, '%')) " +
+                        "ORDER BY j.is_top DESC, j.created_at DESC", countQuery = "SELECT count(*) FROM jobs j WHERE j.employer_id = :employerId "
+                                        +
+                                        "AND j.deleted_at IS NULL " +
+                                        "AND (:status IS NULL OR j.status = :status) " +
+                                        "AND (:search IS NULL OR j.title ILIKE CONCAT('%', :search, '%'))", nativeQuery = true)
+        Page<Job> findByEmployerWithFilter(
+                        @Param("employerId") String employerId,
+                        @Param("status") String status,
+                        @Param("search") String search,
+                        Pageable pageable);
 
-    // tổng ứng viên của employer
-    @Query("SELECT COALESCE(SUM(j.numberOfApplications), 0) FROM Job j WHERE j.employerId = :employerId AND j.deletedAt IS NULL")
-    int sumApplicationsByEmployerId(@Param("employerId") String employerId);
+        // tổng ứng viên của employer
+        @Query("SELECT COALESCE(SUM(j.numberOfApplications), 0) FROM Job j WHERE j.employerId = :employerId AND j.deletedAt IS NULL")
+        int sumApplicationsByEmployerId(@Param("employerId") String employerId);
 
-    // tìm kiếm public — chỉ ACTIVE
-    @Query(value = "SELECT * FROM jobs j WHERE j.status = 'ACTIVE' " +
-            "AND j.deleted_at IS NULL " +
-            "AND (:search IS NULL OR j.title ILIKE CONCAT('%', :search, '%')) " +
-            "AND (:industry IS NULL OR j.industry = :industry) " +
-            "AND (:jobType IS NULL OR j.job_type = :jobType) " +
-            "AND (:location IS NULL OR j.location ILIKE CONCAT('%', :location, '%')) " +
-            "ORDER BY j.is_top DESC, j.created_at DESC",
-            countQuery = "SELECT count(*) FROM jobs j WHERE j.status = 'ACTIVE' " +
-                    "AND j.deleted_at IS NULL " +
-                    "AND (:search IS NULL OR j.title ILIKE CONCAT('%', :search, '%')) " +
-                    "AND (:industry IS NULL OR j.industry = :industry) " +
-                    "AND (:jobType IS NULL OR j.job_type = :jobType) " +
-                    "AND (:location IS NULL OR j.location ILIKE CONCAT('%', :location, '%'))",
-            nativeQuery = true)
-    Page<Job> searchActiveJobs(
-            @Param("search") String search,
-            @Param("industry") String industry,
-            @Param("jobType") String jobType,
-            @Param("location") String location,
-            Pageable pageable
-    );
+        // tìm kiếm public — chỉ ACTIVE
+        @Query(value = "SELECT * FROM jobs j WHERE j.status = 'ACTIVE' " +
+                        "AND j.deleted_at IS NULL " +
+                        "AND (:search IS NULL OR j.title LIKE CONCAT('%', :search, '%')) " +
+                        "AND (:industry IS NULL OR j.industry = :industry) " +
+                        "AND (:jobType IS NULL OR j.job_type = :jobType) " +
+                        "AND (:location IS NULL OR j.location LIKE CONCAT('%', :location, '%')) " +
+                        "ORDER BY j.is_top DESC, j.created_at DESC", countQuery = "SELECT count(*) FROM jobs j WHERE j.status = 'ACTIVE' "
+                                        +
+                                        "AND j.deleted_at IS NULL " +
+                                        "AND (:search IS NULL OR j.title ILIKE CONCAT('%', :search, '%')) " +
+                                        "AND (:industry IS NULL OR j.industry = :industry) " +
+                                        "AND (:jobType IS NULL OR j.job_type = :jobType) " +
+                                        "AND (:location IS NULL OR j.location ILIKE CONCAT('%', :location, '%'))", nativeQuery = true)
+        Page<Job> searchActiveJobs(
+                        @Param("search") String search,
+                        @Param("industry") String industry,
+                        @Param("jobType") String jobType,
+                        @Param("location") String location,
+                        Pageable pageable);
 
-    // system: auto expire job
-    @Query("SELECT j FROM Job j WHERE j.status = :status AND j.deadline < :date AND j.deletedAt IS NULL")
-    List<Job> findByStatusAndDeadlineBefore(@Param("status") StatusJob status,
-                                            @Param("date") LocalDate date);
+        // system: auto expire job
+        @Query("SELECT j FROM Job j WHERE j.status = :status AND j.deadline < :date AND j.deletedAt IS NULL")
+        List<Job> findByStatusAndDeadlineBefore(@Param("status") StatusJob status,
+                        @Param("date") LocalDate date);
 }
