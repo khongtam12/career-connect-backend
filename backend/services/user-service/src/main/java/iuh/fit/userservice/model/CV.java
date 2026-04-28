@@ -36,6 +36,7 @@ public class CV {
     private LocalDateTime updatedAt;
     @ManyToOne
     @JoinColumn(name = "candidateId")
+    @JsonBackReference
     private Candidate candidate;
 
     public String getCvId() {
