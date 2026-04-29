@@ -14,7 +14,9 @@ import org.springframework.web.client.RestTemplate;
 
 import java.rmi.server.UID;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 
@@ -64,6 +66,16 @@ public class JobApplicationService {
         JobApplication app = jobApplicationRepository.findById(id).
                 orElseThrow(()->new AppException(ErrorCode.APPLICATION_NOT_FOUND));
         return mapToResponse(app);
+    }
+
+    public List<JobApplicationResponse> getByCandidate(String candidateId) {
+        if (candidateId == null || candidateId.isEmpty()) {
+            throw new AppException(ErrorCode.CANDIDATE_NOT_FOUND);
+        }
+        return jobApplicationRepository.findByCandidateIdOrderByAppliedAtDesc(candidateId)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     private JobApplicationResponse mapToResponse(JobApplication app) {

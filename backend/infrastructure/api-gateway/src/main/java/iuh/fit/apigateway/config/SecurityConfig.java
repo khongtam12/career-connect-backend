@@ -67,26 +67,29 @@ public class SecurityConfig {
                                 .pathMatchers(org.springframework.http.HttpMethod.OPTIONS).permitAll()
 
 
-
                                 .pathMatchers("/api/v1/user/admin/**",
-                                        "/api/v1/job/admin/**")
+                                        "/api/v1/job/admin/**",
+                                        "/api/v1/company/pending-approvals",
+                                        "/api/v1/company/approval")
                                 .hasAuthority("SCOPE_ADMIN")
                                 .pathMatchers(
                                         "/api/v1/company/verification",
                                         "/api/v1/company/save",
+                                        "/api/v1/company/verification",
+                                        "/api/v1/company/save",
                                         "/api/v1/company/upload/presigned-url",
-                                        "/api/v1/package/payments/**"
+                                        "/api/v1/package/payments/**",
+                                        "/api/v1/job/employer/**"
                                 ).hasAuthority("SCOPE_EMPLOYER")
-                                // Job management: chỉ EMPLOYER mới được tạo/sửa/xóa tin
-                                .pathMatchers("/api/v1/job/employer/**")
-                                .hasAuthority("SCOPE_EMPLOYER")
                                 // Job search/detail: cả EMPLOYER và CANDIDATE đều xem được
                                 .pathMatchers("/api/v1/job/**")
                                 .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
                                 .pathMatchers("/api/v1/apply/**")
                                 .hasAnyAuthority("SCOPE_CANDIDATE")
+                                .pathMatchers("/api/v1/cvs/upload-avatar")
+                                .hasAnyAuthority("SCOPE_CANDIDATE", "SCOPE_ADMIN")
                                 .pathMatchers("/api/v1/cvs/**")
-                                .hasAnyAuthority("SCOPE_CANDIDATE")
+                                .hasAuthority("SCOPE_CANDIDATE")
                                 .pathMatchers("/api/v1/user/auth/me").hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE","SCOPE_ADMIN")
                                 .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
@@ -144,6 +147,7 @@ public class SecurityConfig {
 
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
+                "http://localhost:5174",
                 "http://localhost:3000"
         ));
 
