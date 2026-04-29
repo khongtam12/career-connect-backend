@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 
-@NoArgsConstructor
 @Table(name = "company_verifications")
 public class CompanyVerification {
 
@@ -31,6 +30,9 @@ public class CompanyVerification {
 
     @Enumerated(EnumType.STRING)
     private StatusVerification status;
+
+    public CompanyVerification() {
+    }
 
     public CompanyVerification(String verificationId, Company company, String submittedTaxCode, String businessLicense,
             String verifiedBy, LocalDateTime submittedAt, LocalDateTime verifiedAt, String note,

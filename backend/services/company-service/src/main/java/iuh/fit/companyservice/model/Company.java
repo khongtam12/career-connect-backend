@@ -47,6 +47,9 @@ public class Company {
     @JsonManagedReference
     private List<CompanySubscription> subscriptions = new ArrayList<>();
 
+    public Company() {
+    }
+
     public Company(String companyId, String name, String logo, String taxCode, String website, String email,
             String phone, String address, String description, int companySize, int foundedYear,
             StatusCompany statusCompany, LocalDateTime createdAt, List<CompanySubscription> subscriptions) {

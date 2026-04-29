@@ -84,8 +84,10 @@ public class SecurityConfig {
                                 // Job search/detail: cả EMPLOYER và CANDIDATE đều xem được
                                 .pathMatchers("/api/v1/job/**")
                                 .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
+                                .pathMatchers("/api/v1/apply/employer/**")
+                                .hasAuthority("SCOPE_EMPLOYER")
                                 .pathMatchers("/api/v1/apply/**")
-                                .hasAnyAuthority("SCOPE_CANDIDATE")
+                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
                                 .pathMatchers("/api/v1/cvs/upload-avatar")
                                 .hasAnyAuthority("SCOPE_CANDIDATE", "SCOPE_ADMIN")
                                 .pathMatchers("/api/v1/cvs/**")
