@@ -28,7 +28,9 @@ import java.util.Set;
  */
 public class JobStatusTransition {
 
-    public enum Role { EMPLOYER, ADMIN, SYSTEM }
+    public enum Role {
+        EMPLOYER, ADMIN, SYSTEM
+    }
 
     // Các chuyển trạng thái hợp lệ theo từng role
     private static final Map<Role, Map<StatusJob, Set<StatusJob>>> ALLOWED;
@@ -38,15 +40,17 @@ public class JobStatusTransition {
 
         // ── EMPLOYER ──
         Map<StatusJob, Set<StatusJob>> employer = new EnumMap<>(StatusJob.class);
-        employer.put(StatusJob.DRAFT,    EnumSet.of(StatusJob.PENDING));
-        employer.put(StatusJob.ACTIVE,   EnumSet.of(StatusJob.PAUSED, StatusJob.CLOSED));
-        employer.put(StatusJob.PAUSED,   EnumSet.of(StatusJob.ACTIVE));
+        employer.put(StatusJob.DRAFT, EnumSet.of(StatusJob.PENDING));
+        employer.put(StatusJob.ACTIVE, EnumSet.of(StatusJob.PAUSED, StatusJob.CLOSED));
+        employer.put(StatusJob.PAUSED, EnumSet.of(StatusJob.ACTIVE));
         employer.put(StatusJob.REJECTED, EnumSet.of(StatusJob.PENDING));
         ALLOWED.put(Role.EMPLOYER, employer);
 
         // ── ADMIN ──
         Map<StatusJob, Set<StatusJob>> admin = new EnumMap<>(StatusJob.class);
         admin.put(StatusJob.PENDING, EnumSet.of(StatusJob.ACTIVE, StatusJob.REJECTED));
+        admin.put(StatusJob.ACTIVE, EnumSet.of(StatusJob.REJECTED, StatusJob.CLOSED));
+        admin.put(StatusJob.CLOSED, EnumSet.of(StatusJob.ACTIVE));
         ALLOWED.put(Role.ADMIN, admin);
 
         // ── SYSTEM ──
@@ -58,9 +62,9 @@ public class JobStatusTransition {
     /**
      * Validate và trả về trạng thái mới nếu hợp lệ.
      *
-     * @param role       role thực hiện hành động
-     * @param current    trạng thái hiện tại của job
-     * @param requested  trạng thái muốn chuyển sang
+     * @param role      role thực hiện hành động
+     * @param current   trạng thái hiện tại của job
+     * @param requested trạng thái muốn chuyển sang
      * @return trạng thái mới (chính là {@code requested} nếu hợp lệ)
      * @throws JobStatusException nếu chuyển trạng thái không được phép
      */
@@ -83,7 +87,8 @@ public class JobStatusTransition {
      */
     public static boolean canTransition(Role role, StatusJob current, StatusJob requested) {
         Map<StatusJob, Set<StatusJob>> roleMap = ALLOWED.get(role);
-        if (roleMap == null) return false;
+        if (roleMap == null)
+            return false;
         Set<StatusJob> allowed = roleMap.get(current);
         return allowed != null && allowed.contains(requested);
     }

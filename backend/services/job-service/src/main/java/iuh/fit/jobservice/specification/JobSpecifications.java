@@ -3,7 +3,11 @@ package iuh.fit.jobservice.specification;
 import iuh.fit.jobservice.model.Job;
 import iuh.fit.jobservice.model.JobType;
 import iuh.fit.jobservice.model.StatusJob;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class JobSpecifications {
     private JobSpecifications() {}
@@ -105,6 +109,31 @@ public final class JobSpecifications {
                 return cb.conjunction();
             }
             return cb.lessThanOrEqualTo(root.get("salaryMin"), max);
+        };
+    }
+    public static Specification<Job> filter( String search, String status) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Không lấy job đã bị xóa mềm
+            predicates.add(cb.isNull(root.get("deletedAt")));
+
+
+            // search theo title hoặc companyName
+            if (!search.equals("*")) {
+                String like = "%" + search.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("title")), like),
+                        cb.like(cb.lower(root.get("companyName")), like)
+                ));
+            }
+
+            // filter theo status
+            if (!status.equalsIgnoreCase("all")) {
+                predicates.add(cb.equal(root.get("status"), StatusJob.valueOf(status.toUpperCase())));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 }

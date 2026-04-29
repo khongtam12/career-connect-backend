@@ -8,10 +8,7 @@ import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
-import iuh.fit.jobservice.dto.response.JobDetailResponse;
-import iuh.fit.jobservice.dto.response.JobResponse;
-import iuh.fit.jobservice.dto.response.JobStatsResponse;
-import iuh.fit.jobservice.dto.response.PageResponse;
+import iuh.fit.jobservice.dto.response.*;
 import iuh.fit.jobservice.exception.JobStatusException;
 import iuh.fit.jobservice.mapper.JobMapper;
 import iuh.fit.jobservice.model.Industry;
@@ -607,7 +604,71 @@ public class JobServiceImpl implements JobService {
 		long totalJobs = jobRepository.count();
 		long activeJobs = jobRepository.countByStatus(StatusJob.ACTIVE);
 		long newJobs24h = jobRepository.countByCreatedAtAfter(LocalDateTime.now().minusHours(24));
+		long pendingJobs = jobRepository.countByStatus(StatusJob.PENDING);
+		long rejectedJobs = jobRepository.countByStatus(StatusJob.REJECTED);
 
-		return new JobStats(totalJobs, activeJobs, newJobs24h);
+		return new JobStats(totalJobs, activeJobs, newJobs24h, pendingJobs, rejectedJobs);
 	}
-}
+	public PageResponse<JobAdminResponse> getAllJobByAdmin( String search, String status, int page, int size) {
+		if(search == null || search.isEmpty()) {
+			search = "*";
+		}
+		if (status == null) {
+			status = "all";
+		}
+		Pageable pageable = PageRequest.of(safePage(page), safeSize(size),Sort.by("createdAt").descending());
+		Page<Job> jobPage=jobRepository.findAll(
+				JobSpecifications.filter(search,status),pageable
+		);
+		List<JobAdminResponse> data = jobPage.getContent().stream()
+				.map(job -> JobAdminResponse.builder()
+						.jobId(job.getJobId())
+						.title(job.getTitle())
+						.companyName(job.getCompanyName())
+						.companyLogoUrl(job.getCompanyLogoUrl())
+						.location(job.getLocation())
+						.salaryMin(job.getSalaryMin())
+						.salaryMax(job.getSalaryMax())
+						.status(job.getStatus())
+						.createdAt(job.getCreatedAt())
+						.views(job.getViews())
+						.numberOfApplications(job.getNumberOfApplications())
+						.build()
+				)
+				.toList();
+		return PageResponse.<JobAdminResponse>builder()
+				.page(page)
+				.size(size)
+				.totalElements(jobPage.getTotalElements())
+				.totalPages(jobPage.getTotalPages())
+				.content(data)
+				.build();
+
+
+
+
+	}
+	@Override
+	@Transactional
+	public void adminDeleteJob(String adminId, String jobId) {
+		if (adminId == null || adminId.isBlank()) {
+			throw new RuntimeException("Admin id is required");
+		}
+
+		Job job = jobRepository.findById(jobId)
+				.orElseThrow(() -> new RuntimeException("Job not found"));
+
+
+		if (job.getDeletedAt() != null) {
+			throw new RuntimeException("Job already deleted");
+		}
+
+		job.setDeletedAt(LocalDateTime.now());
+		job.setUpdatedAt(LocalDateTime.now());
+
+		jobRepository.save(job);
+	}
+
+
+
+	}
