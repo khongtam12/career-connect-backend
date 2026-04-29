@@ -38,6 +38,10 @@ public class Company {
     private StatusCompany statusCompany;
     private LocalDateTime createdAt;
 
+    @Enumerated(EnumType.STRING)
+    private ApprovalStatus approvalStatus = ApprovalStatus.PENDING;
+
+    private String approvedBy;
 
     @OneToMany(mappedBy = "company", cascade = CascadeType.ALL)
     @JsonManagedReference
@@ -46,7 +50,9 @@ public class Company {
     public Company() {
     }
 
-    public Company(String companyId, String name, String logo, String taxCode, String website, String email, String phone, String address, String description, int companySize, int foundedYear, StatusCompany statusCompany, LocalDateTime createdAt, List<CompanySubscription> subscriptions) {
+    public Company(String companyId, String name, String logo, String taxCode, String website, String email,
+            String phone, String address, String description, int companySize, int foundedYear,
+            StatusCompany statusCompany, LocalDateTime createdAt, List<CompanySubscription> subscriptions) {
         this.companyId = companyId;
         this.name = name;
         this.logo = logo;
@@ -177,5 +183,21 @@ public class Company {
 
     public void setSubscriptions(List<CompanySubscription> subscriptions) {
         this.subscriptions = subscriptions;
+    }
+
+    public ApprovalStatus getApprovalStatus() {
+        return approvalStatus;
+    }
+
+    public void setApprovalStatus(ApprovalStatus approvalStatus) {
+        this.approvalStatus = approvalStatus;
+    }
+
+    public String getApprovedBy() {
+        return approvedBy;
+    }
+
+    public void setApprovedBy(String approvedBy) {
+        this.approvedBy = approvedBy;
     }
 }

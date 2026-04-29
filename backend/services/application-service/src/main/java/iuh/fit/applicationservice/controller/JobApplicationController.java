@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -39,11 +40,22 @@ public class JobApplicationController {
         return new ApiResponse<>(200, "Apply success", res);
     }
 
+
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<FileUploadResponse> uploadFile(@RequestParam("file") MultipartFile file) {
         FileUploadResponse res = applicationFileStorageService.uploadApplicationFile(file);
         return new ApiResponse<>(200, "Upload success", res);
     }
+
+    @GetMapping("/my-applications")
+    public ApiResponse<List<JobApplicationResponse>> getMyApplications(
+            @RequestHeader("X-User-Id") String candidateId) {
+        List<JobApplicationResponse> res = jobApplicationService.getByCandidate(candidateId);
+        return new ApiResponse<>(200, "Get applications success", res);
+    }
+
+
+
 
     @GetMapping("/employer/candidates")
     public ApiResponse<List<CandidateApplicationResponse>> getCandidatesForEmployer(

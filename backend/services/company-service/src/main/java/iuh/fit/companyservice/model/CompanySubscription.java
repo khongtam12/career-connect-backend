@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+
 @Builder
 @Entity
 @Getter
@@ -33,10 +34,8 @@ public class CompanySubscription {
     @Enumerated(EnumType.STRING)
     private StatusPackage status;
 
-    public CompanySubscription() {
-    }
-
-    public CompanySubscription(String id, Company company, String packageId, int jobPostLimit, int jobPostedCount, LocalDateTime startDate, LocalDateTime endDate, StatusPackage status) {
+    public CompanySubscription(String id, Company company, String packageId, int jobPostLimit, int jobPostedCount,
+            LocalDateTime startDate, LocalDateTime endDate, StatusPackage status) {
         this.id = id;
         this.company = company;
         this.packageId = packageId;

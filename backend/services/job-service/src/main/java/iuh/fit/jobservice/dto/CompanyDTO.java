@@ -1,12 +1,14 @@
 package iuh.fit.jobservice.dto;
 
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonAlias;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class CompanyDTO {
+    @JsonAlias("id")
     private String companyId;
     private String name;
     private String logo;

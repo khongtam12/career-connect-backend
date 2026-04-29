@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+
 @Builder
 @Entity
 @Getter
@@ -21,8 +22,6 @@ public class CompanyVerification {
     private String submittedTaxCode;
     private String businessLicense;
 
-
-
     private String verifiedBy; // adminId
     private LocalDateTime submittedAt;
     private LocalDateTime verifiedAt;
@@ -35,7 +34,9 @@ public class CompanyVerification {
     public CompanyVerification() {
     }
 
-    public CompanyVerification(String verificationId, Company company, String submittedTaxCode, String businessLicense, String verifiedBy, LocalDateTime submittedAt, LocalDateTime verifiedAt, String note, StatusVerification status) {
+    public CompanyVerification(String verificationId, Company company, String submittedTaxCode, String businessLicense,
+            String verifiedBy, LocalDateTime submittedAt, LocalDateTime verifiedAt, String note,
+            StatusVerification status) {
         this.verificationId = verificationId;
         this.company = company;
         this.submittedTaxCode = submittedTaxCode;
