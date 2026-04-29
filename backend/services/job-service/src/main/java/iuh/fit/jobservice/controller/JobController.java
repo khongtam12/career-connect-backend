@@ -4,10 +4,7 @@ import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
-import iuh.fit.jobservice.dto.response.JobDetailResponse;
-import iuh.fit.jobservice.dto.response.JobResponse;
-import iuh.fit.jobservice.dto.response.JobStatsResponse;
-import iuh.fit.jobservice.dto.response.PageResponse;
+import iuh.fit.jobservice.dto.response.*;
 import iuh.fit.jobservice.service.JobService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -168,16 +165,30 @@ public class JobController {
         }
     }
 
+    @DeleteMapping("/admin/{jobId}")
+    public ResponseEntity<?> adminDeleteJob(
+            @RequestHeader("X-Admin-Id") String adminId,
+            @PathVariable String jobId
+    ) {
+        try {
+            jobService.adminDeleteJob(adminId, jobId);
+            return ResponseEntity.ok(Map.of("message", "Job deleted successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     // ===== PUBLIC =====
 
     // xem chi tiết
     @GetMapping("/{jobId}")
-    public ResponseEntity<JobDetailResponse> getJobById(@PathVariable String jobId) {
+    public ResponseEntity<?> getJobById(@PathVariable String jobId) {
         try {
             JobDetailResponse response = jobService.getJobDetail(jobId);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body((JobDetailResponse) Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -220,4 +231,26 @@ public class JobController {
         );
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/admin/filter")
+    public ResponseEntity<?> getAllAdminJobs( @RequestParam(required = false) String search,
+                                              @RequestParam(required = false) String status,
+                                              @RequestParam(defaultValue = "1") int page,
+                                              @RequestParam(defaultValue = "10") int size) {
+        PageResponse<JobAdminResponse> response =
+                jobService.getAllJobByAdmin(search, status, page, size);
+
+        return ResponseEntity.ok(response);
+    }
+    @DeleteMapping("/admin/jobs/{jobId}")
+    public ResponseEntity<?> deleteJobByAdmin(
+                                              @RequestHeader("adminId") String adminId,
+                                              @PathVariable String jobId
+                                                )
+    {
+        jobService.adminDeleteJob(adminId, jobId);
+        return ResponseEntity.ok("Deleted successfully");
+    }
+
+
 }

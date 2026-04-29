@@ -56,4 +56,8 @@ public class JobPackage {
 
     @OneToMany(mappedBy = "jobPackage")
     private List<Payment> payments;
+
+    public JobPackage(String packageId) {
+        this.packageId = packageId;
+    }
 }

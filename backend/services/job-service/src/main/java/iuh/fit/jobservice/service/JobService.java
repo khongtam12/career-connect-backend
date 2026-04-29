@@ -4,10 +4,7 @@ import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
-import iuh.fit.jobservice.dto.response.JobDetailResponse;
-import iuh.fit.jobservice.dto.response.JobResponse;
-import iuh.fit.jobservice.dto.response.JobStatsResponse;
-import iuh.fit.jobservice.dto.response.PageResponse;
+import iuh.fit.jobservice.dto.response.*;
 
 public interface JobService {
 
@@ -55,4 +52,7 @@ public interface JobService {
     JobFilterOptions getFilterOptions();
 
     JobStats getStats();
+
+    PageResponse<JobAdminResponse> getAllJobByAdmin(String search, String status, int page, int size);
+    void adminDeleteJob(String adminId, String jobId);
 }
