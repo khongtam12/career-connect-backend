@@ -20,6 +20,9 @@ public class JobApplication {
     private String candidateId;
 
     private String cvId;
+    private String companyId;
+    private String industryId;
+    private String url;
 
     private String note;
 
@@ -30,14 +33,22 @@ public class JobApplication {
 
     private LocalDateTime updatedAt;
 
+    private String interviewDate;
+    private String interviewTime;
+    private String interviewLocation;
+    private String rejectionReason;
+
     public JobApplication() {
     }
 
-    public JobApplication(String id, String jobId, String candidateId, String cvId, String note, StatusApply status, LocalDateTime appliedAt, LocalDateTime updatedAt) {
+    public JobApplication(String id, String jobId, String candidateId, String cvId, String companyId,String industryId,String url, String note, StatusApply status, LocalDateTime appliedAt, LocalDateTime updatedAt) {
         this.id = id;
         this.jobId = jobId;
         this.candidateId = candidateId;
         this.cvId = cvId;
+        this.companyId = companyId;
+        this.industryId = industryId;
+        this.url = url;
         this.note = note;
         this.status = status;
         this.appliedAt = appliedAt;
@@ -72,8 +83,32 @@ public class JobApplication {
         return cvId;
     }
 
+
     public void setCvId(String cvId) {
         this.cvId = cvId;
+    }
+    public String getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(String companyId) {
+        this.companyId = companyId;
+    }
+
+    public String getIndustryId() {
+        return industryId;
+    }
+
+    public void setIndustryId(String industryId) {
+        this.industryId = industryId;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     public String getNote() {
@@ -106,5 +141,37 @@ public class JobApplication {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getInterviewDate() {
+        return interviewDate;
+    }
+
+    public void setInterviewDate(String interviewDate) {
+        this.interviewDate = interviewDate;
+    }
+
+    public String getInterviewTime() {
+        return interviewTime;
+    }
+
+    public void setInterviewTime(String interviewTime) {
+        this.interviewTime = interviewTime;
+    }
+
+    public String getInterviewLocation() {
+        return interviewLocation;
+    }
+
+    public void setInterviewLocation(String interviewLocation) {
+        this.interviewLocation = interviewLocation;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 }

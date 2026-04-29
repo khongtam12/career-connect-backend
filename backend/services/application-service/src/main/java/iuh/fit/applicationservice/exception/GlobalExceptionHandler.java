@@ -21,4 +21,17 @@ public class GlobalExceptionHandler {
                 .status(errorCode.getCode())
                 .body(response);
     }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Object>> handleGenericException(Exception ex) {
+        ex.printStackTrace();
+        ApiResponse<Object> response = new ApiResponse<>(
+                500,
+                "Internal server error: " + ex.getMessage(),
+                null
+        );
+        return ResponseEntity
+                .status(500)
+                .body(response);
+    }
 }

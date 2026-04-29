@@ -16,12 +16,13 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
 
     Optional<JobApplication> findById(String id);
 
-    // lay danh sach ho so cua ung cu vien nay
     Page<JobApplication> findByCandidateIdOrderByAppliedAtDesc(String candidateId, Pageable pageable);
-    // lay danh sach y=ung cu vien cua 1 cong viec
+
     Page<JobApplication> findByJobIdOrderByAppliedAtDesc(String jobId, Pageable pageable);
 
     long countByJobId(String jobId);
 
     List<JobApplication> findByCandidateId(String candidateId);
+
+    List<JobApplication> findByCompanyIdOrderByAppliedAtDesc(String companyId);
 }
