@@ -18,6 +18,7 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
 
     // lay danh sach ho so cua ung cu vien nay
     Page<JobApplication> findByCandidateIdOrderByAppliedAtDesc(String candidateId, Pageable pageable);
+    List<JobApplication> findByCandidateIdOrderByAppliedAtDesc(String candidateId);
     // lay danh sach y=ung cu vien cua 1 cong viec
     Page<JobApplication> findByJobIdOrderByAppliedAtDesc(String jobId, Pageable pageable);
 
