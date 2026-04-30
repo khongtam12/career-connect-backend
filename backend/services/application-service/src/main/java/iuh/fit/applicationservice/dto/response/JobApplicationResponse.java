@@ -1,0 +1,128 @@
+package iuh.fit.applicationservice.dto.response;
+
+import iuh.fit.applicationservice.model.StatusApply;
+import lombok.*;
+
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+
+public class JobApplicationResponse {
+    private String applicationId;
+    private String jobId;
+    private String candidateId;
+    private String cvId;
+    private String companyId;
+    private String industryId;
+    private String url;
+    private String note;
+    private StatusApply status;
+    private LocalDateTime appliedAt;
+    private LocalDateTime updatedAt;
+
+    public JobApplicationResponse(String applicationId, String jobId, String candidateId, String cvId,String companyId,String industryId,String url, String note, StatusApply status, LocalDateTime appliedAt, LocalDateTime updatedAt) {
+        this.applicationId = applicationId;
+        this.jobId = jobId;
+        this.candidateId = candidateId;
+        this.cvId = cvId;
+        this.companyId = companyId;
+        this.industryId = industryId;
+        this.url = url;
+        this.note = note;
+        this.status = status;
+        this.appliedAt = appliedAt;
+        this.updatedAt = updatedAt;
+    }
+
+    public JobApplicationResponse() {
+    }
+
+    public String getApplicationId() {
+        return applicationId;
+    }
+
+    public void setApplicationId(String applicationId) {
+        this.applicationId = applicationId;
+    }
+
+    public String getJobId() {
+        return jobId;
+    }
+
+    public void setJobId(String jobId) {
+        this.jobId = jobId;
+    }
+
+    public String getCandidateId() {
+        return candidateId;
+    }
+
+    public void setCandidateId(String candidateId) {
+        this.candidateId = candidateId;
+    }
+
+    public String getCvId() {
+        return cvId;
+    }
+
+    public void setCvId(String cvId) {
+        this.cvId = cvId;
+    }
+
+    public String getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(String companyId) {
+        this.companyId = companyId;
+    }
+
+    public String getIndustryId() {
+        return industryId;
+    }
+
+    public void setIndustryId(String industryId) {
+        this.industryId = industryId;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
+    }
+
+    public StatusApply getStatus() {
+        return status;
+    }
+
+    public void setStatus(StatusApply status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getAppliedAt() {
+        return appliedAt;
+    }
+
+    public void setAppliedAt(LocalDateTime appliedAt) {
+        this.appliedAt = appliedAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+}

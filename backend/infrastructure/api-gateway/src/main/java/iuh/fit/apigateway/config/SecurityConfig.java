@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpCookie;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
@@ -23,7 +24,6 @@ import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import org.springframework.web.server.WebFilter;
 
-
 import java.util.List;
 
 @Configuration
@@ -38,6 +38,12 @@ public class SecurityConfig {
         return http
                 .securityMatcher(pathMatchers(
                         "/api/v1/user/auth/login",
+                        "/api/v1/user/auth/register",
+                        "/api/v1/job/search",
+                        "/api/v1/job/filters",
+                        "/api/v1/job/stats",
+                        "/api/v1/package",
+                        "/api/v1/package/payments/vnpay-callback",
                         "/eureka/**"                ))
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -55,24 +61,48 @@ public class SecurityConfig {
                 .authorizeExchange(
 
                         ex -> ex
-                                .pathMatchers(org.springframework.http.HttpMethod.OPTIONS).permitAll()
-                                .pathMatchers("/api/v1/user/admin/**"
 
+                                .pathMatchers("/api/v1/job/health").permitAll()
+                                .pathMatchers(HttpMethod.GET, "/api/v1/job/*").permitAll()
+                                .pathMatchers(org.springframework.http.HttpMethod.OPTIONS).permitAll()
+
+
+                                .pathMatchers("/api/v1/user/admin/**",
+                                        "/api/v1/job/admin/**",
+                                        "/api/v1/company/pending-approvals",
+                                        "/api/v1/company/approval")
+                                .hasAuthority("SCOPE_ADMIN")
+                                .pathMatchers(
+                                        "/api/v1/company/verification",
+                                        "/api/v1/company/save",
+                                        "/api/v1/company/verification",
+                                        "/api/v1/company/save",
+                                        "/api/v1/company/upload/presigned-url",
+                                        "/api/v1/package/payments/**",
+                                        "/api/v1/job/employer/**"
                                 ).hasAuthority("SCOPE_EMPLOYER")
+                                // Job search/detail: cả EMPLOYER và CANDIDATE đều xem được
                                 .pathMatchers("/api/v1/job/**")
                                 .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
+                                .pathMatchers("/api/v1/apply/employer/**")
+                                .hasAuthority("SCOPE_EMPLOYER")
+                                .pathMatchers("/api/v1/apply/**")
+                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
+                                .pathMatchers("/api/v1/cvs/upload-avatar")
+                                .hasAnyAuthority("SCOPE_CANDIDATE", "SCOPE_ADMIN")
+                                .pathMatchers("/api/v1/cvs/**")
+                                .hasAuthority("SCOPE_CANDIDATE")
                                 .pathMatchers("/api/v1/user/auth/me").hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE","SCOPE_ADMIN")
                                 .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtDecoder(jwtDecoder()))
                 )
                 .addFilterBefore(cookieToAuthFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
-
+                .addFilterBefore(userHeaderFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
     }
 
-
-
+    //
     @Bean
     public WebFilter cookieToAuthFilter() {
         return (exchange, chain) -> {
@@ -94,6 +124,23 @@ public class SecurityConfig {
             return chain.filter(exchange);
         };
     }
+    @Bean
+    public WebFilter userHeaderFilter() {
+        return (exchange, chain) ->
+                exchange.getPrincipal()
+                        .flatMap(principal -> {
+
+                            String userId = principal.getName();
+
+                            ServerHttpRequest request = exchange.getRequest()
+                                    .mutate()
+                                    .header("X-User-Id", userId)
+                                    .build();
+
+                            return chain.filter(exchange.mutate().request(request).build());
+                        })
+                        .switchIfEmpty(chain.filter(exchange));
+    }
 
 
     @Bean
@@ -102,6 +149,7 @@ public class SecurityConfig {
 
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
+                "http://localhost:5174",
                 "http://localhost:3000"
         ));
 
