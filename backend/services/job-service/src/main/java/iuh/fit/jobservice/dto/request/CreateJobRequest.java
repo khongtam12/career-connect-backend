@@ -45,6 +45,9 @@ public class CreateJobRequest {
     private List<String> relatedCategories;
     private List<String> skills;
 
+    // Subscription used for posting
+    private String companySubscriptionId;
+
     /**
      * Nếu true → lưu bản nháp (DRAFT), không gửi duyệt.
      * Nếu false (mặc định) → gửi duyệt (PENDING).

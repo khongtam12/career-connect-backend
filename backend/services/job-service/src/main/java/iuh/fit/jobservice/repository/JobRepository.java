@@ -43,7 +43,7 @@ public interface JobRepository extends JpaRepository<Job, String>, JpaSpecificat
                         "AND j.deleted_at IS NULL " +
                         "AND (:status IS NULL OR j.status = :status) " +
                         "AND (:search IS NULL OR j.title LIKE CONCAT('%', :search, '%')) " +
-                        "ORDER BY j.is_top DESC, j.created_at DESC", countQuery = "SELECT count(*) FROM jobs j WHERE j.employer_id = :employerId "
+                        "ORDER BY j.created_at DESC", countQuery = "SELECT count(*) FROM jobs j WHERE j.employer_id = :employerId "
                                         +
                                         "AND j.deleted_at IS NULL " +
                                         "AND (:status IS NULL OR j.status = :status) " +
@@ -65,7 +65,7 @@ public interface JobRepository extends JpaRepository<Job, String>, JpaSpecificat
                         "AND (:industry IS NULL OR j.industry = :industry) " +
                         "AND (:jobType IS NULL OR j.job_type = :jobType) " +
                         "AND (:location IS NULL OR j.location LIKE CONCAT('%', :location, '%')) " +
-                        "ORDER BY j.is_top DESC, j.created_at DESC", countQuery = "SELECT count(*) FROM jobs j WHERE j.status = 'ACTIVE' "
+                        "ORDER BY j.created_at DESC", countQuery = "SELECT count(*) FROM jobs j WHERE j.status = 'ACTIVE' "
                                         +
                                         "AND j.deleted_at IS NULL " +
                                         "AND (:search IS NULL OR j.title ILIKE CONCAT('%', :search, '%')) " +
@@ -83,4 +83,8 @@ public interface JobRepository extends JpaRepository<Job, String>, JpaSpecificat
         @Query("SELECT j FROM Job j WHERE j.status = :status AND j.deadline < :date AND j.deletedAt IS NULL")
         List<Job> findByStatusAndDeadlineBefore(@Param("status") StatusJob status,
                         @Param("date") LocalDate date);
+
+        List<Job> findByCompanySubscriptionIdInAndStatusIn(List<String> subscriptionIds, List<StatusJob> statuses);
+
+        long countByCompanySubscriptionIdAndStatus(String companySubscriptionId, StatusJob status);
 }

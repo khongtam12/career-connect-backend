@@ -38,6 +38,8 @@ public class JobDetailResponse {
     private int views;
     private int numberOfApplications;
     private boolean isTop;
+    private String packageId;
+    private String packageLabel;
     private LocalDateTime deletedAt;
     private String rank;
     private String education;

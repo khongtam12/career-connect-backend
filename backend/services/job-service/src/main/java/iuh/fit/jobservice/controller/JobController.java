@@ -117,22 +117,6 @@ public class JobController {
         return ResponseEntity.ok(stats);
     }
 
-    // đẩy TOP
-    @PutMapping("/employer/{jobId}/push-top")
-    public ResponseEntity<?> pushToTop(
-            @RequestHeader("X-User-Id") String employerId,
-            @PathVariable String jobId
-    ) {
-        try {
-            JobResponse response = jobService.pushToTop(employerId, jobId);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("not authorized"))
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
-
     // đổi trạng thái employer
     @PutMapping("/employer/{jobId}/status")
     public ResponseEntity<?> employerChangeStatus(
