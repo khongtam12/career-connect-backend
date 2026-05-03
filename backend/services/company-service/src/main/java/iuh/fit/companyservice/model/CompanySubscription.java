@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Setter
+@NoArgsConstructor
 
 
 @Table(name = "company_subscriptions")
@@ -23,6 +24,7 @@ public class CompanySubscription {
     @JoinColumn(name = "company_id")
     private Company company;
     private String packageId;
+    private String packageLabel;
     private int jobPostLimit;
 
     private int jobPostedCount;
@@ -34,11 +36,12 @@ public class CompanySubscription {
     @Enumerated(EnumType.STRING)
     private StatusPackage status;
 
-    public CompanySubscription(String id, Company company, String packageId, int jobPostLimit, int jobPostedCount,
+    public CompanySubscription(String id, Company company, String packageId, String packageLabel, int jobPostLimit, int jobPostedCount,
             LocalDateTime startDate, LocalDateTime endDate, StatusPackage status) {
         this.id = id;
         this.company = company;
         this.packageId = packageId;
+        this.packageLabel = packageLabel;
         this.jobPostLimit = jobPostLimit;
         this.jobPostedCount = jobPostedCount;
         this.startDate = startDate;
@@ -68,6 +71,14 @@ public class CompanySubscription {
 
     public void setPackageId(String packageId) {
         this.packageId = packageId;
+    }
+
+    public String getPackageLabel() {
+        return packageLabel;
+    }
+
+    public void setPackageLabel(String packageLabel) {
+        this.packageLabel = packageLabel;
     }
 
     public int getJobPostLimit() {

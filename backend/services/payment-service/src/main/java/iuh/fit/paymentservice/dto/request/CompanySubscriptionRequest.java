@@ -8,6 +8,7 @@ import lombok.Data;
 public class CompanySubscriptionRequest {
     private String companyId;
     private String packageId;
+    private String packageLabel;
     private int jobPostLimit;
     private int durationDays;
 

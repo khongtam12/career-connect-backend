@@ -97,6 +97,9 @@ public class PaymentController {
                         CompanySubscriptionRequest.builder()
                                 .companyId(payment.getCompanyId())
                                 .packageId(payment.getJobPackage().getPackageId())
+                        .packageLabel(payment.getJobPackage().getBadge() != null
+                            ? payment.getJobPackage().getBadge()
+                            : payment.getJobPackage().getName())
                                 .jobPostLimit(payment.getJobPackage().getJobPostLimit())
                                 .durationDays(payment.getDurationDays())
                                 .build()

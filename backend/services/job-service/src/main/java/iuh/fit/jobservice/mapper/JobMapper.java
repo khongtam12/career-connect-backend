@@ -35,6 +35,8 @@ public class JobMapper {
                 .applicants(job.getNumberOfApplications())
                 .isTop(job.isTop())
                 .status(job.getStatus() != null ? job.getStatus().name().toLowerCase() : null)
+                .packageId(job.getPackageId())
+                .packageLabel(job.getPackageLabel())
                 .rank(job.getRank())
                 .education(job.getEducation())
                 .quantity(job.getQuantity())

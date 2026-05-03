@@ -26,6 +26,12 @@ public class JobPackageService {
 
     }
 
+    public JobPackageResponseDTO getJobPackageById(String packageId) {
+        JobPackage jobPackage = jobPackageRepository.findById(packageId)
+                .orElseThrow(() -> new RuntimeException("Job package not found"));
+        return jobPackageMapper.toDTO(jobPackage);
+    }
+
 
 
 

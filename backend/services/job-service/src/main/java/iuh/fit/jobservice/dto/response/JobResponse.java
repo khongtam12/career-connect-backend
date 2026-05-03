@@ -38,6 +38,9 @@ public class JobResponse {
     private boolean isTop;
     private String status;
 
+    private String packageId;
+    private String packageLabel;
+
     // Thông tin chung
     private String rank;
     private String education;

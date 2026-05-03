@@ -2,6 +2,7 @@ package iuh.fit.jobservice.service.impl;
 
 import iuh.fit.jobservice.client.CompanyServiceClient;
 import iuh.fit.jobservice.dto.CompanyDTO;
+import iuh.fit.jobservice.dto.CompanySubscriptionDTO;
 import iuh.fit.jobservice.dto.IndustryDTO;
 import iuh.fit.jobservice.dto.IndustrySummary;
 import iuh.fit.jobservice.dto.JobFilterOptions;
@@ -59,11 +60,26 @@ public class JobServiceImpl implements JobService {
 		validateCreateRequest(request);
 
 		LocalDateTime now = LocalDateTime.now();
+		String companyId = resolveCompanyIdByEmployerId(employerId);
+		CompanySubscriptionDTO subscription = null;
+
+		if (!request.isSaveAsDraft()) {
+			String subscriptionId = normalize(request.getCompanySubscriptionId());
+			if (subscriptionId == null) {
+				throw new RuntimeException("Company subscription is required");
+			}
+			subscription = companyServiceClient.getSubscriptionById(subscriptionId);
+			validateSubscription(subscription, companyId);
+			long pendingCount = jobRepository.countByCompanySubscriptionIdAndStatus(subscriptionId, StatusJob.PENDING);
+			if ((long) subscription.getJobPostedCount() + pendingCount >= subscription.getJobPostLimit()) {
+				throw new RuntimeException("Subscription job post limit reached");
+			}
+		}
 
 		Job job = new Job();
 		job.setJobId(UUID.randomUUID().toString());
 		job.setEmployerId(employerId);
-		job.setCompanyId(resolveCompanyIdByEmployerId(employerId));
+		job.setCompanyId(companyId);
 		job.setTitle(request.getTitle().trim());
 		job.setIndustry(normalize(request.getIndustry()));
 		job.setLocation(normalize(request.getAddress()));
@@ -99,7 +115,12 @@ public class JobServiceImpl implements JobService {
 		job.setViews(0);
 		job.setNumberOfApplications(0);
 		job.setTop(false);
-		job.setStatus(request.isSaveAsDraft() ? StatusJob.DRAFT : StatusJob.ACTIVE);
+		job.setStatus(request.isSaveAsDraft() ? StatusJob.DRAFT : StatusJob.PENDING);
+		if (subscription != null) {
+			job.setCompanySubscriptionId(subscription.getId());
+			job.setPackageId(subscription.getPackageId());
+			job.setPackageLabel(subscription.getPackageLabel());
+		}
 
 		Job saved = jobRepository.save(job);
 		return JobMapper.toResponse(saved);
@@ -246,20 +267,6 @@ public class JobServiceImpl implements JobService {
 				.build();
 	}
 
-	@Override
-	@Transactional
-	public JobResponse pushToTop(String employerId, String jobId) {
-		validateEmployerId(employerId);
-		Job job = getJobOrThrow(jobId);
-		ensureOwner(employerId, job);
-
-		job.setTop(true);
-		job.setUpdatedAt(LocalDateTime.now());
-
-		Job saved = jobRepository.save(job);
-		return JobMapper.toResponse(saved);
-	}
-
 	// ── EMPLOYER: chuyển trạng thái ──────────────────────────────────────────────
 	@Override
 	@Transactional
@@ -286,7 +293,19 @@ public class JobServiceImpl implements JobService {
 		Job job = getJobOrThrow(jobId);
 
 		StatusJob requested = parseStatus(newStatus);
-		StatusJob updated = JobStatusTransition.transition(Role.ADMIN, job.getStatus(), requested);
+		StatusJob current = job.getStatus();
+		StatusJob updated = JobStatusTransition.transition(Role.ADMIN, current, requested);
+
+		if (current == StatusJob.PENDING && updated == StatusJob.ACTIVE) {
+			String subscriptionId = normalize(job.getCompanySubscriptionId());
+			if (subscriptionId == null) {
+				throw new JobStatusException("Company subscription is required to approve job");
+			}
+			CompanySubscriptionDTO consumed = companyServiceClient.consumeSubscription(subscriptionId);
+			if (job.getPackageLabel() == null && consumed != null) {
+				job.setPackageLabel(consumed.getPackageLabel());
+			}
+		}
 
 		job.setStatus(updated);
 		job.setUpdatedAt(LocalDateTime.now());
@@ -310,6 +329,30 @@ public class JobServiceImpl implements JobService {
 			jobRepository.saveAll(overdueJobs);
 		}
 		return overdueJobs.size();
+	}
+
+	// ── SYSTEM: tự động đóng job khi gói tin hết hạn ──────────────────────────
+	@Scheduled(cron = "0 30 1 * * *")   // mỗi ngày 01:30
+	@Transactional
+	public int closeJobsByExpiredSubscriptions() {
+		List<String> expiredSubscriptionIds = companyServiceClient.expireSubscriptions();
+		if (expiredSubscriptionIds == null || expiredSubscriptionIds.isEmpty()) {
+			return 0;
+		}
+
+		List<StatusJob> closableStatuses = List.of(StatusJob.ACTIVE, StatusJob.PENDING, StatusJob.PAUSED);
+		List<Job> jobs = jobRepository.findByCompanySubscriptionIdInAndStatusIn(expiredSubscriptionIds, closableStatuses);
+		if (jobs.isEmpty()) {
+			return 0;
+		}
+
+		LocalDateTime now = LocalDateTime.now();
+		jobs.forEach(job -> {
+			job.setStatus(StatusJob.CLOSED);
+			job.setUpdatedAt(now);
+		});
+		jobRepository.saveAll(jobs);
+		return jobs.size();
 	}
 
 	@Override
@@ -339,7 +382,7 @@ public class JobServiceImpl implements JobService {
 									job.getSalaryDetail(),job.getBenefitsDetail(),job.getWorkSchedule(),job.getLocation(),
 									job.getSalaryMin(),job.getSalaryMax(),job.isSalaryNegotiable(),job.getExperience(),
 									job.getDeadline(),job.getCreatedAt(),job.getUpdatedAt(),job.getViews(),job.getNumberOfApplications(),
-									job.isTop(),job.getDeletedAt(),job.getRank(),job.getEducation(),job.getQuantity(),job.getAgeRange(),
+									job.isTop(),job.getPackageId(),job.getPackageLabel(),job.getDeletedAt(),job.getRank(),job.getEducation(),job.getQuantity(),job.getAgeRange(),
 									job.getIndustry(),job.getStatus(),job.getJobType(),job.getRequirementTags(),job.getBenefitTags(),
 									job.getSpecialties(),job.getRelatedCategories(),job.getSkills(),companyDTO,industryDTO
 				);
@@ -543,6 +586,25 @@ public class JobServiceImpl implements JobService {
 		return parseStatus(status).name();
 	}
 
+	private void validateSubscription(CompanySubscriptionDTO subscription, String companyId) {
+		if (subscription == null) {
+			throw new RuntimeException("Subscription not found");
+		}
+		if (subscription.getCompanyId() == null || !subscription.getCompanyId().equals(companyId)) {
+			throw new RuntimeException("Subscription does not belong to company");
+		}
+		if (subscription.getStatus() == null || !"ACTIVE".equalsIgnoreCase(subscription.getStatus())) {
+			throw new RuntimeException("Subscription is not active");
+		}
+		if (subscription.getEndDate() != null && subscription.getEndDate().isBefore(LocalDateTime.now())) {
+			throw new RuntimeException("Subscription expired");
+		}
+		if (subscription.getJobPostedCount() >= subscription.getJobPostLimit()) {
+			throw new RuntimeException("Subscription job post limit reached");
+		}
+	}
+
+
 	private String normalizeJobTypeFilter(String jobType) {
 		if (jobType == null || jobType.isBlank()) {
 			return null;
@@ -591,8 +653,7 @@ public class JobServiceImpl implements JobService {
 				break;
 		}
 
-		Sort sort = Sort.by(Sort.Order.desc("isTop"));
-		sort = sort.and(Sort.by(new Sort.Order(direction, sortField)));
+		Sort sort = Sort.by(new Sort.Order(direction, sortField));
 		if (!"createdAt".equals(sortField)) {
 			sort = sort.and(Sort.by(Sort.Order.desc("createdAt")));
 		}
