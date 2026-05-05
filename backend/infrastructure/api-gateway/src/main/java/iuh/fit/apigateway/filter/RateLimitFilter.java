@@ -16,7 +16,6 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Component
@@ -31,7 +30,8 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
-
+        String method = exchange.getRequest().getMethod().name();
+        String apiGroup = resolveApiGroup(path, method);
         // Public endpoints: bỏ qua rate limiting
         if (isExcludedPath(path)) {
             log.debug("Skip rate limiting for public endpoint: {}", path);
@@ -41,33 +41,40 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
         // Protected endpoints: áp dụng rate limiting
         return exchange.getPrincipal()
                 .cast(Authentication.class)
-                .flatMap(auth -> handleRequest(exchange, chain, auth))  // Có auth
-                .switchIfEmpty(Mono.defer(() -> handleRequest(exchange, chain, null))); // Không auth
-    }
+                .flatMap(auth -> handleRequest(exchange, chain, auth, apiGroup))
+                .switchIfEmpty(Mono.defer(() -> handleRequest(exchange, chain, null, apiGroup)));   }
 
     private Mono<Void> handleRequest(ServerWebExchange exchange,
                                      GatewayFilterChain chain,
-                                     Authentication auth) {
+                                     Authentication auth, String apiGroup) {
         String key = generateKey(exchange, auth);
-
+        String ip = extractClientIp(exchange);
         // Sử dụng Mono.fromCallable nhưng cần subscribe đúng cách
         return Mono.defer(() -> {
             try {
-                Bucket bucket = rateLimiterService.resolveBucket(key, auth);
-                boolean consumed = bucket.tryConsume(1);
+                Bucket bucket = rateLimiterService.resolveBucket(key, apiGroup, auth);
 
-                if (consumed) {
-                    addRateLimitHeader(exchange, bucket);
-                    log.debug("Rate limit allowed: {}", key);
+                var probe = bucket.tryConsumeAndReturnRemaining(1);
+
+                if (probe.isConsumed()) {
+
+                    exchange.getResponse().getHeaders().add(
+                            "X-RateLimit-Remaining",
+                            String.valueOf(probe.getRemainingTokens())
+                    );
+
                     return chain.filter(exchange);
                 }
 
-                log.warn("Rate limit exceeded: {}", key);
+// ❌ bị limit
                 exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
-                exchange.getResponse().getHeaders().add("Retry-After", "60");
-                // QUAN TRỌNG: Không gọi chain.filter() khi đã set response
-                return exchange.getResponse().setComplete();
 
+                exchange.getResponse().getHeaders().add(
+                        "Retry-After",
+                        String.valueOf(probe.getNanosToWaitForRefill() / 1_000_000_000)
+                );
+
+                return exchange.getResponse().setComplete();
             } catch (Exception e) {
                 log.error("Rate limit error for key: {}", key, e);
                 // Fallback: cho phép request đi qua
@@ -77,16 +84,20 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     }
 
     private String generateKey(ServerWebExchange exchange, Authentication auth) {
-        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
-            return "user:" + auth.getName();
+
+        String path = exchange.getRequest().getURI().getPath();
+        String method = exchange.getRequest().getMethod().name();
+        String apiGroup = resolveApiGroup(path, method);
+
+        if (auth != null && auth.isAuthenticated()
+                && !"anonymousUser".equals(auth.getName())) {
+
+            return "user:" + auth.getName() + ":" + apiGroup + ":" + method;
         }
 
         String ip = extractClientIp(exchange);
-        if (ip != null && !ip.isBlank()) {
-            return "ip:" + ip;
-        }
 
-        return "unknown:" + UUID.randomUUID();
+        return "ip:" + ip + ":" + apiGroup + ":" + method;
     }
 
     private String extractClientIp(ServerWebExchange exchange) {
@@ -128,5 +139,18 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     public int getOrder() {
         return -2; // Chạy sau authentication filter
     }
+
+    private String resolveApiGroup(String path, String method) {
+
+        if (path.startsWith("/api/v1/job/search")) return "job-search";
+        if (path.startsWith("/api/v1/job/stats")) return "job-stats";
+
+        if (path.startsWith("/api/v1/job/employer/create")) return "job-create";
+        if (path.startsWith("/api/v1/job/employer") && method.equals("PUT"))
+            return "job-update";
+
+        return "default";
+    }
 }
+
 

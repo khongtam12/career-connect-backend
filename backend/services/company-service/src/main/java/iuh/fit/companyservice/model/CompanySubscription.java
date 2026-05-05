@@ -34,8 +34,11 @@ public class CompanySubscription {
     @Enumerated(EnumType.STRING)
     private StatusPackage status;
 
+    public CompanySubscription() {
+    }
+
     public CompanySubscription(String id, Company company, String packageId, int jobPostLimit, int jobPostedCount,
-            LocalDateTime startDate, LocalDateTime endDate, StatusPackage status) {
+                               LocalDateTime startDate, LocalDateTime endDate, StatusPackage status) {
         this.id = id;
         this.company = company;
         this.packageId = packageId;

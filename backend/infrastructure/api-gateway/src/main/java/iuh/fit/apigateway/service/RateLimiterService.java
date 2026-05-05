@@ -6,8 +6,11 @@ import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.Refill;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
 import io.github.bucket4j.grid.jcache.JCacheProxyManager;
+import iuh.fit.apigateway.config.ApiRateLimitConfig;
 import iuh.fit.apigateway.config.CacheConfig;
+
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
@@ -23,15 +26,16 @@ import java.util.function.Supplier;
 public class RateLimiterService {
 
     private final ProxyManager<String> proxyManager;
-
+    @Value("${rate-limiter.version}")
+    private String KEY_VERSION;   // đổi khi change config
     private static final Bandwidth ANONYMOUS_LIMIT =
-            Bandwidth.classic(10, Refill.greedy(10, Duration.ofMinutes(1)));
+            Bandwidth.classic(60, Refill.intervally(60, Duration.ofMinutes(1)));
     private static final Bandwidth FREE_LIMIT =
-            Bandwidth.classic(20, Refill.greedy(20, Duration.ofMinutes(1)));
+            Bandwidth.classic(80, Refill.intervally(80, Duration.ofMinutes(1)));
     private static final Bandwidth EMPLOYER_LIMIT =
-            Bandwidth.classic(500, Refill.greedy(500, Duration.ofMinutes(1)));
+            Bandwidth.classic(300, Refill.intervally(300, Duration.ofMinutes(1)));
     private static final Bandwidth ADMIN_LIMIT =
-            Bandwidth.classic(1000, Refill.greedy(1000, Duration.ofMinutes(1)));
+            Bandwidth.classic(1000, Refill.intervally(1000, Duration.ofMinutes(1)));
 
     public RateLimiterService(CacheManager jCacheManager) {
         Cache<String, byte[]> cache = jCacheManager.getCache(CacheConfig.RATE_LIMIT_CACHE);
@@ -39,20 +43,39 @@ public class RateLimiterService {
         log.info("RateLimiterService initialized");
     }
 
-    public Bucket resolveBucket(String key, Authentication auth) {
-        if (key == null || key.isBlank()) {
-            key = "fallback:" + System.currentTimeMillis();
-            log.warn("Using fallback key: {}", key);
-        }
+    public Bucket resolveBucket(String key,
+                                String apiGroup,
+                                Authentication auth) {
 
-        Bandwidth bandwidth = determineBandwidth(auth);
+        String finalKey = KEY_VERSION + ":" + key;
 
-        Supplier<BucketConfiguration> configSupplier = () ->
-                BucketConfiguration.builder()
-                        .addLimit(bandwidth)
+        Supplier<BucketConfiguration> configSupplier = () -> {
+            Bandwidth roleLimit = determineBandwidth(auth);
+            Bandwidth apiLimit = ApiRateLimitConfig.getLimit(apiGroup);
+
+            BucketConfiguration configuration = BucketConfiguration.builder()
+                    .addLimit(roleLimit)
+                    .addLimit(
+                            Bandwidth.classic(1,
+                                    Refill.greedy(1, Duration.ofSeconds(1)))
+                    )
+                    .build();
+
+            if (apiLimit != null) {
+                configuration = BucketConfiguration.builder()
+                        .addLimit(roleLimit)
+                        .addLimit(apiLimit)
+                        .addLimit(
+                                Bandwidth.classic(1,
+                                        Refill.greedy(1, Duration.ofSeconds(1)))
+                        )
                         .build();
+            }
 
-        return proxyManager.builder().build(key, configSupplier);
+            return configuration;
+        };
+
+        return proxyManager.builder().build(finalKey, configSupplier);
     }
 
     private Bandwidth determineBandwidth(Authentication auth) {
