@@ -68,6 +68,12 @@ public class Job {
 
     private boolean isTop;
 
+    private String companySubscriptionId;
+
+    private String packageId;
+
+    private String packageLabel;
+
     private LocalDateTime deletedAt; // null = chưa xóa, có giá trị = đã xóa mềm
 
     // Thông tin chung
@@ -354,6 +360,30 @@ public class Job {
 
     public void setTop(boolean top) {
         isTop = top;
+    }
+
+    public String getCompanySubscriptionId() {
+        return companySubscriptionId;
+    }
+
+    public void setCompanySubscriptionId(String companySubscriptionId) {
+        this.companySubscriptionId = companySubscriptionId;
+    }
+
+    public String getPackageId() {
+        return packageId;
+    }
+
+    public void setPackageId(String packageId) {
+        this.packageId = packageId;
+    }
+
+    public String getPackageLabel() {
+        return packageLabel;
+    }
+
+    public void setPackageLabel(String packageLabel) {
+        this.packageLabel = packageLabel;
     }
 
     public LocalDateTime getDeletedAt() {

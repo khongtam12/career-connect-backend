@@ -19,8 +19,6 @@ public interface JobService {
 
     JobStatsResponse getMyStats(String employerId);
 
-    JobResponse pushToTop(String employerId, String jobId);
-
     JobResponse employerChangeStatus(String employerId, String jobId, String newStatus);
 
     // ===== ADMIN =====

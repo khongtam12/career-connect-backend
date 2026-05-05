@@ -12,6 +12,7 @@ import lombok.Setter;
 public class CompanySubscriptionRequest {
     private String companyId;
     private String packageId;
+    private String packageLabel;
     private int jobPostLimit;
     private int durationDays;
 
@@ -29,6 +30,14 @@ public class CompanySubscriptionRequest {
 
     public void setPackageId(String packageId) {
         this.packageId = packageId;
+    }
+
+    public String getPackageLabel() {
+        return packageLabel;
+    }
+
+    public void setPackageLabel(String packageLabel) {
+        this.packageLabel = packageLabel;
     }
 
     public int getJobPostLimit() {
