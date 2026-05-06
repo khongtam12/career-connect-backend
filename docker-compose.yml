@@ -1,0 +1,287 @@
+
+
+# ==============================================================
+#  CAREER CONNECT - Backend Docker Compose
+#  Repo: BE (backend)
+#
+#  Chạy: docker-compose up --build -d
+#  Network "career-net" là external → FE repo cùng dùng chung
+#
+#  Tạo network trước khi chạy lần đầu:
+#    docker network create career-net
+# ==============================================================
+
+networks:
+  career-net:
+    external: true # ← Dùng chung với FE repo
+
+volumes:
+  postgres-data-main:
+  redis-data:
+
+services:
+
+  # ==============================================================
+  # 0. INFRASTRUCTURE (Redis)
+  # ==============================================================
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - career-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==============================================================
+  # 1. DATABASES (PostgreSQL × 6)
+  # ==============================================================
+
+  # ==============================================================
+  # 1. CENTRAL DATABASE (PostgreSQL)
+  # ==============================================================
+
+  postgres-server:
+    image: postgres:16-alpine
+    container_name: postgres-server
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    volumes:
+      - postgres-data-main:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - career-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  # ==============================================================
+  # 2. EUREKA SERVER (Service Registry)
+  # ==============================================================
+
+  eureka-server:
+    build:
+      context: ./backend
+      dockerfile: infrastructure/eureka-server/Dockerfile
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - career-net
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # ==============================================================
+  # 3. MICROSERVICES
+  # ==============================================================
+
+  user-service:
+    build:
+      context: ./backend
+      dockerfile: services/user-service/Dockerfile
+    container_name: user-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/user-service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  company-service:
+    build:
+      context: ./backend
+      dockerfile: services/company-service/Dockerfile
+    container_name: company-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/company-service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  job-service:
+    build:
+      context: ./backend
+      dockerfile: services/job-service/Dockerfile
+    container_name: job-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/job-service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  application-service:
+    build:
+      context: ./backend
+      dockerfile: services/application-service/Dockerfile
+    container_name: application-service
+    env_file:
+      - ./backend/.env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/application-service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  payment-service:
+    build:
+      context: ./backend
+      dockerfile: services/payment-service/Dockerfile
+    container_name: payment-service
+    env_file:
+      - ./backend/.env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/payment-service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      FRONTEND_URL: http://localhost:3000
+    ports:
+      - "8086:8086"
+    depends_on:
+      postgres-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  notification-service:
+    build:
+      context: ./backend
+      dockerfile: services/notification-service/Dockerfile
+    container_name: notification-service
+    env_file:
+      - ./backend/.env
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8085:8085"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  cv-service:
+    build:
+      context: ./backend
+      dockerfile: services/cv-service/Dockerfile
+    container_name: cv-service
+    env_file:
+      - ./backend/.env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/cv-service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8087:8087"
+    depends_on:
+      postgres-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+
+  # ==============================================================
+  # 4. API GATEWAY (chờ tất cả services đăng ký Eureka)
+  # ==============================================================
+
+  api-gateway:
+    build:
+      context: ./backend
+      dockerfile: infrastructure/api-gateway/Dockerfile
+    container_name: api-gateway
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      company-service:
+        condition: service_started
+      job-service:
+        condition: service_started
+      application-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      cv-service:
+        condition: service_started
+    networks:
+      - career-net
+    restart: on-failure
