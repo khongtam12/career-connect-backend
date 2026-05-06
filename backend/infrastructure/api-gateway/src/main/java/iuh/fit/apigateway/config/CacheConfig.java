@@ -27,8 +27,9 @@ public class CacheConfig {
     public Config redissonConfig() {
         Config config = new Config();
         // Cấu hình kết nối Redis của bạn (Single, Cluster, Sentinel...)
+        String redisHost = System.getenv().getOrDefault("REDIS_HOST", "redis");
         config.useSingleServer()
-                .setAddress("redis://127.0.0.1:6379");
+                .setAddress("redis://" + redisHost + ":6379");
         // .setPassword("your-password");
         return config;
     }
