@@ -8,6 +8,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface SkillRepository extends JpaRepository<Skill, Long> {
+public interface SkillRepository extends JpaRepository<Skill, UUID> {
     List<Skill> findByCvId(UUID cvId);
 }

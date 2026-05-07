@@ -8,6 +8,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface CertificateRepository extends JpaRepository<Certificate, Long> {
+public interface CertificateRepository extends JpaRepository<Certificate, UUID> {
     List<Certificate> findByCvId(UUID cvId);
 }
