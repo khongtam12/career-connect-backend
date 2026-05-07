@@ -49,6 +49,7 @@ services:
   # ==============================================================
 
   postgres-server:
+    platform: linux/arm64
     image: postgres:16-alpine
     container_name: postgres-server
     environment:
@@ -58,7 +59,7 @@ services:
       - postgres-data-main:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     ports:
-      - "5432:5432"
+      - "5434:5432"
     networks:
       - career-net
     healthcheck:
