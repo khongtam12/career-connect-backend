@@ -9,6 +9,7 @@ import iuh.fit.companyservice.dto.response.CompanyPendingDTO;
 import iuh.fit.companyservice.dto.response.EmployerResponse;
 import iuh.fit.companyservice.model.Company;
 import iuh.fit.companyservice.model.CompanyVerification;
+import iuh.fit.companyservice.model.StatusCompany;
 import iuh.fit.companyservice.model.StatusVerification;
 import iuh.fit.companyservice.repository.CompanyRepository;
 import iuh.fit.companyservice.repository.CompanyVerificationRepository;
@@ -130,6 +131,14 @@ public class CompanyService {
         verification.setVerifiedAt(LocalDateTime.now());
         verification.setNote(request.getNote());
         CompanyVerification saved = companyVerificationRepository.save(verification);
+
+        // Cập nhật trạng thái của Company cho đồng nhất
+        if (request.getAction() == StatusVerification.APPROVED) {
+            company.setStatusCompany(StatusCompany.VERIFIED);
+        } else {
+            company.setStatusCompany(StatusCompany.PENDING);
+        }
+        companyRepository.save(company);
 
         CompanyApprovalResponseDTO response = new CompanyApprovalResponseDTO();
         response.setCompanyId(company.getCompanyId());
