@@ -1,3 +1,6 @@
+-- Clear existing data
+TRUNCATE TABLE companies CASCADE;
+
 -- Insert Companies
 INSERT INTO companies (company_id, name, logo, tax_code, website, email, phone, address, description, company_size, founded_year, status_company, created_at) VALUES
 ('COMP001', 'FPT Software', 'https://fpt.png', '0101248141', 'https://fpt.com', 'hr@fpt.com', '02437687077', 'Ha Noi', 'IT Services', 30000, 1999, 'VERIFIED', NOW()),
@@ -10,16 +13,16 @@ INSERT INTO companies (company_id, name, logo, tax_code, website, email, phone, 
 ('COMP008', 'Tek Expert', 'https://tek.png', '0107753177', 'https://tek.com', 'hr@tek.com', '02439561234', 'Ha Noi', 'Technical Support', 2000, 2011, 'VERIFIED', NOW()),
 ('COMP009', 'NashTech', 'https://nash.png', '0302014728', 'https://nashtech.com', 'hr@nash.com', '02838106200', 'HCM', 'Software', 2500, 2000, 'VERIFIED', NOW()),
 ('COMP010', 'Zalo', 'https://zalo.png', '0303215392-1', 'https://zalo.me', 'hr@zalo.me', '02839623888', 'HCM', 'Messaging', 1000, 2012, 'VERIFIED', NOW()),
-('COMP011', 'Lazada', 'https://lazada.png', '0311226743', 'https://lazada.vn', 'hr@lazada.vn', '19001007', 'HCM', 'E-commerce', 2000, 2012, 'VERIFIED', NOW()),
-('COMP012', 'VinFast', 'https://vinfast.png', '0105847076', 'https://vinfast.vn', 'hr@vinfast.vn', '1900232389', 'Hai Phong', 'Automotive', 10000, 2017, 'VERIFIED', NOW()),
-('COMP013', 'Base.vn', 'https://base.png', '0107431268', 'https://base.vn', 'hr@base.vn', '02422466981', 'HCM', 'SaaS', 500, 2016, 'VERIFIED', NOW()),
-('COMP014', 'KMS', 'https://kms.png', '0306325510', 'https://kms.com', 'hr@kms.com', '02838486000', 'HCM', 'Software', 1500, 2009, 'VERIFIED', NOW()),
-('COMP015', 'NAB', 'https://nab.png', '0315754562', 'https://nab.com', 'hr@nab.com', '02836224000', 'HCM', 'Banking IT', 1000, 2019, 'VERIFIED', NOW()),
-('COMP016', 'SmartDev', 'https://sd.png', '0401625341', 'https://smartdev.com', 'hr@sd.com', '02363888321', 'Da Nang', 'Software', 300, 2014, 'VERIFIED', NOW()),
-('COMP017', 'Sun*', 'https://sun.png', '0105813350', 'https://sun.vn', 'hr@sun.vn', '02437955463', 'Ha Noi', 'Software', 2000, 2012, 'VERIFIED', NOW()),
-('COMP018', 'Amanotes', 'https://ama.png', '0313137258', 'https://amanotes.com', 'hr@ama.com', '02862908231', 'HCM', 'Gaming', 200, 2014, 'VERIFIED', NOW()),
-('COMP019', 'Be Group', 'https://be.png', '0315184852', 'https://be.vn', 'hr@be.vn', '1900232345', 'HCM', 'Ride-hailing', 1000, 2018, 'VERIFIED', NOW()),
-('COMP020', 'OneMount', 'https://om.png', '0108906161', 'https://onemount.com', 'hr@om.com', '02432045555', 'Ha Noi', 'Ecosystem', 2000, 2019, 'VERIFIED', NOW())
+('COMP011', 'Lazada', 'https://lazada.png', '0311226743', 'https://lazada.vn', 'hr@lazada.vn', '19001007', 'HCM', 'E-commerce', 2000, 2012, 'PENDING', NOW()),
+('COMP012', 'VinFast', 'https://vinfast.png', '0105847076', 'https://vinfast.vn', 'hr@vinfast.vn', '1900232389', 'Hai Phong', 'Automotive', 10000, 2017, 'PENDING', NOW()),
+('COMP013', 'Base.vn', 'https://base.png', '0107431268', 'https://base.vn', 'hr@base.vn', '02422466981', 'HCM', 'SaaS', 500, 2016, 'PENDING', NOW()),
+('COMP014', 'KMS', 'https://kms.png', '0306325510', 'https://kms.com', 'hr@kms.com', '02838486000', 'HCM', 'Software', 1500, 2009, 'PENDING', NOW()),
+('COMP015', 'NAB', 'https://nab.png', '0315754562', 'https://nab.com', 'hr@nab.com', '02836224000', 'HCM', 'Banking IT', 1000, 2019, 'PENDING', NOW()),
+('COMP016', 'SmartDev', 'https://sd.png', '0401625341', 'https://smartdev.com', 'hr@sd.com', '02363888321', 'Da Nang', 'Software', 300, 2014, 'PENDING', NOW()),
+('COMP017', 'Sun*', 'https://sun.png', '0105813350', 'https://sun.vn', 'hr@sun.vn', '02437955463', 'Ha Noi', 'Software', 2000, 2012, 'PENDING', NOW()),
+('COMP018', 'Amanotes', 'https://ama.png', '0313137258', 'https://amanotes.com', 'hr@ama.com', '02862908231', 'HCM', 'Gaming', 200, 2014, 'PENDING', NOW()),
+('COMP019', 'Be Group', 'https://be.png', '0315184852', 'https://be.vn', 'hr@be.vn', '1900232345', 'HCM', 'Ride-hailing', 1000, 2018, 'PENDING', NOW()),
+('COMP020', 'OneMount', 'https://om.png', '0108906161', 'https://onemount.com', 'hr@om.com', '02432045555', 'Ha Noi', 'Ecosystem', 2000, 2019, 'PENDING', NOW())
 ON CONFLICT (company_id) DO NOTHING;
 
 -- Insert Verifications (Set half to APPROVED, half to PENDING)
