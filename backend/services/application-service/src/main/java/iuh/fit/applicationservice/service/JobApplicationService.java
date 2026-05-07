@@ -3,10 +3,7 @@ package iuh.fit.applicationservice.service;
 import iuh.fit.applicationservice.client.JobServiceClient;
 import iuh.fit.applicationservice.client.NotificationServiceClient;
 import iuh.fit.applicationservice.client.UserServiceClient;
-import iuh.fit.applicationservice.dto.request.CreateJobApplicationRequest;
-import iuh.fit.applicationservice.dto.request.ScheduleInterviewRequest;
-import iuh.fit.applicationservice.dto.request.SendEmailRequest;
-import iuh.fit.applicationservice.dto.request.UpdateStatusRequest;
+import iuh.fit.applicationservice.dto.request.*;
 import iuh.fit.applicationservice.dto.response.CandidateApplicationResponse;
 import iuh.fit.applicationservice.dto.response.CandidateSummaryClientResponse;
 import iuh.fit.applicationservice.dto.response.EmployerCompanyClientResponse;
@@ -78,6 +75,20 @@ public class JobApplicationService {
         app.setUpdatedAt(LocalDateTime.now());
 
         jobApplicationRepository.save(app);
+        // phat su kien den employer
+        try {
+            ApplicationNotificationRequest notificationRequest = new ApplicationNotificationRequest();
+            notificationRequest.setCompanyId(request.getCompanyId());
+            notificationRequest.setJobId(request.getJobId());
+            notificationRequest.setCandidateId(candidateId);
+
+            JobDetailClientResponse jobDetail = jobServiceClient.getJobById(request.getJobId());
+            notificationRequest.setJobTitle(jobDetail.getTitle() != null ? jobDetail.getTitle() : "");
+            notificationRequest.setMessage("Có 1 ứng viên mới vừa nộp hồ sơ vị trí "+notificationRequest.getJobTitle());
+            notificationServiceClient.pushCandidateApplied(notificationRequest);
+        }catch (Exception e){
+            System.err.println("Failed to push notification: " + e.getMessage());
+        }
         return mapToResponse(app);
     }
 
