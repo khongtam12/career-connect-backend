@@ -7,11 +7,12 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class RecruiterPageDTO {
-    private List<RecruiterResponseDTO> content;
+@NoArgsConstructor
+public class EmployerPageDTO {
+    private List<EmployerResponseDTO> content;
     private int page;
     private int size;
     private long totalElements;
+    private int totalPages;
 }

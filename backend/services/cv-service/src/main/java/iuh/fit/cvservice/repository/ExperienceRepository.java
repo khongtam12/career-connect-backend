@@ -8,6 +8,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface ExperienceRepository extends JpaRepository<Experience, Long> {
+public interface ExperienceRepository extends JpaRepository<Experience, UUID> {
     List<Experience> findByCvId(UUID cvId);
 }

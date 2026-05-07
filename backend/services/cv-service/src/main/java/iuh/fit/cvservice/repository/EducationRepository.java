@@ -8,6 +8,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface EducationRepository extends JpaRepository<Education, Long> {
+public interface EducationRepository extends JpaRepository<Education, UUID> {
     List<Education> findByCvId(UUID cvId);
 }

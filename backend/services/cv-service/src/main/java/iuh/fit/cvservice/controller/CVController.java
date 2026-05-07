@@ -30,7 +30,7 @@ public class CVController {
     @GetMapping("/my-cvs")
     public ResponseEntity<?> getMyCVs(@RequestHeader("X-User-Id") String userId) {
         log.info("Fetching CVs for user: {}", userId);
-        return ResponseEntity.ok(cvService.getCVsByUserId(UUID.fromString(userId)));
+        return ResponseEntity.ok(cvService.getCVsByUserId(userId));
     }
 
     @GetMapping("/{id}")
@@ -45,7 +45,7 @@ public class CVController {
     @PostMapping
     public ResponseEntity<CV> saveCV(@RequestBody CV cv, @RequestHeader("X-User-Id") String userId) {
         log.info("Saving CV for user: {}", userId);
-        cv.setUserId(UUID.fromString(userId));
+        cv.setUserId(userId);
         return ResponseEntity.ok(cvService.saveCV(cv));
     }
 
@@ -53,7 +53,7 @@ public class CVController {
     public ResponseEntity<CV> updateCV(@PathVariable UUID id, @RequestBody CV cv, @RequestHeader("X-User-Id") String userId) {
         log.info("Updating CV {} for user: {}", id, userId);
         cv.setId(id);
-        cv.setUserId(UUID.fromString(userId));
+        cv.setUserId(userId);
         return ResponseEntity.ok(cvService.saveCV(cv));
     }
 
@@ -71,6 +71,20 @@ public class CVController {
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body("Upload failed: " + e.getMessage());
         }
+    }
+
+    @PostMapping("/{id}/upload-pdf")
+    public ResponseEntity<CV> uploadPDF(@PathVariable UUID id, @RequestParam("file") MultipartFile file) {
+        try {
+            return ResponseEntity.ok(cvService.uploadCVFile(id, file));
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/upload/presigned-url")
+    public ResponseEntity<String> getPresignedUrl(@RequestParam String key, @RequestParam String contentType) {
+        return ResponseEntity.ok(s3Service.generatePresignedUrl(key, contentType));
     }
 
     @GetMapping("/{id}/pdf")
