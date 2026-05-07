@@ -11,7 +11,6 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-
 @Table(name = "companies")
 public class Company {
     @Id
@@ -34,14 +33,11 @@ public class Company {
     private int companySize;
 
     private int foundedYear;
+
     @Enumerated(EnumType.STRING)
     private StatusCompany statusCompany;
+
     private LocalDateTime createdAt;
-
-    @Enumerated(EnumType.STRING)
-    private ApprovalStatus approvalStatus = ApprovalStatus.PENDING;
-
-    private String approvedBy;
 
     @OneToMany(mappedBy = "company", cascade = CascadeType.ALL)
     @JsonManagedReference
@@ -73,131 +69,45 @@ public class Company {
         this.companyId = companyId;
     }
 
-    public String getCompanyId() {
-        return companyId;
-    }
+    public String getCompanyId() { return companyId; }
+    public void setCompanyId(String companyId) { this.companyId = companyId; }
 
-    public void setCompanyId(String companyId) {
-        this.companyId = companyId;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public String getName() {
-        return name;
-    }
+    public String getLogo() { return logo; }
+    public void setLogo(String logo) { this.logo = logo; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public String getTaxCode() { return taxCode; }
+    public void setTaxCode(String taxCode) { this.taxCode = taxCode; }
 
-    public String getLogo() {
-        return logo;
-    }
+    public String getWebsite() { return website; }
+    public void setWebsite(String website) { this.website = website; }
 
-    public void setLogo(String logo) {
-        this.logo = logo;
-    }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public String getTaxCode() {
-        return taxCode;
-    }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 
-    public void setTaxCode(String taxCode) {
-        this.taxCode = taxCode;
-    }
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
 
-    public String getWebsite() {
-        return website;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public void setWebsite(String website) {
-        this.website = website;
-    }
+    public int getCompanySize() { return companySize; }
+    public void setCompanySize(int companySize) { this.companySize = companySize; }
 
-    public String getEmail() {
-        return email;
-    }
+    public int getFoundedYear() { return foundedYear; }
+    public void setFoundedYear(int foundedYear) { this.foundedYear = foundedYear; }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    public StatusCompany getStatusCompany() { return statusCompany; }
+    public void setStatusCompany(StatusCompany statusCompany) { this.statusCompany = statusCompany; }
 
-    public String getPhone() {
-        return phone;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public int getCompanySize() {
-        return companySize;
-    }
-
-    public void setCompanySize(int companySize) {
-        this.companySize = companySize;
-    }
-
-    public int getFoundedYear() {
-        return foundedYear;
-    }
-
-    public void setFoundedYear(int foundedYear) {
-        this.foundedYear = foundedYear;
-    }
-
-    public StatusCompany getStatusCompany() {
-        return statusCompany;
-    }
-
-    public void setStatusCompany(StatusCompany statusCompany) {
-        this.statusCompany = statusCompany;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public List<CompanySubscription> getSubscriptions() {
-        return subscriptions;
-    }
-
-    public void setSubscriptions(List<CompanySubscription> subscriptions) {
-        this.subscriptions = subscriptions;
-    }
-
-    public ApprovalStatus getApprovalStatus() {
-        return approvalStatus;
-    }
-
-    public void setApprovalStatus(ApprovalStatus approvalStatus) {
-        this.approvalStatus = approvalStatus;
-    }
-
-    public String getApprovedBy() {
-        return approvedBy;
-    }
-
-    public void setApprovedBy(String approvedBy) {
-        this.approvedBy = approvedBy;
-    }
+    public List<CompanySubscription> getSubscriptions() { return subscriptions; }
+    public void setSubscriptions(List<CompanySubscription> subscriptions) { this.subscriptions = subscriptions; }
 }

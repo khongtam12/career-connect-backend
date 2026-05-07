@@ -50,6 +50,7 @@ services:
   # ==============================================================
 
   postgres-server:
+    platform: linux/arm64
     image: postgres:16-alpine
     container_name: postgres-server
     environment:
@@ -83,10 +84,10 @@ services:
     container_name: eureka-server
     ports:
       - "8761:8761"
+    environment:
+      JAVA_OPTS: "-Xmx256m -Xms128m"
     networks:
       - career-net
-    environment:
-      - JAVA_TOOL_OPTIONS=-Xmx256m -Xms256m
     deploy:
       resources:
         limits:
@@ -113,13 +114,14 @@ services:
       SPRING_DATASOURCE_PASSWORD: 1234
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
-      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms256m"
+      JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8083:8083"
     deploy:
       resources:
         limits:
-          memory: 400M
+
+          memory: 512M
     depends_on:
       postgres-server:
         condition: service_healthy
@@ -140,13 +142,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: 1234
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
-      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms256m"
+      JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8081:8081"
     deploy:
       resources:
         limits:
-          memory: 400M
+          memory: 512M
     depends_on:
       postgres-server:
         condition: service_healthy
@@ -167,13 +169,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: 1234
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
-      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms256m"
+      JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8082:8082"
     deploy:
       resources:
         limits:
-          memory: 400M
+          memory: 512M
     depends_on:
       postgres-server:
         condition: service_healthy
@@ -196,13 +198,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: 1234
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
-      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms256m"
+      JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8084:8084"
     deploy:
       resources:
         limits:
-          memory: 400M
+          memory: 512M
     depends_on:
       postgres-server:
         condition: service_healthy
@@ -226,13 +228,13 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       FRONTEND_URL: http://localhost:3000
-      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms256m"
+      JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8086:8086"
     deploy:
       resources:
         limits:
-          memory: 400M
+          memory: 512M
     depends_on:
       postgres-server:
         condition: service_healthy
@@ -252,13 +254,13 @@ services:
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
-      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms256m"
+      JAVA_OPTS: "-Xmx256m -Xms128m"
     ports:
       - "8085:8085"
     deploy:
       resources:
         limits:
-          memory: 400M
+          memory: 384M
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -279,13 +281,15 @@ services:
       SPRING_DATASOURCE_PASSWORD: 1234
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
-      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms256m"
+
+      APP_FRONTEND_URL: http://frontend
+      JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8087:8087"
     deploy:
       resources:
         limits:
-          memory: 400M
+          memory: 512M
     depends_on:
       postgres-server:
         condition: service_healthy
@@ -331,13 +335,13 @@ services:
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
-      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms256m"
+      JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8080:8080"
     deploy:
       resources:
         limits:
-          memory: 400M
+          memory: 512M
     depends_on:
       eureka-server:
         condition: service_healthy

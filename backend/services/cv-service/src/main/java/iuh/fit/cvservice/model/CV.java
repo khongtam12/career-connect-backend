@@ -26,8 +26,8 @@ public class CV {
     @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "user_id", columnDefinition = "uuid", nullable = false)
-    private UUID userId;
+    @Column(name = "user_id", nullable = false)
+    private String userId;
 
     private String name;
     private Integer templateId;
@@ -37,6 +37,7 @@ public class CV {
     private CVStatus status;
 
     private LocalDateTime updatedAt;
+    private String fileUrl;
 
     // Personal info fields – kept flat for simplicity
     private String fullName;

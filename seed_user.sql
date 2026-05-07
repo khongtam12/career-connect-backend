@@ -37,10 +37,4 @@ INSERT INTO employers (employer_id, email, password, full_name, phone, avatar, c
 ('EMP020', 'hr20@om.com', '$2a$10$7', 'Emp 20', '0987111020', 'https://avatar.png', NOW(), NOW(), 'ACTIVE', 'Chair', 'COMP020')
 ON CONFLICT (employer_id) DO NOTHING;
 
--- Recruiters
-INSERT INTO recruiters (id, username, email, company_id, role, status, created_at, updated_at) VALUES
-('EMP001', 'emp1', 'hr1@fpt.com', 'COMP001', 'RECRUITER', 'ACTIVE', NOW(), NOW()),
-('EMP002', 'emp2', 'hr2@vng.com', 'COMP002', 'RECRUITER', 'ACTIVE', NOW(), NOW()),
-('EMP003', 'emp3', 'hr3@viettel.vn', 'COMP003', 'RECRUITER', 'ACTIVE', NOW(), NOW()),
-('EMP004', 'emp4', 'hr4@momo.vn', 'COMP004', 'RECRUITER', 'ACTIVE', NOW(), NOW())
-ON CONFLICT (id) DO NOTHING;
+

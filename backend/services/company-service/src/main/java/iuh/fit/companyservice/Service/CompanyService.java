@@ -1,26 +1,23 @@
 package iuh.fit.companyservice.Service;
 
 import iuh.fit.companyservice.client.EmployerClient;
-import iuh.fit.companyservice.dto.request.EmployerCompanyRequest;
-import iuh.fit.companyservice.dto.response.EmployerResponse;
-import iuh.fit.companyservice.model.Company;
-import iuh.fit.companyservice.repository.CompanyRepository;
-import iuh.fit.companyservice.util.IdGenerator;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
-
 import iuh.fit.companyservice.dto.request.CompanyApprovalRequestDTO;
+import iuh.fit.companyservice.dto.request.EmployerCompanyRequest;
 import iuh.fit.companyservice.dto.response.CompanyApprovalResponseDTO;
 import iuh.fit.companyservice.dto.response.CompanyFullDetailDTO;
 import iuh.fit.companyservice.dto.response.CompanyPendingDTO;
-import iuh.fit.companyservice.model.ApprovalStatus;
-import iuh.fit.companyservice.model.CompanyApprovalLog;
-import iuh.fit.companyservice.repository.CompanyApprovalLogRepository;
+import iuh.fit.companyservice.dto.response.EmployerResponse;
+import iuh.fit.companyservice.model.Company;
+import iuh.fit.companyservice.model.CompanyVerification;
+import iuh.fit.companyservice.model.StatusVerification;
+import iuh.fit.companyservice.repository.CompanyRepository;
 import iuh.fit.companyservice.repository.CompanyVerificationRepository;
+import iuh.fit.companyservice.util.IdGenerator;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import java.util.List;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,14 +25,14 @@ public class CompanyService {
     private final CompanyRepository companyRepository;
     private final S3Service s3Service;
     private final EmployerClient employerClient;
-    private final CompanyApprovalLogRepository companyApprovalLogRepository;
     private final CompanyVerificationRepository companyVerificationRepository;
 
-    public CompanyService(CompanyRepository companyRepository, S3Service s3Service, EmployerClient employerClient, CompanyApprovalLogRepository companyApprovalLogRepository, CompanyVerificationRepository companyVerificationRepository) {
+    public CompanyService(CompanyRepository companyRepository, S3Service s3Service,
+                          EmployerClient employerClient,
+                          CompanyVerificationRepository companyVerificationRepository) {
         this.companyRepository = companyRepository;
         this.s3Service = s3Service;
         this.employerClient = employerClient;
-        this.companyApprovalLogRepository = companyApprovalLogRepository;
         this.companyVerificationRepository = companyVerificationRepository;
     }
 
@@ -53,7 +50,8 @@ public class CompanyService {
     }
 
     public CompanyFullDetailDTO getCompanyFullDetail(String id) {
-        Company company = companyRepository.findById(id).orElseThrow(() -> new RuntimeException("Company not found"));
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Company not found"));
 
         CompanyFullDetailDTO dto = new CompanyFullDetailDTO();
         dto.setId(company.getCompanyId());
@@ -69,7 +67,7 @@ public class CompanyService {
         dto.setFoundedYear(company.getFoundedYear());
         dto.setCreatedAt(company.getCreatedAt());
 
-        // Fetch Verification
+        // Lấy thông tin xác minh từ CompanyVerification
         companyVerificationRepository.findByCompanyCompanyId(id).ifPresent(v -> {
             dto.setSubmittedTaxCode(v.getSubmittedTaxCode());
             dto.setBusinessLicense(v.getBusinessLicense());
@@ -92,8 +90,13 @@ public class CompanyService {
         }
     }
 
+    /**
+     * Lấy danh sách công ty có trạng thái xác minh PENDING
+     * (dùng CompanyVerification.status thay vì trường approvalStatus cũ)
+     */
     public Page<CompanyPendingDTO> getPendingCompanies(int page, int size) {
-        Page<Company> companies = companyRepository.findByApprovalStatus(ApprovalStatus.PENDING, PageRequest.of(page, size));
+        Page<Company> companies = companyRepository.findByVerificationStatus(
+                StatusVerification.PENDING, PageRequest.of(page, size));
         return companies.map(company -> {
             CompanyPendingDTO dto = new CompanyPendingDTO();
             dto.setId(company.getCompanyId());
@@ -104,28 +107,36 @@ public class CompanyService {
         });
     }
 
+    /**
+     * Xử lý phê duyệt / từ chối công ty bằng cách cập nhật CompanyVerification.status
+     */
     public CompanyApprovalResponseDTO processApproval(CompanyApprovalRequestDTO request, String adminId) {
         Company company = companyRepository.findById(request.getCompanyId())
                 .orElseThrow(() -> new RuntimeException("Company not found"));
 
-        company.setApprovalStatus(request.getAction());
-        company.setApprovedBy(adminId);
-        companyRepository.save(company);
+        // Tìm bản ghi xác minh hiện có, nếu không có thì tạo mới
+        CompanyVerification verification = companyVerificationRepository
+                .findByCompanyCompanyId(company.getCompanyId())
+                .orElseGet(() -> {
+                    CompanyVerification v = new CompanyVerification();
+                    v.setVerificationId(IdGenerator.generatorIdCompannyVerified());
+                    v.setCompany(company);
+                    v.setSubmittedAt(LocalDateTime.now());
+                    return v;
+                });
 
-        CompanyApprovalLog log = new CompanyApprovalLog();
-        log.setCompanyId(company.getCompanyId());
-        log.setAction(request.getAction());
-        log.setPerformedBy(adminId);
-        log.setTimestamp(LocalDateTime.now());
-        log.setNote(request.getNote());
-        companyApprovalLogRepository.save(log);
+        verification.setStatus(request.getAction());
+        verification.setVerifiedBy(adminId);
+        verification.setVerifiedAt(LocalDateTime.now());
+        verification.setNote(request.getNote());
+        CompanyVerification saved = companyVerificationRepository.save(verification);
 
         CompanyApprovalResponseDTO response = new CompanyApprovalResponseDTO();
         response.setCompanyId(company.getCompanyId());
-        response.setApprovalStatus(company.getApprovalStatus());
-        response.setApprovedBy(company.getApprovedBy());
-        response.setApprovedAt(log.getTimestamp());
-        response.setNote(log.getNote());
+        response.setVerificationStatus(saved.getStatus());
+        response.setVerifiedBy(saved.getVerifiedBy());
+        response.setVerifiedAt(saved.getVerifiedAt());
+        response.setNote(saved.getNote());
 
         return response;
     }

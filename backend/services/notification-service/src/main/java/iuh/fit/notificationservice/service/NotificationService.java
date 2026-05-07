@@ -1,5 +1,6 @@
 package iuh.fit.notificationservice.service;
 
+import iuh.fit.notificationservice.dto.ApplicationNotificationRequest;
 import iuh.fit.notificationservice.dto.SendEmailRequest;
 import iuh.fit.notificationservice.model.Notification;
 import iuh.fit.notificationservice.model.NotificationType;
@@ -7,10 +8,12 @@ import iuh.fit.notificationservice.model.UserType;
 import iuh.fit.notificationservice.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +22,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final EmailService emailService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Async
     public void sendApplicationEmail(SendEmailRequest request) {
@@ -101,5 +105,29 @@ public class NotificationService {
             case "ACCEPTED", "REJECTED" -> NotificationType.APPLICATION_STATUS;
             default -> NotificationType.SYSTEM;
         };
+    }
+
+    public void sendCandidateAppliedNotification(ApplicationNotificationRequest request) {
+        Notification notification = Notification.builder()
+                .userId(request.getCompanyId()) // Lưu companyId vào cột userId
+                .title("Ứng viên mới: " + request.getJobTitle())
+                .message(request.getMessage() != null ? request.getMessage() : "Có ứng viên vừa ứng tuyển")
+                .type(NotificationType.SYSTEM)
+                .userType(UserType.EMPLOYER)
+                .isRead(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+        notification = notificationRepository.save(notification);
+        // Phát sự kiện qua Websocket
+        messagingTemplate.convertAndSend("/topic/company/" + request.getCompanyId() + "/notifications", notification);
+    }
+    public List<Notification> getNotificationsByCompanyId(String companyId) {
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(companyId);
+    }
+    public void markAsRead(String id) {
+        notificationRepository.findById(id).ifPresent(noti -> {
+            noti.setRead(true);
+            notificationRepository.save(noti);
+        });
     }
 }

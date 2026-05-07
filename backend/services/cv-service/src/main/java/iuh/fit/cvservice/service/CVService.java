@@ -15,9 +15,10 @@ import java.util.UUID;
 public class CVService {
 
     private final CVRepository cvRepository;
+    private final S3Service s3Service;
 
     @Transactional(readOnly = true)
-    public List<CV> getCVsByUserId(UUID userId) {
+    public List<CV> getCVsByUserId(String userId) {
         List<CV> cvs = cvRepository.findByUserId(userId);
         cvs.forEach(cv -> {
             cv.getSkills().size();
@@ -52,6 +53,13 @@ public class CVService {
             existingCV.setTemplateId(cv.getTemplateId());
             existingCV.setAvatarUrl(cv.getAvatarUrl());
             existingCV.setStatus(cv.getStatus());
+            
+            // Handle S3 file cleanup if URL changed
+            if (cv.getFileUrl() != null && !cv.getFileUrl().equals(existingCV.getFileUrl())) {
+                s3Service.deleteFile(existingCV.getFileUrl());
+                existingCV.setFileUrl(cv.getFileUrl());
+            }
+            
             existingCV.setUpdatedAt(LocalDateTime.now());
             
             // Personal Info
@@ -109,7 +117,28 @@ public class CVService {
     }
 
     @Transactional
+    public CV uploadCVFile(UUID id, org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
+        CV cv = getCVById(id);
+        
+        // Upload new file
+        String newUrl = s3Service.uploadCVFile(file);
+        
+        // Delete old file if exists
+        if (cv.getFileUrl() != null) {
+            s3Service.deleteFile(cv.getFileUrl());
+        }
+        
+        // Update CV
+        cv.setFileUrl(newUrl);
+        return cvRepository.save(cv);
+    }
+
+    @Transactional
     public void deleteCV(UUID id) {
+        CV cv = getCVById(id);
+        if (cv.getFileUrl() != null) {
+            s3Service.deleteFile(cv.getFileUrl());
+        }
         cvRepository.deleteById(id);
     }
 }
