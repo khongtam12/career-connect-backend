@@ -43,7 +43,7 @@ return "Company service is working";
 }
 
     @GetMapping("/{companyId}")
-    public ResponseEntity<CompanyFullDetailDTO> getCompanyById(@PathVariable String companyId) {
+    public ResponseEntity<CompanyFullDetailDTO> getCompanyById(@PathVariable("companyId") String companyId) {
         return ResponseEntity.ok(companyService.getCompanyFullDetail(companyId));
     };
 
@@ -56,8 +56,8 @@ return "Company service is working";
 
     @GetMapping("/pending-approvals")
     public ResponseEntity<Page<CompanyPendingDTO>> getPendingApprovals(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
         Page<CompanyPendingDTO> result = companyService.getPendingCompanies(page, size);
         return ResponseEntity.ok(result);
     }

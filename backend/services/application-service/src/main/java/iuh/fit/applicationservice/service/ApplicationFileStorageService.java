@@ -17,6 +17,8 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class ApplicationFileStorageService {
@@ -43,7 +45,7 @@ public class ApplicationFileStorageService {
                 : "application/octet-stream";
 
         Map<String, String> metadata = new HashMap<>();
-        metadata.put("original-filename", originalFilename);
+        metadata.put("original-filename", URLEncoder.encode(originalFilename, StandardCharsets.UTF_8));
 
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
@@ -55,6 +57,8 @@ public class ApplicationFileStorageService {
         try (InputStream inputStream = file.getInputStream()) {
             s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, file.getSize()));
         } catch (IOException | S3Exception e) {
+            e.printStackTrace();
+            System.err.println("S3 Upload Failed: " + e.getMessage());
             throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
         }
 
