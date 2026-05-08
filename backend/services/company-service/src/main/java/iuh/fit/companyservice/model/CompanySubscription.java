@@ -52,8 +52,6 @@ public class CompanySubscription {
         this.status = status;
     }
 
-    public CompanySubscription() {
-    }
 
     public String getId() {
         return id;
