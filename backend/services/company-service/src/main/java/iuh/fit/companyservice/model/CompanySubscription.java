@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 
-
 @Table(name = "company_subscriptions")
 public class CompanySubscription {
     @Id
@@ -38,8 +37,8 @@ public class CompanySubscription {
     public CompanySubscription() {
     }
 
-
-    public CompanySubscription(String id, Company company, String packageId, String packageLabel, int jobPostLimit, int jobPostedCount,
+    public CompanySubscription(String id, Company company, String packageId, String packageLabel, int jobPostLimit,
+            int jobPostedCount,
             LocalDateTime startDate, LocalDateTime endDate, StatusPackage status) {
         this.id = id;
         this.company = company;
