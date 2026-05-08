@@ -8,7 +8,7 @@ COPY . .
 RUN mvn -pl services/cv-service -am clean package -DskipTests
 
 # ===== STAGE 2: RUN =====
-FROM mcr.microsoft.com/playwright/java:v1.43.0-jammy
+FROM mcr.microsoft.com/playwright/java:v1.43.0
 
 WORKDIR /app
 
