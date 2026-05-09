@@ -26,11 +26,12 @@ public class EmailService {
 
     // Gui email len lich phong van
     public void sendInterviewScheduleEmail(String toEmail, String candidateName, String jobName,
-                                            String interviewDate, String interviewTime,
-                                            String location, String note) throws MessagingException {
+            String interviewDate, String interviewTime,
+            String location, String note) throws MessagingException {
         String subject = " Lịch phỏng vấn - " + jobName;
         String noteHtml = (note != null && !note.isEmpty())
-                ? "<div style='background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 8px;'><strong style='color: #92400e;'>📝 Ghi chú:</strong><p style='margin: 4px 0 0 0; color: #78350f;'>" + note + "</p></div>"
+                ? "<div style='background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 8px;'><strong style='color: #92400e;'>📝 Ghi chú:</strong><p style='margin: 4px 0 0 0; color: #78350f;'>"
+                        + note + "</p></div>"
                 : "";
 
         String html = """
@@ -56,7 +57,8 @@ public class EmailService {
                         Career Connect Platform — Kết nối cơ hội nghề nghiệp
                     </div>
                 </div>
-                """.formatted(candidateName, jobName, interviewDate, interviewTime, location, noteHtml);
+                """
+                .formatted(candidateName, jobName, interviewDate, interviewTime, location, noteHtml);
 
         sendHtmlEmail(toEmail, subject, html);
     }
@@ -82,16 +84,19 @@ public class EmailService {
                         Career Connect Platform — Kết nối cơ hội nghề nghiệp
                     </div>
                 </div>
-                """.formatted(candidateName, jobName);
+                """
+                .formatted(candidateName, jobName);
 
         sendHtmlEmail(toEmail, subject, html);
     }
 
     // Gui email tu choi
-    public void sendRejectEmail(String toEmail, String candidateName, String jobName, String reason) throws MessagingException {
+    public void sendRejectEmail(String toEmail, String candidateName, String jobName, String reason)
+            throws MessagingException {
         String subject = "Thông báo kết quả ứng tuyển - " + jobName;
         String reasonHtml = (reason != null && !reason.isEmpty())
-                ? "<div style='background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 8px; margin: 12px 0;'><strong style='color: #92400e;'>💡 Phản hồi từ nhà tuyển dụng:</strong><p style='margin: 4px 0 0 0; color: #78350f;'>" + reason + "</p></div>"
+                ? "<div style='background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 8px; margin: 12px 0;'><strong style='color: #92400e;'>💡 Phản hồi từ nhà tuyển dụng:</strong><p style='margin: 4px 0 0 0; color: #78350f;'>"
+                        + reason + "</p></div>"
                 : "";
 
         String html = """
@@ -114,13 +119,15 @@ public class EmailService {
                         Career Connect Platform — Kết nối cơ hội nghề nghiệp
                     </div>
                 </div>
-                """.formatted(candidateName, jobName, reasonHtml);
+                """
+                .formatted(candidateName, jobName, reasonHtml);
 
         sendHtmlEmail(toEmail, subject, html);
     }
 
     // Gui email huy phong van
-    public void sendCancelInterviewEmail(String toEmail, String candidateName, String jobName) throws MessagingException {
+    public void sendCancelInterviewEmail(String toEmail, String candidateName, String jobName)
+            throws MessagingException {
         String subject = "Thông báo hủy phỏng vấn - " + jobName;
         String html = """
                 <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
@@ -140,7 +147,43 @@ public class EmailService {
                         Career Connect Platform — Kết nối cơ hội nghề nghiệp
                     </div>
                 </div>
-                """.formatted(candidateName, jobName);
+                """
+                .formatted(candidateName, jobName);
+
+        sendHtmlEmail(toEmail, subject, html);
+    }
+
+    // Gửi email xác nhận thanh toán gói dịch vụ thành công
+    public void sendPaymentSuccessEmail(String toEmail, String packageName, Double amount, int durationDays)
+            throws MessagingException {
+        String subject = "💳 Xác nhận thanh toán thành công - " + packageName;
+        String html = """
+                <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #4f46e5, #6366f1); padding: 24px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 22px;">Thanh toán thành công</h1>
+                    </div>
+                    <div style="padding: 24px;">
+                        <p style="font-size: 16px; color: #374151;">Xin chào,</p>
+                        <p style="font-size: 15px; color: #4b5563;">Giao dịch nâng cấp gói dịch vụ của bạn đã được xử lý thành công.</p>
+                        <div style="background: #f5f3ff; border-left: 4px solid #6366f1; padding: 16px; margin: 16px 0; border-radius: 8px;">
+                            <table style="width: 100%%; border-collapse: collapse;">
+                                <tr><td style="padding: 4px 0; color: #6b7280;">Gói dịch vụ:</td><td style="font-weight: bold; color: #111827;">%s</td></tr>
+                                <tr><td style="padding: 4px 0; color: #6b7280;">Số tiền:</td><td style="font-weight: bold; color: #059669;">%,.0f VNĐ</td></tr>
+                                <tr><td style="padding: 4px 0; color: #6b7280;">Thời hạn:</td><td style="font-weight: bold; color: #111827;">%d ngày</td></tr>
+                            </table>
+                        </div>
+                        <p style="font-size: 15px; color: #4b5563;">Bạn hiện đã có thể sử dụng các tính năng ưu việt của gói dịch vụ này để tối ưu hóa việc tuyển dụng.</p>
+                        <div style="text-align: center; margin-top: 24px;">
+                            <a href="http://localhost:5173/employer/jobs" style="background: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Đăng tin ngay</a>
+                        </div>
+                        <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">Cảm ơn bạn đã tin dùng Career Connect Platform!</p>
+                    </div>
+                    <div style="background: #f9fafb; padding: 16px; text-align: center; font-size: 12px; color: #9ca3af;">
+                        Career Connect Platform — Nâng tầm thương hiệu tuyển dụng
+                    </div>
+                </div>
+                """
+                .formatted(packageName, amount, durationDays);
 
         sendHtmlEmail(toEmail, subject, html);
     }

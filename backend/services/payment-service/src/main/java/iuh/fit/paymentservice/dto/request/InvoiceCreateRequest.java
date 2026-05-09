@@ -2,13 +2,12 @@ package iuh.fit.paymentservice.dto.request;
 
 import iuh.fit.paymentservice.model.Method;
 import lombok.Data;
-import lombok.Getter;
 
-import java.util.List;
+
 @Data
-@Getter
 public class InvoiceCreateRequest {
     private String employerId;
+    private String employerEmail;
     private Method paymentMethod;
     private Long amount;
     private String companyId;

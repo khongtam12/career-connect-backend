@@ -29,8 +29,8 @@ public class CompanyService {
     private final CompanyVerificationRepository companyVerificationRepository;
 
     public CompanyService(CompanyRepository companyRepository, S3Service s3Service,
-                          EmployerClient employerClient,
-                          CompanyVerificationRepository companyVerificationRepository) {
+            EmployerClient employerClient,
+            CompanyVerificationRepository companyVerificationRepository) {
         this.companyRepository = companyRepository;
         this.s3Service = s3Service;
         this.employerClient = employerClient;
@@ -109,7 +109,8 @@ public class CompanyService {
     }
 
     /**
-     * Xử lý phê duyệt / từ chối công ty bằng cách cập nhật CompanyVerification.status
+     * Xử lý phê duyệt / từ chối công ty bằng cách cập nhật
+     * CompanyVerification.status
      */
     public CompanyApprovalResponseDTO processApproval(CompanyApprovalRequestDTO request, String adminId) {
         Company company = companyRepository.findById(request.getCompanyId())
