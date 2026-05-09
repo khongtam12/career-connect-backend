@@ -64,7 +64,7 @@ public class JobController {
     @PutMapping("/employer/{jobId}")
     public ResponseEntity<?> updateJob(
             @RequestHeader("X-User-Id") String employerId,
-            @PathVariable String jobId,
+            @PathVariable("jobId") String jobId,
             @RequestBody UpdateJobRequest request
     ) {
         try {
@@ -83,7 +83,7 @@ public class JobController {
     @DeleteMapping("/employer/{jobId}")
     public ResponseEntity<?> deleteJob(
             @RequestHeader("X-User-Id") String employerId,
-            @PathVariable String jobId
+            @PathVariable("jobId") String jobId
     ) {
         try {
             jobService.deleteJob(employerId, jobId);
@@ -101,10 +101,10 @@ public class JobController {
     @GetMapping("/employer/my-jobs")
     public ResponseEntity<?> getMyJobs(
             @RequestHeader("X-User-Id") String employerId,
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false, defaultValue = "all") String status,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "status", required = false, defaultValue = "all") String status,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
     ) {
         PageResponse<JobResponse> response = jobService.getMyJobs(employerId, search, status, page, size);
         return ResponseEntity.ok(response);
@@ -121,8 +121,8 @@ public class JobController {
     @PutMapping("/employer/{jobId}/status")
     public ResponseEntity<?> employerChangeStatus(
             @RequestHeader("X-User-Id") String employerId,
-            @PathVariable String jobId,
-            @RequestParam String status
+            @PathVariable("jobId") String jobId,
+            @RequestParam("status") String status
     ) {
         try {
             JobResponse response = jobService.employerChangeStatus(employerId, jobId, status);
@@ -138,8 +138,8 @@ public class JobController {
     @PutMapping("/admin/{jobId}/status")
     public ResponseEntity<?> adminChangeStatus(
             @RequestHeader("X-Admin-Id") String adminId,
-            @PathVariable String jobId,
-            @RequestParam String status
+            @PathVariable("jobId") String jobId,
+            @RequestParam("status") String status
     ) {
         try {
             JobResponse response = jobService.adminChangeStatus(adminId, jobId, status);
@@ -152,7 +152,7 @@ public class JobController {
     @DeleteMapping("/admin/{jobId}")
     public ResponseEntity<?> adminDeleteJob(
             @RequestHeader("X-Admin-Id") String adminId,
-            @PathVariable String jobId
+            @PathVariable("jobId") String jobId
     ) {
         try {
             jobService.adminDeleteJob(adminId, jobId);
@@ -164,9 +164,8 @@ public class JobController {
 
     // ===== PUBLIC =====
 
-    // xem chi tiết
     @GetMapping("/{jobId}")
-    public ResponseEntity<?> getJobById(@PathVariable String jobId) {
+    public ResponseEntity<?> getJobById(@PathVariable("jobId") String jobId) {
         try {
             JobDetailResponse response = jobService.getJobDetail(jobId);
             return ResponseEntity.ok(response);
@@ -179,21 +178,21 @@ public class JobController {
     // search public
     @GetMapping("/search")
     public ResponseEntity<?> searchJobs(
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String industry,
-            @RequestParam(required = false) String industryId,
-            @RequestParam(required = false) String jobType,
-            @RequestParam(required = false) String location,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) Integer experienceMin,
-            @RequestParam(required = false) Integer experienceMax,
-            @RequestParam(required = false) Double salaryMin,
-            @RequestParam(required = false) Double salaryMax,
-            @RequestParam(required = false) String sortBy,
-            @RequestParam(required = false) String sortDir,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "industry", required = false) String industry,
+            @RequestParam(value = "industryId", required = false) String industryId,
+            @RequestParam(value = "jobType", required = false) String jobType,
+            @RequestParam(value = "location", required = false) String location,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "experienceMin", required = false) Integer experienceMin,
+            @RequestParam(value = "experienceMax", required = false) Integer experienceMax,
+            @RequestParam(value = "salaryMin", required = false) Double salaryMin,
+            @RequestParam(value = "salaryMax", required = false) Double salaryMax,
+            @RequestParam(value = "sortBy", required = false) String sortBy,
+            @RequestParam(value = "sortDir", required = false) String sortDir,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
     ) {
         String resolvedKeyword = keyword != null ? keyword : search;
         String resolvedIndustry = industryId != null ? industryId : industry;
@@ -217,10 +216,10 @@ public class JobController {
     }
 
     @GetMapping("/admin/filter")
-    public ResponseEntity<?> getAllAdminJobs( @RequestParam(required = false) String search,
-                                              @RequestParam(required = false) String status,
-                                              @RequestParam(defaultValue = "1") int page,
-                                              @RequestParam(defaultValue = "10") int size) {
+    public ResponseEntity<?> getAllAdminJobs( @RequestParam(value = "search", required = false) String search,
+                                              @RequestParam(value = "status", required = false) String status,
+                                              @RequestParam(value = "page", defaultValue = "1") int page,
+                                              @RequestParam(value = "size", defaultValue = "10") int size) {
         PageResponse<JobAdminResponse> response =
                 jobService.getAllJobByAdmin(search, status, page, size);
 
@@ -229,7 +228,7 @@ public class JobController {
     @DeleteMapping("/admin/jobs/{jobId}")
     public ResponseEntity<?> deleteJobByAdmin(
                                               @RequestHeader("adminId") String adminId,
-                                              @PathVariable String jobId
+                                              @PathVariable("jobId") String jobId
                                                 )
     {
         jobService.adminDeleteJob(adminId, jobId);

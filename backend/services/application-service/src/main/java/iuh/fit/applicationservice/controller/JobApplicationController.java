@@ -70,7 +70,7 @@ public class JobApplicationController {
     // len lich phong van
     @PutMapping("/{applicationId}/schedule-interview")
     public ApiResponse<JobApplicationResponse> scheduleInterview(
-            @PathVariable String applicationId,
+            @PathVariable("applicationId") String applicationId,
             @RequestBody ScheduleInterviewRequest request) {
 
         JobApplicationResponse res =
@@ -82,7 +82,7 @@ public class JobApplicationController {
     // huy phong van
     @PutMapping("/{applicationId}/cancel-interview")
     public ApiResponse<JobApplicationResponse> cancelInterview(
-            @PathVariable String applicationId) {
+            @PathVariable("applicationId") String applicationId) {
 
         JobApplicationResponse res =
                 jobApplicationService.cancelInterview(applicationId);
@@ -93,7 +93,7 @@ public class JobApplicationController {
     // cap nhat trang thai
     @PutMapping("/{applicationId}/status")
     public ApiResponse<JobApplicationResponse> updateStatus(
-            @PathVariable String applicationId,
+            @PathVariable("applicationId") String applicationId,
             @RequestBody UpdateStatusRequest request) {
 
         JobApplicationResponse res =
@@ -105,7 +105,7 @@ public class JobApplicationController {
     // tu choi ho so
     @PutMapping("/{applicationId}/reject")
     public ApiResponse<JobApplicationResponse> rejectApplication(
-            @PathVariable String applicationId,
+            @PathVariable("applicationId") String applicationId,
             @RequestBody UpdateStatusRequest request) {
 
         JobApplicationResponse res =
