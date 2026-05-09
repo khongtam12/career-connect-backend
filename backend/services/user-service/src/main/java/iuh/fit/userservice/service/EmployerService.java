@@ -96,7 +96,12 @@ public class EmployerService {
 
         // Map kết quả
         List<EmployerResponseDTO> content = employers.stream()
-                .map(e -> employerMapper.toDto(e, companyNameMap.getOrDefault(e.getCompanyId(), "N/A")))
+                .map(e -> employerMapper.toDto(
+                        e,
+                        Optional.ofNullable(e.getCompanyId())
+                                .map(id -> companyNameMap.getOrDefault(id, "N/A"))
+                                .orElse("N/A")
+                ))
                 .collect(Collectors.toList());
 
         return new EmployerPageDTO(

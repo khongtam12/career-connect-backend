@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
 @Entity
 @Table(name = "payments")
 @Getter
@@ -18,6 +19,7 @@ public class Payment {
     private String paymentId;
 
     private String companyId;
+    private String employerEmail;
 
     @ManyToOne
     @JoinColumn(name = "packageId")

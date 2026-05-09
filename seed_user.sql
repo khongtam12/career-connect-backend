@@ -1,16 +1,16 @@
 -- Admins
 INSERT INTO admins (admin_id, email, password, full_name, phone, avatar, created_at, updated_at, status) VALUES
-('ADM001', 'admin@cc.com', '$2a$10$X87SxD1h8lshh8.92SxD1.Lh.v8.Lh.v8.Lh.v8.Lh.v8.Lh.v8', 'Admin 1', '0123456789', 'https://avatar.png', NOW(), NOW(), 'ACTIVE'),
-('ADM002', 'mod@cc.com', '$2a$10$X87SxD1h8lshh8.92SxD1.Lh.v8.Lh.v8.Lh.v8.Lh.v8.Lh.v8', 'Admin 2', '0123456788', 'https://avatar.png', NOW(), NOW(), 'ACTIVE')
+('ADM001', 'admin@cc.com', '$2a$10$X87SxD1h8lshh8.92SxD1.Lh.v8.Lh.v8.Lh.v8.Lh.v8.Lh.v8', 'Admin 1', '0123456789', 'https://media-cdn-v2.laodong.vn/Storage/NewsPortal/2022/12/18/1128512/HOA-HAU-VIET-NAM-2.jpg', NOW(), NOW(), 'ACTIVE'),
+('ADM002', 'mod@cc.com', '$2a$10$X87SxD1h8lshh8.92SxD1.Lh.v8.Lh.v8.Lh.v8.Lh.v8.Lh.v8', 'Admin 2', '0123456788', 'https://tse4.mm.bing.net/th/id/OIP.I4Fkok-Va855c7MeGMjfQwHaLH?rs=1&pid=ImgDetMain&o=7&rm=3', NOW(), NOW(), 'ACTIVE')
 ON CONFLICT (admin_id) DO NOTHING;
 
 -- Candidates
 INSERT INTO candidates (candidate_id, email, password, full_name, phone, avatar, created_at, updated_at, status, date_of_birth, address, experience_year, current_job_title, expected_salary) VALUES
-('CAND001', 'cand1@gmail.com', '$2a$10$7', 'Nguyen Van A', '0912345671', 'https://avatar.png', NOW(), NOW(), 'ACTIVE', '1995-01-01', 'HN', 3, 'Java Dev', 1500),
-('CAND002', 'cand2@gmail.com', '$2a$10$7', 'Le Thi B', '0912345672', 'https://avatar.png', NOW(), NOW(), 'ACTIVE', '1998-01-01', 'HCM', 1, 'Web Dev', 1000),
-('CAND003', 'cand3@gmail.com', '$2a$10$7', 'Tran Van C', '0912345673', 'https://avatar.png', NOW(), NOW(), 'ACTIVE', '1992-01-01', 'DN', 7, 'PM', 2500),
-('CAND004', 'cand4@gmail.com', '$2a$10$7', 'Pham Thi D', '0912345674', 'https://avatar.png', NOW(), NOW(), 'ACTIVE', '2000-01-01', 'HN', 0, 'Analyst', 500),
-('CAND005', 'cand5@gmail.com', '$2a$10$7', 'Hoang Van E', '0912345675', 'https://avatar.png', NOW(), NOW(), 'ACTIVE', '1996-01-01', 'HCM', 4, 'Designer', 1800)
+('CAND001', 'cand1@gmail.com', '$2a$10$7', 'Nguyen Van A', '0912345671', 'https://tse4.mm.bing.net/th/id/OIP.I4Fkok-Va855c7MeGMjfQwHaLH?rs=1&pid=ImgDetMain&o=7&rm=3', NOW(), NOW(), 'ACTIVE', '1995-01-01', 'HN', 3, 'Java Dev', 1500),
+('CAND002', 'cand2@gmail.com', '$2a$10$7', 'Le Thi B', '0912345672', 'https://khoinguonsangtao.vn/wp-content/uploads/2022/09/hinh-anh-gai-xinh-viet-nam.jpg', NOW(), NOW(), 'ACTIVE', '1998-01-01', 'HCM', 1, 'Web Dev', 1000),
+('CAND003', 'cand3@gmail.com', '$2a$10$7', 'Tran Van C', '0912345673', 'https://tse4.mm.bing.net/th/id/OIP.r-9toORel9f3Z9ruF4IpCAHaJj?rs=1&pid=ImgDetMain&o=7&rm=3', NOW(), NOW(), 'ACTIVE', '1992-01-01', 'DN', 7, 'PM', 2500),
+('CAND004', 'cand4@gmail.com', '$2a$10$7', 'Pham Thi D', '0912345674', 'https://tse4.mm.bing.net/th/id/OIP.r-9toORel9f3Z9ruF4IpCAHaJj?rs=1&pid=ImgDetMain&o=7&rm=3', NOW(), NOW(), 'ACTIVE', '2000-01-01', 'HN', 0, 'Analyst', 500),
+('CAND005', 'cand5@gmail.com', '$2a$10$7', 'Hoang Van E', '0912345675', 'https://tse4.mm.bing.net/th/id/OIP.r-9toORel9f3Z9ruF4IpCAHaJj?rs=1&pid=ImgDetMain&o=7&rm=3', NOW(), NOW(), 'ACTIVE', '1996-01-01', 'HCM', 4, 'Designer', 1800)
 ON CONFLICT (candidate_id) DO NOTHING;
 
 -- Employers

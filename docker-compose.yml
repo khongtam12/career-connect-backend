@@ -42,6 +42,67 @@ services:
       timeout: 5s
       retries: 5
 
+
+
+# ==============================================================
+# KAFKA + ZOOKEEPER
+# ==============================================================
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - career-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+
+    depends_on:
+      - zookeeper
+
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+    networks:
+      - career-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1" ]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+
+
   # ==============================================================
   # 1. DATABASES (PostgreSQL × 6)
   # ==============================================================
@@ -50,7 +111,6 @@ services:
   # ==============================================================
 
   postgres-server:
-    platform: linux/arm64
     image: postgres:16-alpine
     container_name: postgres-server
     environment:
@@ -60,7 +120,7 @@ services:
       - postgres-data-main:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     ports:
-      - "5432:5432"
+      - "5434:5432"
     networks:
       - career-net
     deploy:
