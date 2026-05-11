@@ -258,6 +258,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: 1234
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      AI_MATCHING_SERVICE_URL: http://ai-service:8090
       JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8084:8084"
@@ -270,6 +271,23 @@ services:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  ai-service:
+    build:
+      context: ./backend
+      dockerfile: services/ai-service/Dockerfile
+    container_name: ai-service
+    environment:
+      EMBEDDING_MODEL_NAME: sentence-transformers/all-MiniLM-L6-v2
+    ports:
+      - "8090:8090"
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
     networks:
       - career-net
     restart: on-failure

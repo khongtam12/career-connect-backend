@@ -59,10 +59,11 @@ public class JobApplicationController {
 
     @GetMapping("/employer/candidates")
     public ApiResponse<List<CandidateApplicationResponse>> getCandidatesForEmployer(
-            @RequestHeader("X-User-Id") String employerId) {
+            @RequestHeader("X-User-Id") String employerId,
+            @RequestParam(value = "jobId", required = false) String jobId) {
 
         List<CandidateApplicationResponse> res =
-                jobApplicationService.getCandidatesByEmployer(employerId);
+                jobApplicationService.getCandidatesByEmployer(employerId, jobId);
 
         return new ApiResponse<>(200, "Get candidate applications success", res);
     }
