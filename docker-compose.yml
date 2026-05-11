@@ -226,7 +226,8 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/job-service
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: doyouam123
+      SPRING_DATASOURCE_PASSWORD: 1234
+      REDIS_HOST: redis
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       JAVA_OPTS: "-Xmx384m -Xms256m"
