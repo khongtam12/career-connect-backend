@@ -19,7 +19,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Cho phép kết nối từ mọi origin, sử dụng SockJS cho frontend
-        registry.addEndpoint("/ws-notifications").setAllowedOriginPatterns("*").withSockJS();
+        registry.addEndpoint("/api/v1/notifications/ws").setAllowedOriginPatterns("*").withSockJS();
     }
 }
