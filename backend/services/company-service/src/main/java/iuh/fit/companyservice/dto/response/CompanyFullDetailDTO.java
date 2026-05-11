@@ -23,4 +23,5 @@ public class CompanyFullDetailDTO {
     private String businessLicense;
     private String verificationNote;
     private String verificationStatus;
+    private String statusCompany;
 }
