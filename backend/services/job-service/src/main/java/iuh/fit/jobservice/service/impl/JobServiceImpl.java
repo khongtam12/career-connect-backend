@@ -23,6 +23,11 @@ import iuh.fit.jobservice.service.JobService;
 import iuh.fit.jobservice.service.JobStatusTransition;
 import iuh.fit.jobservice.service.JobStatusTransition.Role;
 import iuh.fit.jobservice.specification.JobSpecifications;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -44,9 +49,24 @@ import java.util.UUID;
 @Service
 public class JobServiceImpl implements JobService {
 
+	private static final Logger log = LoggerFactory.getLogger(JobServiceImpl.class);
+	private static final String JOB_SEARCH_CACHE = "job-search";
+
 	private final JobRepository jobRepository;
 	private final IndustryRepository industryRepository;
 	private final CompanyServiceClient companyServiceClient;
+	private final CacheManager cacheManager;
+
+	public JobServiceImpl(
+			JobRepository jobRepository,
+			IndustryRepository industryRepository,
+			CompanyServiceClient companyServiceClient,
+			CacheManager cacheManager
+	) {
+		this.jobRepository = jobRepository;
+		this.industryRepository = industryRepository;
+		this.companyServiceClient = companyServiceClient;
+		this.cacheManager = cacheManager;
 	private final UserServiceClient userServiceClient;
 
 	public JobServiceImpl(JobRepository jobRepository, IndustryRepository industryRepository, CompanyServiceClient companyServiceClient, UserServiceClient userServiceClient) {
@@ -58,12 +78,31 @@ public class JobServiceImpl implements JobService {
 
 	@Override
 	@Transactional
+	public void incrementApplications(String jobId) {
+		if (jobId == null || jobId.isBlank()) {
+			throw new IllegalArgumentException("jobId is required");
+		}
+		int updated = jobRepository.incrementApplications(jobId);
+		if (updated == 0) {
+			throw new RuntimeException("Job not found");
+		}
+	}
+
+	@Override
+	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
 	public JobResponse createJob(String employerId, CreateJobRequest request) {
 		validateEmployerId(employerId);
-		validateCreateRequest(request);
+
+		// Kiểm tra công ty đã được phê duyệt chưa
+		String companyIdForCheck = fetchCompanyIdByEmployerId(employerId);
+		CompanyDTO company = companyServiceClient.getCompanyById(companyIdForCheck);
+		if (company == null || !"VERIFIED".equalsIgnoreCase(company.getStatusCompany())) {
+			throw new RuntimeException("Công ty của bạn chưa được phê duyệt. Vui lòng chờ admin xác minh công ty trước khi đăng tin tuyển dụng.");
+		}
 
 		LocalDateTime now = LocalDateTime.now();
-		String companyId = fetchCompanyIdByEmployerId(employerId);
+		String companyId = companyIdForCheck;
 		CompanySubscriptionDTO subscription = null;
 
 		if (!request.isSaveAsDraft()) {
@@ -131,6 +170,7 @@ public class JobServiceImpl implements JobService {
 
 	@Override
 	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
 	public JobResponse updateJob(String employerId, String jobId, UpdateJobRequest request) {
 		validateEmployerId(employerId);
 		Job job = getJobOrThrow(jobId);
@@ -220,6 +260,7 @@ public class JobServiceImpl implements JobService {
 
 	@Override
 	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
 	public void deleteJob(String employerId, String jobId) {
 		validateEmployerId(employerId);
 		Job job = getJobOrThrow(jobId);
@@ -273,6 +314,7 @@ public class JobServiceImpl implements JobService {
 	// ── EMPLOYER: chuyển trạng thái ──────────────────────────────────────────────
 	@Override
 	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
 	public JobResponse employerChangeStatus(String employerId, String jobId, String newStatus) {
 		validateEmployerId(employerId);
 		Job job = getJobOrThrow(jobId);
@@ -289,6 +331,7 @@ public class JobServiceImpl implements JobService {
 	// ── ADMIN: duyệt / từ chối ────────────────────────────────────────────────
 	@Override
 	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
 	public JobResponse adminChangeStatus(String adminId, String jobId, String newStatus) {
 		if (adminId == null || adminId.isBlank()) {
 			throw new JobStatusException("Admin id is required");
@@ -361,6 +404,8 @@ public class JobServiceImpl implements JobService {
 	@Override
 	@Transactional
 	public JobDetailResponse getJobDetail(String jobId) {
+		// Tăng lượt xem trước, sau đó đọc lại để lấy số lượt xem mới
+		jobRepository.incrementViews(jobId);
 		Job job = jobRepository.findById(jobId)
 				.orElseThrow(() -> new RuntimeException("Không tìm thấy công việc: " + jobId));
 		IndustryDTO industryDTO = null;
@@ -408,6 +453,36 @@ public class JobServiceImpl implements JobService {
 			int page,
 			int size
 	) {
+		String cacheKey = buildSearchCacheKey(
+				keyword,
+				industryId,
+				jobType,
+				location,
+				status,
+				experienceMin,
+				experienceMax,
+				salaryMin,
+				salaryMax,
+				sortBy,
+				sortDir,
+				page,
+				size
+		);
+
+		Cache cache = cacheManager.getCache(JOB_SEARCH_CACHE);
+		if (cache != null) {
+			Cache.ValueWrapper wrapper = cache.get(cacheKey);
+			if (wrapper != null) {
+				Object cached = wrapper.get();
+				if (cached instanceof PageResponse) {
+					log.info("Job search cache HIT: key={}", cacheKey);
+					@SuppressWarnings("unchecked")
+					PageResponse<JobResponse> cachedResponse = (PageResponse<JobResponse>) cached;
+					return cachedResponse;
+				}
+			}
+		}
+
 		Pageable pageable = PageRequest.of(
 				safePage(page),
 				safeSize(size),
@@ -445,13 +520,20 @@ public class JobServiceImpl implements JobService {
 
 		Page<Job> jobsPage = jobRepository.findAll(spec, pageable);
 
-		return PageResponse.<JobResponse>builder()
+		PageResponse<JobResponse> response = PageResponse.<JobResponse>builder()
 				.content(jobsPage.getContent().stream().map(JobMapper::toResponse).toList())
 				.page(jobsPage.getNumber() + 1)
 				.size(jobsPage.getSize())
 				.totalElements(jobsPage.getTotalElements())
 				.totalPages(jobsPage.getTotalPages())
 				.build();
+
+		if (cache != null) {
+			cache.put(cacheKey, response);
+			log.info("Job search cache MISS: key={}", cacheKey);
+		}
+
+		return response;
 	}
 
 	private Job getJobOrThrow(String jobId) {
@@ -471,17 +553,6 @@ public class JobServiceImpl implements JobService {
 		}
 	}
 
-	private void validateCreateRequest(CreateJobRequest request) {
-		if (request == null) {
-			throw new RuntimeException("Request body is required");
-		}
-		if (request.getTitle() == null || request.getTitle().isBlank()) {
-			throw new RuntimeException("Title is required");
-		}
-		if (request.getJobType() == null || request.getJobType().isBlank()) {
-			throw new RuntimeException("Job type is required");
-		}
-	}
 
 	private StatusJob parseStatus(String status) {
 		if (status == null || status.isBlank()) {
@@ -562,8 +633,7 @@ public class JobServiceImpl implements JobService {
 	}
 
 	private String normalizeForQuery(String value) {
-		String normalized = normalize(value);
-		return normalized == null ? null : normalized;
+		return normalize(value);
 	}
 
 	private String fetchCompanyIdByEmployerId(String employerId) {
@@ -605,12 +675,7 @@ public class JobServiceImpl implements JobService {
 	}
 
 
-	private String normalizeJobTypeFilter(String jobType) {
-		if (jobType == null || jobType.isBlank()) {
-			return null;
-		}
-		return parseJobType(jobType).name();
-	}
+
 
 	private int safePage(int page) {
 		return Math.max(page, 1) - 1;
@@ -711,6 +776,7 @@ public class JobServiceImpl implements JobService {
 	}
 	@Override
 	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
 	public void adminDeleteJob(String adminId, String jobId) {
 		if (adminId == null || adminId.isBlank()) {
 			throw new RuntimeException("Admin id is required");
@@ -728,6 +794,42 @@ public class JobServiceImpl implements JobService {
 		job.setUpdatedAt(LocalDateTime.now());
 
 		jobRepository.save(job);
+	}
+
+	public String buildSearchCacheKey(
+			String keyword,
+			String industryId,
+			String jobType,
+			String location,
+			String status,
+			Integer experienceMin,
+			Integer experienceMax,
+			Double salaryMin,
+			Double salaryMax,
+			String sortBy,
+			String sortDir,
+			int page,
+			int size
+	) {
+		StringBuilder key = new StringBuilder();
+		key.append("keyword=").append(normalizeForKey(keyword))
+				.append("|industryId=").append(normalizeForKey(industryId))
+				.append("|jobType=").append(normalizeForKey(jobType))
+				.append("|location=").append(normalizeForKey(location))
+				.append("|status=").append(normalizeForKey(status))
+				.append("|experienceMin=").append(experienceMin != null ? experienceMin : "")
+				.append("|experienceMax=").append(experienceMax != null ? experienceMax : "")
+				.append("|salaryMin=").append(salaryMin != null ? salaryMin : "")
+				.append("|salaryMax=").append(salaryMax != null ? salaryMax : "")
+				.append("|sortBy=").append(normalizeForKey(sortBy))
+				.append("|sortDir=").append(normalizeForKey(sortDir))
+				.append("|page=").append(page)
+				.append("|size=").append(size);
+		return key.toString();
+	}
+
+	private String normalizeForKey(String value) {
+		return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
 	}
 
 

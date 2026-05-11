@@ -98,9 +98,7 @@ public class PaymentController {
                 payment.setPaidAt(LocalDateTime.now());
                 paymentService.save(payment);
 
-                String email = (payment.getEmployerEmail() != null) ? payment.getEmployerEmail()
-                        : "unknown@company.com";
-
+                String email = payment.getEmployerEmail();
                 PaymentSuccessEvent event = PaymentSuccessEvent.builder()
                         .paymentId(payment.getPaymentId())
                         .companyId(payment.getCompanyId())
@@ -115,6 +113,7 @@ public class PaymentController {
                         .durationDays(payment.getDurationDays())
                         .paidAt(LocalDateTime.now())
                         .build();
+                System.out.println(event.getEmployerEmail());
                 log.info("Bootstrap: {}", bootstrapServers);
                 kafkaTemplate.send("payment-success", event);
                 return redirectToFrontend("success");

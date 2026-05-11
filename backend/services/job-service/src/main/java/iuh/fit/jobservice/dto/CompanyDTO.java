@@ -19,4 +19,5 @@ public class CompanyDTO {
     private String description;
     private int companySize;
     private int foundedYear;
+    private String statusCompany;
 }

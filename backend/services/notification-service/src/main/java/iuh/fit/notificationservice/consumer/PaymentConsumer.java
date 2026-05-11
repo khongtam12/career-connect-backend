@@ -20,6 +20,7 @@ public class PaymentConsumer {
     public void handlePaymentSuccess(PaymentSuccessEvent event) {
         log.info("📧 Nhận sự kiện thanh toán thành công để gửi mail: {}", event.getPaymentId());
         try {
+            System.out.println(event.getEmployerEmail());
             emailService.sendPaymentSuccessEmail(
                     event.getEmployerEmail(),
                     event.getPackageName(),

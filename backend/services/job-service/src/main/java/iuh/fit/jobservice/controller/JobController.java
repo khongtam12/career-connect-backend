@@ -50,14 +50,8 @@ public class JobController {
             @RequestHeader("X-User-Id") String employerId,
             @RequestBody CreateJobRequest request
     ) {
-        try {
-            JobResponse response = jobService.createJob(employerId, request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (Exception e) {
-            log.error("[createJob] employerId={} error={}", employerId, e.getMessage(), e);
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
-        }
+        JobResponse response = jobService.createJob(employerId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     // cập nhật tin
@@ -67,16 +61,8 @@ public class JobController {
             @PathVariable("jobId") String jobId,
             @RequestBody UpdateJobRequest request
     ) {
-        try {
-            JobResponse response = jobService.updateJob(employerId, jobId, request);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("not authorized"))
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
-            if (e.getMessage().contains("not found"))
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+        JobResponse response = jobService.updateJob(employerId, jobId, request);
+        return ResponseEntity.ok(response);
     }
 
     // xóa tin
@@ -85,16 +71,8 @@ public class JobController {
             @RequestHeader("X-User-Id") String employerId,
             @PathVariable("jobId") String jobId
     ) {
-        try {
-            jobService.deleteJob(employerId, jobId);
-            return ResponseEntity.ok(Map.of("message", "Job deleted successfully"));
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("not authorized"))
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
-            if (e.getMessage().contains("not found"))
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+        jobService.deleteJob(employerId, jobId);
+        return ResponseEntity.ok(Map.of("message", "Job deleted successfully"));
     }
 
     // danh sách tin của employer
@@ -124,14 +102,8 @@ public class JobController {
             @PathVariable("jobId") String jobId,
             @RequestParam("status") String status
     ) {
-        try {
-            JobResponse response = jobService.employerChangeStatus(employerId, jobId, status);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("not authorized"))
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+        JobResponse response = jobService.employerChangeStatus(employerId, jobId, status);
+        return ResponseEntity.ok(response);
     }
 
     // ===== ADMIN =====
@@ -141,12 +113,8 @@ public class JobController {
             @PathVariable("jobId") String jobId,
             @RequestParam("status") String status
     ) {
-        try {
-            JobResponse response = jobService.adminChangeStatus(adminId, jobId, status);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+        JobResponse response = jobService.adminChangeStatus(adminId, jobId, status);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/admin/{jobId}")
@@ -154,25 +122,22 @@ public class JobController {
             @RequestHeader("X-Admin-Id") String adminId,
             @PathVariable("jobId") String jobId
     ) {
-        try {
-            jobService.adminDeleteJob(adminId, jobId);
-            return ResponseEntity.ok(Map.of("message", "Job deleted successfully"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+        jobService.adminDeleteJob(adminId, jobId);
+        return ResponseEntity.ok(Map.of("message", "Job deleted successfully"));
     }
 
     // ===== PUBLIC =====
 
     @GetMapping("/{jobId}")
     public ResponseEntity<?> getJobById(@PathVariable("jobId") String jobId) {
-        try {
-            JobDetailResponse response = jobService.getJobDetail(jobId);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", e.getMessage()));
-        }
+        JobDetailResponse response = jobService.getJobDetail(jobId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{jobId}/applications/increment")
+    public ResponseEntity<?> incrementApplications(@PathVariable("jobId") String jobId) {
+        jobService.incrementApplications(jobId);
+        return ResponseEntity.ok(Map.of("message", "Applications incremented"));
     }
 
     // search public
@@ -225,6 +190,7 @@ public class JobController {
 
         return ResponseEntity.ok(response);
     }
+
     @DeleteMapping("/admin/jobs/{jobId}")
     public ResponseEntity<?> deleteJobByAdmin(
                                               @RequestHeader("adminId") String adminId,

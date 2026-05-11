@@ -30,4 +30,6 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     List<JobApplication> findByCandidateId(String candidateId);
 
     List<JobApplication> findByCompanyIdOrderByAppliedAtDesc(String companyId);
+
+    List<JobApplication> findByCompanyIdAndJobIdOrderByAppliedAtDesc(String companyId, String jobId);
 }
