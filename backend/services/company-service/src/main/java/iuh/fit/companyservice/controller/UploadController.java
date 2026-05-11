@@ -16,8 +16,8 @@ public class UploadController {
     }
     @GetMapping("/presigned-url")
     public ResponseEntity<?> getPresignedUrl(
-            @RequestParam String key,
-            @RequestParam String contentType
+            @RequestParam("key") String key,
+            @RequestParam("contentType") String contentType
     ) {
         try {
             System.out.println("KEY = " + key);
@@ -37,7 +37,7 @@ public class UploadController {
 
     }
     @DeleteMapping("/delete")
-    public ResponseEntity<?> deleteFile(@RequestParam String key) {
+    public ResponseEntity<?> deleteFile(@RequestParam("key") String key) {
         s3Service.deleteFile(key);
         return ResponseEntity.ok("Deleted");
     }

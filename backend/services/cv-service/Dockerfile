@@ -10,12 +10,15 @@ COPY . .
 RUN mvn -pl services/cv-service -am clean package -DskipTests
 
 # ===== STAGE 2: RUN =====
-FROM eclipse-temurin:21-jre-alpine
+FROM mcr.microsoft.com/playwright/java:v1.43.0
 
 WORKDIR /app
 
 COPY --from=builder /app/services/cv-service/target/*.jar app.jar
 
+# Playwright requires some environment variables to find the browser
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
 EXPOSE 8087
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

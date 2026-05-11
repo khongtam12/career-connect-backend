@@ -9,5 +9,5 @@ import java.util.UUID;
 
 @Repository
 public interface CVRepository extends JpaRepository<CV, UUID> {
-    List<CV> findByUserId(UUID userId);
+    List<CV> findByUserId(String userId);
 }

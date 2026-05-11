@@ -1,5 +1,6 @@
 package iuh.fit.applicationservice.client;
 
+import iuh.fit.applicationservice.dto.request.ApplicationNotificationRequest;
 import iuh.fit.applicationservice.dto.request.SendEmailRequest;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,4 +13,7 @@ public interface NotificationServiceClient {
 
     @PostMapping("/api/v1/notifications/send-email")
     Map<String, String> sendEmail(@RequestBody SendEmailRequest request);
+
+    @PostMapping("/api/v1/notifications/push-candidate-applied")
+    Map<String, String> pushCandidateApplied(@RequestBody ApplicationNotificationRequest request);
 }

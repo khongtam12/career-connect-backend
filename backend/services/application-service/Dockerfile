@@ -18,4 +18,4 @@ COPY --from=builder /app/services/application-service/target/*.jar app.jar
 
 EXPOSE 8084
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

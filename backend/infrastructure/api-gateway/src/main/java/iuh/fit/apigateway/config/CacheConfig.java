@@ -23,11 +23,13 @@ public class CacheConfig {
 
     // --- CẤU HÌNH CHO BUCKET4J (JCACHE) ---
 
+    @org.springframework.beans.factory.annotation.Value("${REDIS_HOST:redis}")
+    private String redisHost;
+
     @Bean
     public Config redissonConfig() {
         Config config = new Config();
-        // Cấu hình kết nối Redis của bạn (Single, Cluster, Sentinel...)
-        String redisHost = System.getenv().getOrDefault("REDIS_HOST", "redis");
+        // Cấu hình kết nối Redis
         config.useSingleServer()
                 .setAddress("redis://" + redisHost + ":6379");
         // .setPassword("your-password");

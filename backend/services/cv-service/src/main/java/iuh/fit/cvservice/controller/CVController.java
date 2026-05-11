@@ -30,11 +30,11 @@ public class CVController {
     @GetMapping("/my-cvs")
     public ResponseEntity<?> getMyCVs(@RequestHeader("X-User-Id") String userId) {
         log.info("Fetching CVs for user: {}", userId);
-        return ResponseEntity.ok(cvService.getCVsByUserId(UUID.fromString(userId)));
+        return ResponseEntity.ok(cvService.getCVsByUserId(userId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CV> getCVById(@PathVariable UUID id) {
+    public ResponseEntity<CV> getCVById(@PathVariable("id") UUID id) {
         try {
             return ResponseEntity.ok(cvService.getCVById(id));
         } catch (Exception e) {
@@ -45,20 +45,20 @@ public class CVController {
     @PostMapping
     public ResponseEntity<CV> saveCV(@RequestBody CV cv, @RequestHeader("X-User-Id") String userId) {
         log.info("Saving CV for user: {}", userId);
-        cv.setUserId(UUID.fromString(userId));
+        cv.setUserId(userId);
         return ResponseEntity.ok(cvService.saveCV(cv));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CV> updateCV(@PathVariable UUID id, @RequestBody CV cv, @RequestHeader("X-User-Id") String userId) {
+    public ResponseEntity<CV> updateCV(@PathVariable("id") UUID id, @RequestBody CV cv, @RequestHeader("X-User-Id") String userId) {
         log.info("Updating CV {} for user: {}", id, userId);
         cv.setId(id);
-        cv.setUserId(UUID.fromString(userId));
+        cv.setUserId(userId);
         return ResponseEntity.ok(cvService.saveCV(cv));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCV(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteCV(@PathVariable("id") UUID id) {
         cvService.deleteCV(id);
         return ResponseEntity.noContent().build();
     }
@@ -73,8 +73,22 @@ public class CVController {
         }
     }
 
+    @PostMapping("/{id}/upload-pdf")
+    public ResponseEntity<CV> uploadPDF(@PathVariable("id") UUID id, @RequestParam("file") MultipartFile file) {
+        try {
+            return ResponseEntity.ok(cvService.uploadCVFile(id, file));
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/upload/presigned-url")
+    public ResponseEntity<String> getPresignedUrl(@RequestParam String key, @RequestParam String contentType) {
+        return ResponseEntity.ok(s3Service.generatePresignedUrl(key, contentType));
+    }
+
     @GetMapping("/{id}/pdf")
-    public ResponseEntity<byte[]> exportPDF(@PathVariable UUID id, @CookieValue(value = "access_token", required = false) String token) {
+    public ResponseEntity<byte[]> exportPDF(@PathVariable("id") UUID id, @CookieValue(value = "access_token", required = false) String token) {
         try {
             log.info("Request to export CV {} to PDF", id);
             byte[] pdf = pdfExportService.exportCVToPDF(id.toString(), token);
@@ -90,7 +104,7 @@ public class CVController {
     }
 
     @PostMapping("/{id}/ai-review")
-    public ResponseEntity<AIReviewResponse> reviewCV(@PathVariable UUID id) {
+    public ResponseEntity<AIReviewResponse> reviewCV(@PathVariable("id") UUID id) {
         log.info("Request AI review for CV: {}", id);
         CV cv = cvService.getCVById(id);
         return ResponseEntity.ok(aiService.reviewCV(cv));

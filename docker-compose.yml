@@ -1,5 +1,3 @@
-
-
 # ==============================================================
 #  CAREER CONNECT - Backend Docker Compose
 #  Repo: BE (backend)
@@ -13,7 +11,7 @@
 
 networks:
   career-net:
-    external: true # ← Dùng chung với FE repo
+    external: true 
 
 volumes:
   postgres-data-main:
@@ -34,22 +32,85 @@ services:
       - redis-data:/data
     networks:
       - career-net
+    deploy:
+      resources:
+        limits:
+          memory: 64M
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
+
+
+# ==============================================================
+# KAFKA + ZOOKEEPER
+# ==============================================================
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - career-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+
+    depends_on:
+      - zookeeper
+
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+    networks:
+      - career-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: [ "CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1" ]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+
+
   # ==============================================================
   # 1. DATABASES (PostgreSQL × 6)
   # ==============================================================
-
   # ==============================================================
   # 1. CENTRAL DATABASE (PostgreSQL)
   # ==============================================================
 
   postgres-server:
-    platform: linux/arm64
     image: postgres:16-alpine
     container_name: postgres-server
     environment:
@@ -62,12 +123,15 @@ services:
       - "5434:5432"
     networks:
       - career-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
       timeout: 5s
       retries: 5
-
 
   # ==============================================================
   # 2. EUREKA SERVER (Service Registry)
@@ -80,8 +144,14 @@ services:
     container_name: eureka-server
     ports:
       - "8761:8761"
+    environment:
+      JAVA_OPTS: "-Xmx256m -Xms128m"
     networks:
       - career-net
+    deploy:
+      resources:
+        limits:
+          memory: 400M
     healthcheck:
       test: [ "CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1" ]
       interval: 15s
@@ -104,8 +174,14 @@ services:
       SPRING_DATASOURCE_PASSWORD: 1234
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8083:8083"
+    deploy:
+      resources:
+        limits:
+
+          memory: 512M
     depends_on:
       postgres-server:
         condition: service_healthy
@@ -126,8 +202,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: 1234
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8081:8081"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     depends_on:
       postgres-server:
         condition: service_healthy
@@ -149,8 +230,13 @@ services:
       REDIS_HOST: redis
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8082:8082"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     depends_on:
       postgres-server:
         condition: service_healthy
@@ -173,8 +259,13 @@ services:
       SPRING_DATASOURCE_PASSWORD: 1234
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8084:8084"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     depends_on:
       postgres-server:
         condition: service_healthy
@@ -198,8 +289,13 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       FRONTEND_URL: http://localhost:3000
+      JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8086:8086"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     depends_on:
       postgres-server:
         condition: service_healthy
@@ -219,8 +315,13 @@ services:
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JAVA_OPTS: "-Xmx256m -Xms128m"
     ports:
       - "8085:8085"
+    deploy:
+      resources:
+        limits:
+          memory: 384M
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -241,8 +342,15 @@ services:
       SPRING_DATASOURCE_PASSWORD: 1234
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+
+      APP_FRONTEND_URL: http://frontend
+      JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8087:8087"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     depends_on:
       postgres-server:
         condition: service_healthy
@@ -252,6 +360,29 @@ services:
       - career-net
     restart: on-failure
 
+  storage-service:
+    build:
+      context: ./backend
+      dockerfile: services/storage-service/Dockerfile
+    container_name: storage-service
+    env_file:
+      - ./backend/.env
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms256m"
+    ports:
+      - "8088:8088"
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
 
   # ==============================================================
   # 4. API GATEWAY (chờ tất cả services đăng ký Eureka)
@@ -265,8 +396,14 @@ services:
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JAVA_OPTS: "-Xmx384m -Xms256m"
+      REDIS_HOST: redis
     ports:
       - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -283,6 +420,8 @@ services:
       payment-service:
         condition: service_started
       cv-service:
+        condition: service_started
+      storage-service:
         condition: service_started
     networks:
       - career-net

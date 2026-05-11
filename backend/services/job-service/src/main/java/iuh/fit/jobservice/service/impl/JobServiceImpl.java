@@ -1,6 +1,7 @@
 package iuh.fit.jobservice.service.impl;
 
 import iuh.fit.jobservice.client.CompanyServiceClient;
+import iuh.fit.jobservice.client.UserServiceClient;
 import iuh.fit.jobservice.dto.CompanyDTO;
 import iuh.fit.jobservice.dto.CompanySubscriptionDTO;
 import iuh.fit.jobservice.dto.IndustryDTO;
@@ -66,6 +67,13 @@ public class JobServiceImpl implements JobService {
 		this.industryRepository = industryRepository;
 		this.companyServiceClient = companyServiceClient;
 		this.cacheManager = cacheManager;
+	private final UserServiceClient userServiceClient;
+
+	public JobServiceImpl(JobRepository jobRepository, IndustryRepository industryRepository, CompanyServiceClient companyServiceClient, UserServiceClient userServiceClient) {
+		this.jobRepository = jobRepository;
+		this.industryRepository = industryRepository;
+		this.companyServiceClient = companyServiceClient;
+		this.userServiceClient = userServiceClient;
 	}
 
 	@Override
@@ -76,7 +84,7 @@ public class JobServiceImpl implements JobService {
 		validateCreateRequest(request);
 
 		LocalDateTime now = LocalDateTime.now();
-		String companyId = resolveCompanyIdByEmployerId(employerId);
+		String companyId = fetchCompanyIdByEmployerId(employerId);
 		CompanySubscriptionDTO subscription = null;
 
 		if (!request.isSaveAsDraft()) {
@@ -378,18 +386,18 @@ public class JobServiceImpl implements JobService {
 	@Override
 	@Transactional
 	public JobDetailResponse getJobDetail(String jobId) {
-        Job job = jobRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy công việc: " + jobId));
-        IndustryDTO industryDTO = null;
-        Industry industry = null;
-        if (job.getIndustry() != null) {
-            industry = industryRepository.findById(job.getIndustryId()).orElse(null);
-        }
-        if (industry != null) {
-            industryDTO = new IndustryDTO(
-                    industry.getIndustryId(), industry.getName(), industry.getDescription()
-            );
-        }
+		Job job = jobRepository.findById(jobId)
+				.orElseThrow(() -> new RuntimeException("Không tìm thấy công việc: " + jobId));
+		IndustryDTO industryDTO = null;
+		Industry industry = null;
+		if (job.getIndustry() != null) {
+			industry = industryRepository.findById(job.getIndustryId()).orElse(null);
+		}
+		if (industry != null) {
+			industryDTO = new IndustryDTO(
+					industry.getIndustryId(), industry.getName(), industry.getDescription()
+			);
+		}
 		CompanyDTO companyDTO = null;
 		if (job.getCompanyId() != null) {
 			try {
@@ -399,15 +407,15 @@ public class JobServiceImpl implements JobService {
 			}
 		}
 		return new JobDetailResponse(job.getJobId(),job.getTitle(),job.getDescription(),job.getCandidateRequirements(),
-									job.getSalaryDetail(),job.getBenefitsDetail(),job.getWorkSchedule(),job.getLocation(),
-									job.getSalaryMin(),job.getSalaryMax(),job.isSalaryNegotiable(),job.getExperience(),
-									job.getDeadline(),job.getCreatedAt(),job.getUpdatedAt(),job.getViews(),job.getNumberOfApplications(),
-									job.isTop(),job.getPackageId(),job.getPackageLabel(),job.getDeletedAt(),job.getRank(),job.getEducation(),job.getQuantity(),job.getAgeRange(),
-									job.getIndustry(),job.getStatus(),job.getJobType(),job.getRequirementTags(),job.getBenefitTags(),
-									job.getSpecialties(),job.getRelatedCategories(),job.getSkills(),companyDTO,industryDTO
-				);
+				job.getSalaryDetail(),job.getBenefitsDetail(),job.getWorkSchedule(),job.getLocation(),
+				job.getSalaryMin(),job.getSalaryMax(),job.isSalaryNegotiable(),job.getExperience(),
+				job.getDeadline(),job.getCreatedAt(),job.getUpdatedAt(),job.getViews(),job.getNumberOfApplications(),
+				job.isTop(),job.getPackageId(),job.getPackageLabel(),job.getDeletedAt(),job.getRank(),job.getEducation(),job.getQuantity(),job.getAgeRange(),
+				job.getIndustry(),job.getStatus(),job.getJobType(),job.getRequirementTags(),job.getBenefitTags(),
+				job.getSpecialties(),job.getRelatedCategories(),job.getSkills(),companyDTO,industryDTO
+		);
 
-    }
+	}
 
 	@Override
 	public PageResponse<JobResponse> searchJobs(
@@ -620,15 +628,12 @@ public class JobServiceImpl implements JobService {
 		return normalized == null ? null : normalized;
 	}
 
-	private String resolveCompanyIdByEmployerId(String employerId) {
-		String normalizedEmployerId = employerId.trim().toUpperCase(Locale.ROOT);
-		if (normalizedEmployerId.startsWith("COMP")) {
-			return normalizedEmployerId;
+	private String fetchCompanyIdByEmployerId(String employerId) {
+		EmployerCompanyResponse employerCompany = userServiceClient.getEmployerById(employerId);
+		if (employerCompany == null || employerCompany.getCompanyId() == null || employerCompany.getCompanyId().isBlank()) {
+			throw new RuntimeException("Employer company not found");
 		}
-		if (normalizedEmployerId.startsWith("EMP") && normalizedEmployerId.length() > 3) {
-			return "COMP" + normalizedEmployerId.substring(3);
-		}
-		return "COMP" + normalizedEmployerId;
+		return employerCompany.getCompanyId().trim();
 	}
 
 	private String normalizeOrDefault(String value, String defaultValue) {
@@ -826,4 +831,4 @@ public class JobServiceImpl implements JobService {
 
 
 
-	}
+}

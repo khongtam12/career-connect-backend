@@ -32,6 +32,7 @@ public class PaymentService {
                 .amount(req.getAmount())
                 .durationDays(req.getDurationDays())
                 .method(req.getPaymentMethod())
+                .employerEmail(req.getEmployerEmail())
                 .jobPackage(new JobPackage(req.getPackageId()))
                 .status(StatusPayment.PENDING)
                 .build();

@@ -29,17 +29,17 @@ public class SubscriptionController {
     }
 
     @GetMapping("/{subscriptionId}")
-    public ResponseEntity<CompanySubscriptionResponse> getSubscription(@PathVariable String subscriptionId) {
+    public ResponseEntity<CompanySubscriptionResponse> getSubscription(@PathVariable("subscriptionId") String subscriptionId) {
         return ResponseEntity.ok(subscriptionService.getById(subscriptionId));
     }
 
     @GetMapping("/company/{companyId}")
-    public ResponseEntity<List<CompanySubscriptionResponse>> getByCompany(@PathVariable String companyId) {
+    public ResponseEntity<List<CompanySubscriptionResponse>> getByCompany(@PathVariable("companyId") String companyId) {
         return ResponseEntity.ok(subscriptionService.getByCompanyId(companyId));
     }
 
     @PostMapping("/{subscriptionId}/consume")
-    public ResponseEntity<CompanySubscriptionResponse> consumeSubscription(@PathVariable String subscriptionId) {
+    public ResponseEntity<CompanySubscriptionResponse> consumeSubscription(@PathVariable("subscriptionId") String subscriptionId) {
         return ResponseEntity.ok(subscriptionService.consumeJobPost(subscriptionId));
     }
 

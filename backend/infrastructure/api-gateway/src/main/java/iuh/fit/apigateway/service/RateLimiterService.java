@@ -27,15 +27,14 @@ public class RateLimiterService {
 
     private final ProxyManager<String> proxyManager;
     @Value("${rate-limiter.version}")
-    private String KEY_VERSION;   // đổi khi change config
-    private static final Bandwidth ANONYMOUS_LIMIT =
-            Bandwidth.classic(60, Refill.intervally(60, Duration.ofMinutes(1)));
-    private static final Bandwidth FREE_LIMIT =
-            Bandwidth.classic(80, Refill.intervally(80, Duration.ofMinutes(1)));
-    private static final Bandwidth EMPLOYER_LIMIT =
-            Bandwidth.classic(300, Refill.intervally(300, Duration.ofMinutes(1)));
-    private static final Bandwidth ADMIN_LIMIT =
-            Bandwidth.classic(1000, Refill.intervally(1000, Duration.ofMinutes(1)));
+    private String KEY_VERSION; // đổi khi change config
+    private static final Bandwidth ANONYMOUS_LIMIT = Bandwidth.classic(60,
+            Refill.intervally(60, Duration.ofMinutes(1)));
+    private static final Bandwidth FREE_LIMIT = Bandwidth.classic(80, Refill.intervally(80, Duration.ofMinutes(1)));
+    private static final Bandwidth EMPLOYER_LIMIT = Bandwidth.classic(300,
+            Refill.intervally(300, Duration.ofMinutes(1)));
+    private static final Bandwidth ADMIN_LIMIT = Bandwidth.classic(1000,
+            Refill.intervally(1000, Duration.ofMinutes(1)));
 
     public RateLimiterService(CacheManager jCacheManager) {
         Cache<String, byte[]> cache = jCacheManager.getCache(CacheConfig.RATE_LIMIT_CACHE);
@@ -44,8 +43,8 @@ public class RateLimiterService {
     }
 
     public Bucket resolveBucket(String key,
-                                String apiGroup,
-                                Authentication auth) {
+            String apiGroup,
+            Authentication auth) {
 
         String finalKey = KEY_VERSION + ":" + key;
 
@@ -56,9 +55,8 @@ public class RateLimiterService {
             BucketConfiguration configuration = BucketConfiguration.builder()
                     .addLimit(roleLimit)
                     .addLimit(
-                            Bandwidth.classic(1,
-                                    Refill.greedy(1, Duration.ofSeconds(1)))
-                    )
+                            Bandwidth.classic(50,
+                                    Refill.greedy(50, Duration.ofSeconds(1))))
                     .build();
 
             if (apiLimit != null) {
@@ -66,9 +64,8 @@ public class RateLimiterService {
                         .addLimit(roleLimit)
                         .addLimit(apiLimit)
                         .addLimit(
-                                Bandwidth.classic(1,
-                                        Refill.greedy(1, Duration.ofSeconds(1)))
-                        )
+                                Bandwidth.classic(50,
+                                        Refill.greedy(10, Duration.ofSeconds(1))))
                         .build();
             }
 
