@@ -111,17 +111,6 @@ public class Job {
 
     // Extra info
     private String companyLogoUrl;
-    private String companySize;
-    private String companyAddress;
-    private String jobLevel;
-    private String workType;
-    private String employmentType;
-
-    private String provinceCode;
-    private String district;
-
-    private String contactEmail;
-    private String contactPhone;
 
     @OneToMany(mappedBy = "job", cascade = CascadeType.ALL)
     @JsonIgnore
@@ -496,78 +485,6 @@ public class Job {
 
     public void setCompanyLogoUrl(String companyLogoUrl) {
         this.companyLogoUrl = companyLogoUrl;
-    }
-
-    public String getCompanySize() {
-        return companySize;
-    }
-
-    public void setCompanySize(String companySize) {
-        this.companySize = companySize;
-    }
-
-    public String getCompanyAddress() {
-        return companyAddress;
-    }
-
-    public void setCompanyAddress(String companyAddress) {
-        this.companyAddress = companyAddress;
-    }
-
-    public String getJobLevel() {
-        return jobLevel;
-    }
-
-    public void setJobLevel(String jobLevel) {
-        this.jobLevel = jobLevel;
-    }
-
-    public String getWorkType() {
-        return workType;
-    }
-
-    public void setWorkType(String workType) {
-        this.workType = workType;
-    }
-
-    public String getEmploymentType() {
-        return employmentType;
-    }
-
-    public void setEmploymentType(String employmentType) {
-        this.employmentType = employmentType;
-    }
-
-    public String getProvinceCode() {
-        return provinceCode;
-    }
-
-    public void setProvinceCode(String provinceCode) {
-        this.provinceCode = provinceCode;
-    }
-
-    public String getDistrict() {
-        return district;
-    }
-
-    public void setDistrict(String district) {
-        this.district = district;
-    }
-
-    public String getContactEmail() {
-        return contactEmail;
-    }
-
-    public void setContactEmail(String contactEmail) {
-        this.contactEmail = contactEmail;
-    }
-
-    public String getContactPhone() {
-        return contactPhone;
-    }
-
-    public void setContactPhone(String contactPhone) {
-        this.contactPhone = contactPhone;
     }
 
     public List<Favourite> getFavourites() {

@@ -63,9 +63,9 @@ public class JobApplicationService {
         if (request.getCompanyId() == null || request.getCompanyId().isEmpty()){
             throw new AppException(ErrorCode.COMPANY_NOT_FOUND);
         }
-        if (request.getIndustryId() == null || request.getIndustryId().isEmpty()){
-            throw new AppException(ErrorCode.INDUSTRY_NOT_FOUND);
-        }
+//        if (request.getIndustryId() == null || request.getIndustryId().isEmpty()){
+//            throw new AppException(ErrorCode.INDUSTRY_NOT_FOUND);
+//        }
 
         if (jobApplicationRepository.existsByJobIdAndCandidateId(request.getJobId(),candidateId)){
             throw new AppException(ErrorCode.DUPLICATE_APPLICATION);
@@ -85,6 +85,13 @@ public class JobApplicationService {
         app.setUpdatedAt(LocalDateTime.now());
 
         jobApplicationRepository.save(app);
+
+        try {
+            jobServiceClient.incrementApplications(request.getJobId());
+        } catch (Exception e) {
+            jobApplicationRepository.delete(app);
+            throw new AppException(ErrorCode.INTERNAL_ERROR);
+        }
         // phat su kien den employer
         try {
             ApplicationNotificationRequest notificationRequest = new ApplicationNotificationRequest();
