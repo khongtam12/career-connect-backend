@@ -17,6 +17,9 @@ public class PDFExportService {
     @Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
 
+    @Value("${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:}")
+    private String chromiumExecutablePath;
+
     private Playwright playwright;
     private Browser browser;
 
@@ -25,9 +28,15 @@ public class PDFExportService {
         try {
             log.info("Initializing Playwright...");
             playwright = Playwright.create();
-            // Launching browser. It will download the browser if not present.
-            browser = playwright.chromium().launch(new BrowserType.LaunchOptions()
-                    .setHeadless(true));
+            BrowserType.LaunchOptions launchOptions = new BrowserType.LaunchOptions()
+                    .setHeadless(true);
+
+            if (chromiumExecutablePath != null && !chromiumExecutablePath.isBlank()) {
+                log.info("Using system Chromium at {}", chromiumExecutablePath);
+                launchOptions.setExecutablePath(java.nio.file.Paths.get(chromiumExecutablePath));
+            }
+
+            browser = playwright.chromium().launch(launchOptions);
             log.info("Playwright initialized successfully.");
         } catch (Exception e) {
             log.error("Failed to initialize Playwright: ", e);

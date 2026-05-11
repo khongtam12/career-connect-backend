@@ -23,6 +23,7 @@ public class Project {
     private UUID id;
 
     private String name;
+    @Column(columnDefinition = "TEXT")
     private String description;
     private String link;
     private String startDate;

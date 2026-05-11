@@ -7,17 +7,30 @@ COPY .mvn/settings.xml /root/.m2/settings.xml
 
 COPY . .
 
-RUN mvn -pl services/cv-service -am clean package -DskipTests
+RUN --mount=type=cache,target=/root/.m2 \
+    bash -lc 'for i in 1 2 3; do \
+      mvn -B -pl services/cv-service -am clean package -DskipTests -Dmaven.wagon.http.retryHandler.count=5 && exit 0; \
+      echo "Maven build failed on attempt $i. Retrying in 15 seconds..."; \
+      sleep 15; \
+    done; \
+    exit 1'
 
 # ===== STAGE 2: RUN =====
-FROM mcr.microsoft.com/playwright/java:v1.43.0
+FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium-browser \
+    fonts-liberation \
+    fonts-noto-color-emoji \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /app/services/cv-service/target/*.jar app.jar
 
-# Playwright requires some environment variables to find the browser
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 EXPOSE 8087
 

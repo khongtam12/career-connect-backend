@@ -25,6 +25,7 @@ public class CandidateApplicationResponse {
     private String interviewTime;
     private String interviewLocation;
     private String rejectionReason;
+    private CandidateMatchInsight matchInsight;
 
     public CandidateApplicationResponse() {
     }
@@ -206,5 +207,13 @@ public class CandidateApplicationResponse {
 
     public void setRejectionReason(String rejectionReason) {
         this.rejectionReason = rejectionReason;
+    }
+
+    public CandidateMatchInsight getMatchInsight() {
+        return matchInsight;
+    }
+
+    public void setMatchInsight(CandidateMatchInsight matchInsight) {
+        this.matchInsight = matchInsight;
     }
 }

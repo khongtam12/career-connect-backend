@@ -1,11 +1,14 @@
 package iuh.fit.applicationservice.service;
 
+import iuh.fit.applicationservice.client.CvServiceClient;
 import iuh.fit.applicationservice.client.JobServiceClient;
 import iuh.fit.applicationservice.client.NotificationServiceClient;
 import iuh.fit.applicationservice.client.UserServiceClient;
 import iuh.fit.applicationservice.dto.request.*;
+import iuh.fit.applicationservice.dto.response.CandidateMatchInsight;
 import iuh.fit.applicationservice.dto.response.CandidateApplicationResponse;
 import iuh.fit.applicationservice.dto.response.CandidateSummaryClientResponse;
+import iuh.fit.applicationservice.dto.response.CvDetailClientResponse;
 import iuh.fit.applicationservice.dto.response.EmployerCompanyClientResponse;
 import iuh.fit.applicationservice.dto.response.JobApplicationResponse;
 import iuh.fit.applicationservice.dto.response.JobDetailClientResponse;
@@ -17,6 +20,7 @@ import iuh.fit.applicationservice.repository.JobApplicationRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -28,15 +32,21 @@ public class JobApplicationService {
     private final UserServiceClient userServiceClient;
     private final JobServiceClient jobServiceClient;
     private final NotificationServiceClient notificationServiceClient;
+    private final CvServiceClient cvServiceClient;
+    private final CandidateMatchingService candidateMatchingService;
 
     public JobApplicationService(JobApplicationRepository jobApplicationRepository,
                                  UserServiceClient userServiceClient,
                                  JobServiceClient jobServiceClient,
-                                 NotificationServiceClient notificationServiceClient) {
+                                 NotificationServiceClient notificationServiceClient,
+                                 CvServiceClient cvServiceClient,
+                                 CandidateMatchingService candidateMatchingService) {
         this.jobApplicationRepository = jobApplicationRepository;
         this.userServiceClient = userServiceClient;
         this.jobServiceClient = jobServiceClient;
         this.notificationServiceClient = notificationServiceClient;
+        this.cvServiceClient = cvServiceClient;
+        this.candidateMatchingService = candidateMatchingService;
     }
 
     public JobApplicationResponse applyForJob(String candidateId, CreateJobApplicationRequest request){
@@ -281,7 +291,7 @@ public class JobApplicationService {
     }
 
     //lay danh sach ung vien
-    public List<CandidateApplicationResponse> getCandidatesByEmployer(String employerId) {
+    public List<CandidateApplicationResponse> getCandidatesByEmployer(String employerId, String jobId) {
         if (employerId == null || employerId.isEmpty()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
@@ -291,11 +301,23 @@ public class JobApplicationService {
             throw new AppException(ErrorCode.COMPANY_NOT_FOUND);
         }
 
-        List<JobApplication> applications =
-                jobApplicationRepository.findByCompanyIdOrderByAppliedAtDesc(employer.getCompanyId());
+        List<JobApplication> applications = (jobId != null && !jobId.isBlank())
+                ? jobApplicationRepository.findByCompanyIdAndJobIdOrderByAppliedAtDesc(employer.getCompanyId(), jobId)
+                : jobApplicationRepository.findByCompanyIdOrderByAppliedAtDesc(employer.getCompanyId());
 
         return applications.stream()
                 .map(this::mapToCandidateApplicationResponse)
+                .sorted(Comparator
+                        .comparing(
+                                (CandidateApplicationResponse response) -> {
+                                    CandidateMatchInsight insight = response.getMatchInsight();
+                                    return insight != null && insight.getMatchScore() != null
+                                            ? insight.getMatchScore()
+                                            : -1D;
+                                }
+                        )
+                        .reversed()
+                        .thenComparing(CandidateApplicationResponse::getAppliedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
     }
 
@@ -329,6 +351,19 @@ public class JobApplicationService {
 
         if (job != null && job.getIndustryDTO() != null) {
             res.setIndustryName(job.getIndustryDTO().getName());
+        }
+
+        try {
+            CvDetailClientResponse cv = cvServiceClient.getCvById(app.getCvId());
+            res.setMatchInsight(candidateMatchingService.match(
+                    job,
+                    cv,
+                    candidate != null ? candidate.getExperienceYear() : null
+            ));
+        } catch (Exception ex) {
+            CandidateMatchInsight fallback = new CandidateMatchInsight();
+            fallback.setRecommendation("Không thể phân tích CV này tự động.Vui long đánh giá thủ công hoặc yêu cầu ứng viên tạo CV trên hệ thống.");
+            res.setMatchInsight(fallback);
         }
 
         return res;
