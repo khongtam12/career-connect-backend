@@ -3,6 +3,8 @@ FROM maven:3.9.6-eclipse-temurin-21 AS builder
 
 WORKDIR /app
 
+COPY .mvn/settings.xml /root/.m2/settings.xml
+
 COPY . .
 
 RUN --mount=type=cache,target=/root/.m2 \
