@@ -58,10 +58,14 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
 
                 if (probe.isConsumed()) {
 
-                    exchange.getResponse().getHeaders().add(
-                            "X-RateLimit-Remaining",
-                            String.valueOf(probe.getRemainingTokens())
-                    );
+                    try {
+                        exchange.getResponse().getHeaders().add(
+                                "X-RateLimit-Remaining",
+                                String.valueOf(probe.getRemainingTokens())
+                        );
+                    } catch (UnsupportedOperationException e) {
+                        log.debug("Headers are read-only (possibly WebSocket upgrade), skipping rate limit header injection");
+                    }
 
                     return chain.filter(exchange);
                 }
@@ -69,10 +73,14 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
 // ❌ bị limit
                 exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
 
-                exchange.getResponse().getHeaders().add(
-                        "Retry-After",
-                        String.valueOf(probe.getNanosToWaitForRefill() / 1_000_000_000)
-                );
+                try {
+                    exchange.getResponse().getHeaders().add(
+                            "Retry-After",
+                            String.valueOf(probe.getNanosToWaitForRefill() / 1_000_000_000)
+                    );
+                } catch (UnsupportedOperationException e) {
+                    log.debug("Headers are read-only, skipping retry-after header");
+                }
 
                 return exchange.getResponse().setComplete();
             } catch (Exception e) {
