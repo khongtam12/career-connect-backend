@@ -51,6 +51,8 @@ public interface JobService {
 
     JobStats getStats();
 
+    void incrementApplications(String jobId);
+
     PageResponse<JobAdminResponse> getAllJobByAdmin(String search, String status, int page, int size);
     void adminDeleteJob(String adminId, String jobId);
 }

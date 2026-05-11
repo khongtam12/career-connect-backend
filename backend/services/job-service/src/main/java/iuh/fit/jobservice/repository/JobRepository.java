@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -87,4 +88,14 @@ public interface JobRepository extends JpaRepository<Job, String>, JpaSpecificat
         List<Job> findByCompanySubscriptionIdInAndStatusIn(List<String> subscriptionIds, List<StatusJob> statuses);
 
         long countByCompanySubscriptionIdAndStatus(String companySubscriptionId, StatusJob status);
+
+        // Tăng lượt xem trực tiếp bằng query (hiệu quả hơn load + save toàn bộ entity)
+        @Modifying
+        @Query("UPDATE Job j SET j.views = j.views + 1 WHERE j.jobId = :jobId")
+        void incrementViews(@Param("jobId") String jobId);
+
+        // Tăng số lượng ứng viên trực tiếp bằng query
+        @Modifying
+        @Query("UPDATE Job j SET j.numberOfApplications = j.numberOfApplications + 1 WHERE j.jobId = :jobId")
+        int incrementApplications(@Param("jobId") String jobId);
 }
