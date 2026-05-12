@@ -15,8 +15,19 @@ private final CompanyVerificationRepository companyVerificationRepository;
         this.companyVerificationRepository = companyVerificationRepository;
     }
     public CompanyVerification save(CompanyVerification companyVerification) {
-                companyVerification.setVerificationId(IdGenerator.generatorIdCompannyVerified());
-     return    companyVerificationRepository.save(companyVerification);
+        companyVerificationRepository.findByCompanyCompanyId(
+                companyVerification.getCompany().getCompanyId()
+        ).ifPresent(existing -> {
+            companyVerification.setVerificationId(existing.getVerificationId());
+            companyVerification.setVerifiedAt(existing.getVerifiedAt());
+            companyVerification.setVerifiedBy(existing.getVerifiedBy());
+        });
+
+        if (companyVerification.getVerificationId() == null || companyVerification.getVerificationId().isBlank()) {
+            companyVerification.setVerificationId(IdGenerator.generatorIdCompannyVerified());
+        }
+
+        return companyVerificationRepository.save(companyVerification);
 
     }
 }

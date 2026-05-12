@@ -31,10 +31,7 @@ public class Candidate{
     private int experienceYear;
     private String currentJobTitle;
     private double expectedSalary;
-    @OneToMany(mappedBy = "candidate")
-    @ToString.Exclude
-    @JsonManagedReference
-    private List<CV> cvs;
+
 
     public String getCandidateId() {
         return candidateId;
@@ -148,11 +145,5 @@ public class Candidate{
         this.expectedSalary = expectedSalary;
     }
 
-    public List<CV> getCvs() {
-        return cvs;
-    }
 
-    public void setCvs(List<CV> cvs) {
-        this.cvs = cvs;
-    }
 }

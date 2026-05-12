@@ -56,24 +56,17 @@ public class JobServiceImpl implements JobService {
 	private final IndustryRepository industryRepository;
 	private final CompanyServiceClient companyServiceClient;
 	private final CacheManager cacheManager;
-
-	public JobServiceImpl(
-			JobRepository jobRepository,
-			IndustryRepository industryRepository,
-			CompanyServiceClient companyServiceClient,
-			CacheManager cacheManager
-	) {
-		this.jobRepository = jobRepository;
-		this.industryRepository = industryRepository;
-		this.companyServiceClient = companyServiceClient;
-		this.cacheManager = cacheManager;
 	private final UserServiceClient userServiceClient;
 
-	public JobServiceImpl(JobRepository jobRepository, IndustryRepository industryRepository, CompanyServiceClient companyServiceClient, UserServiceClient userServiceClient) {
+
+
+
+	public JobServiceImpl(JobRepository jobRepository, IndustryRepository industryRepository, CompanyServiceClient companyServiceClient, CacheManager cacheManager, UserServiceClient userServiceClient) {
 		this.jobRepository = jobRepository;
 		this.industryRepository = industryRepository;
 		this.companyServiceClient = companyServiceClient;
-		this.userServiceClient = userServiceClient;
+        this.cacheManager = cacheManager;
+        this.userServiceClient = userServiceClient;
 	}
 
 	@Override

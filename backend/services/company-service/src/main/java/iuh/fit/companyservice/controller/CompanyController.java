@@ -22,6 +22,7 @@ import iuh.fit.companyservice.dto.request.CompanyApprovalRequestDTO;
 import iuh.fit.companyservice.dto.response.CompanyApprovalResponseDTO;
 import iuh.fit.companyservice.dto.response.CompanyFullDetailDTO;
 import iuh.fit.companyservice.dto.response.CompanyPendingDTO;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 
 @RestController
@@ -48,7 +49,7 @@ return "Company service is working";
     };
 
     @PostMapping("/save")
-    public ResponseEntity<Company> saveCompany(@RequestBody CompanyDTO dto){
+    public ResponseEntity<Company> saveCompany(@Valid @RequestBody CompanyDTO dto){
         Company company = CompanyMapper.toConvertCompany(dto);
         Company saved = companyService.saveCompany(company,dto.getEmployerId());
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
