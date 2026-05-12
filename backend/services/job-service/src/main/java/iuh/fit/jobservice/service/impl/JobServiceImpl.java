@@ -55,18 +55,33 @@ public class JobServiceImpl implements JobService {
 	private final JobRepository jobRepository;
 	private final IndustryRepository industryRepository;
 	private final CompanyServiceClient companyServiceClient;
-	private final CacheManager cacheManager;
 	private final UserServiceClient userServiceClient;
+	private final CacheManager cacheManager;
 
-
-
-
-	public JobServiceImpl(JobRepository jobRepository, IndustryRepository industryRepository, CompanyServiceClient companyServiceClient, CacheManager cacheManager, UserServiceClient userServiceClient) {
+	public JobServiceImpl(
+			JobRepository jobRepository,
+			IndustryRepository industryRepository,
+			CompanyServiceClient companyServiceClient,
+			UserServiceClient userServiceClient,
+			CacheManager cacheManager
+	) {
 		this.jobRepository = jobRepository;
 		this.industryRepository = industryRepository;
 		this.companyServiceClient = companyServiceClient;
-        this.cacheManager = cacheManager;
-        this.userServiceClient = userServiceClient;
+		this.userServiceClient = userServiceClient;
+		this.cacheManager = cacheManager;
+	}
+
+	@Override
+	@Transactional
+	public void incrementApplications(String jobId) {
+		if (jobId == null || jobId.isBlank()) {
+			throw new IllegalArgumentException("jobId is required");
+		}
+		int updated = jobRepository.incrementApplications(jobId);
+		if (updated == 0) {
+			throw new RuntimeException("Job not found");
+		}
 	}
 
 	@Override
@@ -74,10 +89,16 @@ public class JobServiceImpl implements JobService {
 	@CacheEvict(cacheNames = "job-search", allEntries = true)
 	public JobResponse createJob(String employerId, CreateJobRequest request) {
 		validateEmployerId(employerId);
-		validateCreateRequest(request);
+
+		// Kiểm tra công ty đã được phê duyệt chưa
+		String companyIdForCheck = fetchCompanyIdByEmployerId(employerId);
+		CompanyDTO company = companyServiceClient.getCompanyById(companyIdForCheck);
+		if (company == null || !"VERIFIED".equalsIgnoreCase(company.getStatusCompany())) {
+			throw new RuntimeException("Công ty của bạn chưa được phê duyệt. Vui lòng chờ admin xác minh công ty trước khi đăng tin tuyển dụng.");
+		}
 
 		LocalDateTime now = LocalDateTime.now();
-		String companyId = fetchCompanyIdByEmployerId(employerId);
+		String companyId = companyIdForCheck;
 		CompanySubscriptionDTO subscription = null;
 
 		if (!request.isSaveAsDraft()) {
@@ -379,6 +400,8 @@ public class JobServiceImpl implements JobService {
 	@Override
 	@Transactional
 	public JobDetailResponse getJobDetail(String jobId) {
+		// Tăng lượt xem trước, sau đó đọc lại để lấy số lượt xem mới
+		jobRepository.incrementViews(jobId);
 		Job job = jobRepository.findById(jobId)
 				.orElseThrow(() -> new RuntimeException("Không tìm thấy công việc: " + jobId));
 		IndustryDTO industryDTO = null;
@@ -526,17 +549,6 @@ public class JobServiceImpl implements JobService {
 		}
 	}
 
-	private void validateCreateRequest(CreateJobRequest request) {
-		if (request == null) {
-			throw new RuntimeException("Request body is required");
-		}
-		if (request.getTitle() == null || request.getTitle().isBlank()) {
-			throw new RuntimeException("Title is required");
-		}
-		if (request.getJobType() == null || request.getJobType().isBlank()) {
-			throw new RuntimeException("Job type is required");
-		}
-	}
 
 	private StatusJob parseStatus(String status) {
 		if (status == null || status.isBlank()) {
@@ -617,8 +629,7 @@ public class JobServiceImpl implements JobService {
 	}
 
 	private String normalizeForQuery(String value) {
-		String normalized = normalize(value);
-		return normalized == null ? null : normalized;
+		return normalize(value);
 	}
 
 	private String fetchCompanyIdByEmployerId(String employerId) {
@@ -660,12 +671,7 @@ public class JobServiceImpl implements JobService {
 	}
 
 
-	private String normalizeJobTypeFilter(String jobType) {
-		if (jobType == null || jobType.isBlank()) {
-			return null;
-		}
-		return parseJobType(jobType).name();
-	}
+
 
 	private int safePage(int page) {
 		return Math.max(page, 1) - 1;

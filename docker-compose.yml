@@ -115,7 +115,7 @@ services:
     container_name: postgres-server
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 1234
+      POSTGRES_PASSWORD: 123
     volumes:
       - postgres-data-main:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
@@ -171,7 +171,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/user-service
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 1234
+      SPRING_DATASOURCE_PASSWORD: 123
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       JAVA_OPTS: "-Xmx384m -Xms256m"
@@ -199,7 +199,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/company-service
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 1234
+      SPRING_DATASOURCE_PASSWORD: 123
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       JAVA_OPTS: "-Xmx384m -Xms256m"
@@ -226,8 +226,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/job-service
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 1234
-      REDIS_HOST: redis
+      SPRING_DATASOURCE_PASSWORD: 123
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       JAVA_OPTS: "-Xmx384m -Xms256m"
@@ -256,7 +255,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/application-service
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 1234
+      SPRING_DATASOURCE_PASSWORD: 123
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       AI_MATCHING_SERVICE_URL: http://ai-service:8090
@@ -303,7 +302,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/payment-service
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 1234
+      SPRING_DATASOURCE_PASSWORD: 123
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       FRONTEND_URL: http://localhost:3000
@@ -357,7 +356,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/cv-service
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 1234
+      SPRING_DATASOURCE_PASSWORD: 123
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
 

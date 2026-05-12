@@ -2,14 +2,23 @@ package iuh.fit.storageservice.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
+import java.io.InputStream;
+import java.net.URLEncoder;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.springframework.util.StringUtils.cleanPath;
+import static org.springframework.util.StringUtils.hasText;
 
 @Service
 public class S3Service {
@@ -50,5 +59,58 @@ private  String bucketName ;
         s3Client.deleteObject(request);
     }
 
+    public boolean doesObjectExist(String key) {
+        try {
+            s3Client.headObject(HeadObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build());
+            return true;
+        } catch (NoSuchKeyException e) {
+            return false;
+        }
+    }
 
+    public Map<String, String> uploadFile(MultipartFile file) {
+        String originalFilename = file.getOriginalFilename() != null ?
+               cleanPath(file.getOriginalFilename()) : "file";
+        String objectKey = "applications/" + originalFilename;
+
+        if (doesObjectExist(objectKey)) {
+            deleteFile(objectKey);
+            System.out.println("Deleted existing file: " + objectKey);
+        }
+
+        String contentType = hasText(file.getContentType())
+                ? file.getContentType()
+                : "application/octet-stream";
+
+        Map<String, String> metadata = new HashMap<>();
+        metadata.put("original-filename", URLEncoder.encode(originalFilename, UTF_8));
+
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(objectKey)
+                .contentType(contentType)
+                .metadata(metadata)
+                .build();
+
+        try (InputStream inputStream = file.getInputStream()) {
+            s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, file.getSize()));
+        } catch (java.io.IOException | S3Exception e) {
+            e.printStackTrace();
+            System.err.println("S3 Upload Failed: " + e.getMessage());
+            throw new RuntimeException("FILE_UPLOAD_FAILED");
+        }
+
+        String fileUrl = s3Client.utilities()
+                .getUrl(builder -> builder.bucket(bucketName).key(objectKey))
+                .toExternalForm();
+
+        return java.util.Map.of(
+            "id", objectKey,
+            "url", fileUrl,
+            "fileName", originalFilename
+        );
+    }
 }

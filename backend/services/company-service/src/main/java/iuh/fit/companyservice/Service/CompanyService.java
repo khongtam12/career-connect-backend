@@ -74,6 +74,7 @@ public class CompanyService {
         dto.setCompanySize(company.getCompanySize());
         dto.setFoundedYear(company.getFoundedYear());
         dto.setCreatedAt(company.getCreatedAt());
+        dto.setStatusCompany(company.getStatusCompany() != null ? company.getStatusCompany().name() : null);
 
         // Lấy thông tin xác minh từ CompanyVerification
         companyVerificationRepository.findByCompanyCompanyId(id).ifPresent(v -> {
