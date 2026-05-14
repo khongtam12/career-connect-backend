@@ -20,6 +20,8 @@ public class JobMapper {
                 .jobId(job.getJobId())
                 .employerId(job.getEmployerId())
                 .companyId(job.getCompanyId())
+                .companyName(job.getCompanyName())
+                .logo(job.getCompanyLogoUrl())
                 .title(job.getTitle())
                 .industry(job.getIndustry())
                 .location(job.getLocation())

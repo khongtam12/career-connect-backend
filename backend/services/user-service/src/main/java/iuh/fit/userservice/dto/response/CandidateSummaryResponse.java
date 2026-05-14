@@ -6,16 +6,18 @@ public class CandidateSummaryResponse {
     private String experienceYear;
     private String dateOfBirth;
     private String email;
+    private String avatar;
 
     public CandidateSummaryResponse() {
     }
 
-    public CandidateSummaryResponse(String candidateId, String fullName, String experienceYear, String dateOfBirth, String email) {
+    public CandidateSummaryResponse(String candidateId, String fullName, String experienceYear, String dateOfBirth, String email, String avatar) {
         this.candidateId = candidateId;
         this.fullName = fullName;
         this.experienceYear = experienceYear;
         this.dateOfBirth = dateOfBirth;
         this.email = email;
+        this.avatar = avatar;
     }
 
     public String getCandidateId() {
@@ -56,5 +58,13 @@ public class CandidateSummaryResponse {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
     }
 }
