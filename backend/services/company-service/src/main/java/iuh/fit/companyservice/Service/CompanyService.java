@@ -2,10 +2,12 @@ package iuh.fit.companyservice.Service;
 
 import iuh.fit.companyservice.client.EmployerClient;
 import iuh.fit.companyservice.dto.request.CompanyApprovalRequestDTO;
+import iuh.fit.companyservice.dto.request.CompanyProfileUpdateRequest;
 import iuh.fit.companyservice.dto.request.EmployerCompanyRequest;
 import iuh.fit.companyservice.dto.response.CompanyApprovalResponseDTO;
 import iuh.fit.companyservice.dto.response.CompanyFullDetailDTO;
 import iuh.fit.companyservice.dto.response.CompanyPendingDTO;
+import iuh.fit.companyservice.dto.response.CompanyProfileResponse;
 import iuh.fit.companyservice.dto.response.EmployerResponse;
 import iuh.fit.companyservice.model.Company;
 import iuh.fit.companyservice.model.CompanyVerification;
@@ -150,5 +152,47 @@ public class CompanyService {
         response.setNote(saved.getNote());
 
         return response;
+    }
+
+    // ---- Company profile management ----
+
+    public CompanyProfileResponse getCompanyProfile(String companyId) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new RuntimeException("Company not found: " + companyId));
+        return toProfileResponse(company);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public CompanyProfileResponse updateCompanyProfile(String companyId, CompanyProfileUpdateRequest dto) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new RuntimeException("Company not found: " + companyId));
+        company.setName(dto.getName());
+        if (dto.getLogo() != null) company.setLogo(dto.getLogo());
+        if (dto.getWebsite() != null) company.setWebsite(dto.getWebsite());
+        if (dto.getEmail() != null) company.setEmail(dto.getEmail());
+        if (dto.getPhone() != null) company.setPhone(dto.getPhone());
+        if (dto.getAddress() != null) company.setAddress(dto.getAddress());
+        if (dto.getDescription() != null) company.setDescription(dto.getDescription());
+        company.setCompanySize(dto.getCompanySize());
+        company.setFoundedYear(dto.getFoundedYear());
+        return toProfileResponse(companyRepository.save(company));
+    }
+
+    private CompanyProfileResponse toProfileResponse(Company c) {
+        return new CompanyProfileResponse(
+                c.getCompanyId(),
+                c.getName(),
+                c.getLogo(),
+                c.getTaxCode(),
+                c.getWebsite(),
+                c.getEmail(),
+                c.getPhone(),
+                c.getAddress(),
+                c.getDescription(),
+                c.getCompanySize(),
+                c.getFoundedYear(),
+                c.getStatusCompany() != null ? c.getStatusCompany().name() : null,
+                c.getCreatedAt()
+        );
     }
 }
