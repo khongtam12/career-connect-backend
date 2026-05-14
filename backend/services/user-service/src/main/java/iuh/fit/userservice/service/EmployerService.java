@@ -2,8 +2,10 @@ package iuh.fit.userservice.service;
 
 import iuh.fit.userservice.client.CompanyClient;
 import iuh.fit.userservice.dto.request.EmployerRequestDTO;
+import iuh.fit.userservice.dto.request.EmployerProfileUpdateRequest;
 import iuh.fit.userservice.dto.response.CompanyDTO;
 import iuh.fit.userservice.dto.response.EmployerPageDTO;
+import iuh.fit.userservice.dto.response.EmployerProfileResponse;
 import iuh.fit.userservice.dto.response.EmployerResponseDTO;
 import iuh.fit.userservice.mapper.EmployerMapper;
 import iuh.fit.userservice.model.Employer;
@@ -180,5 +182,43 @@ public class EmployerService {
         stats.put("banned", banned);
         stats.put("newToday", newToday);
         return stats;
+    }
+
+    // ---- Self-service profile management ----
+
+    public EmployerProfileResponse getProfile(String id) {
+        Employer e = employerRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Employer not found: " + id));
+        String companyName = getCompanyNameSafe(e.getCompanyId());
+        return toProfileResponse(e, companyName);
+    }
+
+    @Transactional
+    public EmployerProfileResponse updateProfile(String id, EmployerProfileUpdateRequest dto) {
+        Employer e = employerRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Employer not found: " + id));
+        e.setFullName(dto.getFullName());
+        if (dto.getPhone() != null) e.setPhone(dto.getPhone());
+        if (dto.getAvatar() != null) e.setAvatar(dto.getAvatar());
+        if (dto.getPosition() != null) e.setPosition(dto.getPosition());
+        e.setUpdatedAt(LocalDate.now());
+        Employer saved = employerRepository.save(e);
+        return toProfileResponse(saved, getCompanyNameSafe(saved.getCompanyId()));
+    }
+
+    private EmployerProfileResponse toProfileResponse(Employer e, String companyName) {
+        return new EmployerProfileResponse(
+                e.getEmployerId(),
+                e.getEmail(),
+                e.getFullName(),
+                e.getPhone(),
+                e.getAvatar(),
+                e.getPosition(),
+                e.getCompanyId(),
+                companyName,
+                e.getStatus() != null ? e.getStatus().name() : null,
+                e.getCreatedAt(),
+                e.getUpdatedAt()
+        );
     }
 }

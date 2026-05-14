@@ -10,7 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class JobSpecifications {
-    private JobSpecifications() {}
+    private JobSpecifications() {
+    }
 
     public static Specification<Job> notDeleted() {
         return (root, query, cb) -> cb.isNull(root.get("deletedAt"));
@@ -23,10 +24,9 @@ public final class JobSpecifications {
             }
             String like = "%" + keyword.toLowerCase() + "%";
             return cb.or(
-                cb.like(cb.lower(root.get("title")), like),
-                cb.like(cb.lower(root.get("companyName")), like),
-                cb.like(cb.lower(root.get("description")), like)
-            );
+                    cb.like(cb.lower(root.get("title")), like),
+                    cb.like(cb.lower(root.get("companyName")), like),
+                    cb.like(cb.lower(root.get("description")), like));
         };
     }
 
@@ -111,21 +111,20 @@ public final class JobSpecifications {
             return cb.lessThanOrEqualTo(root.get("salaryMin"), max);
         };
     }
-    public static Specification<Job> filter( String search, String status) {
+
+    public static Specification<Job> filter(String search, String status) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
             // Không lấy job đã bị xóa mềm
             predicates.add(cb.isNull(root.get("deletedAt")));
 
-
             // search theo title hoặc companyName
             if (!search.equals("*")) {
                 String like = "%" + search.toLowerCase() + "%";
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("title")), like),
-                        cb.like(cb.lower(root.get("companyName")), like)
-                ));
+                        cb.like(cb.lower(root.get("companyName")), like)));
             }
 
             // filter theo status

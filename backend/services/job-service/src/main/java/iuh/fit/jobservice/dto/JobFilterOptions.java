@@ -11,11 +11,10 @@ public class JobFilterOptions {
     private List<IndustrySummary> industries;
 
     public JobFilterOptions(
-        List<JobType> jobTypes,
-        List<StatusJob> statuses,
-        List<String> locations,
-        List<IndustrySummary> industries
-    ) {
+            List<JobType> jobTypes,
+            List<StatusJob> statuses,
+            List<String> locations,
+            List<IndustrySummary> industries) {
         this.jobTypes = jobTypes;
         this.statuses = statuses;
         this.locations = locations;
