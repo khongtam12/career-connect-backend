@@ -24,7 +24,8 @@ public class CandidateService {
                 candidate.getFullName(),
                 String.valueOf(candidate.getExperienceYear()),
                 candidate.getDateOfBirth() != null ? candidate.getDateOfBirth().toString() : null,
-                candidate.getEmail()
+                candidate.getEmail(),
+                candidate.getAvatar()
         );
     }
 }
