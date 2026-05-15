@@ -36,6 +36,57 @@ build/
 
 ### Mac OS ###
 .DS_Store
-# Environment variables
+
+# OS / editor
+Thumbs.db
+.idea/
+
+# Logs
+*.log
+
+# Env files
 .env
 .env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.python-version
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Java / Maven / Gradle
+target/
+build/
+.gradle/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Node
+node_modules/
+dist/
+coverage/
+.npm/
+.pnpm-store/
+
+# Frontend build caches
+.vite/
+.parcel-cache/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Uploaded/generated binaries
+*.class
+*.jar
+*.war
+
