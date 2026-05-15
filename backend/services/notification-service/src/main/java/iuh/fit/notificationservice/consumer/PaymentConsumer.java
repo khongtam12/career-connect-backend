@@ -16,11 +16,11 @@ public class PaymentConsumer {
 
     @KafkaListener(topics = "payment-order-success", groupId = "notification-group")
     public void handlePaymentSuccess(OrderPaymentSuccessEvent event) {
-        log.info("Nhan su kien thanh toan tong hop de gui 1 email: {}", event.getPaymentId());
+        log.info("Nhận sự kiện thanh toán tổng hợp để gửi 1 email: {}", event.getPaymentId());
         try {
             emailService.sendPaymentSuccessEmail(event);
         } catch (Exception e) {
-            log.error("Loi khi gui email thanh toan tong hop: {}", e.getMessage(), e);
+            log.error("Lỗi khi gửi email thanh toán tổng hợp: {}", e.getMessage(), e);
         }
     }
 }

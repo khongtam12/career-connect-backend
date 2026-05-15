@@ -94,6 +94,10 @@ public class SecurityConfig {
                                 .hasAuthority("SCOPE_CANDIDATE")
                                 .pathMatchers("/api/v1/user/auth/me",
                                         "/api/v1/storage/**").hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE","SCOPE_ADMIN")
+                                .pathMatchers("/api/v1/notifications/chat/**")
+                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
+                                .pathMatchers("/api/v1/notifications/**")
+                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE", "SCOPE_ADMIN")
                                 .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtDecoder(jwtDecoder()))

@@ -18,6 +18,8 @@ public class JobResponse {
     private String jobId;
     private String employerId;
     private String companyId;
+    private String companyName;
+    private String logo;
 
     private String title;
     private String industry;

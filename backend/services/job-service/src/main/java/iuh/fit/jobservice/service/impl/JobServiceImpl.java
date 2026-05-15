@@ -121,6 +121,8 @@ public class JobServiceImpl implements JobService {
 		job.setJobId(UUID.randomUUID().toString());
 		job.setEmployerId(employerId);
 		job.setCompanyId(companyId);
+		job.setCompanyName(company.getName());
+		job.setCompanyLogoUrl(company.getLogo());
 		job.setTitle(request.getTitle().trim());
 		job.setIndustry(normalize(request.getIndustry()));
 		job.setLocation(normalize(request.getAddress()));
