@@ -23,5 +23,13 @@ public class IdGenerator {
         return "CMPSB" + "-" + UUID.randomUUID();
     }
 
+    public static String generatorIdCompanyMarketingEntitlement() {
+        return "CMPME" + "-" + UUID.randomUUID();
+    }
+
+    public static String generatorIdCompanyMarketingAssignment() {
+        return "CMPMA" + "-" + UUID.randomUUID();
+    }
+
 
 }

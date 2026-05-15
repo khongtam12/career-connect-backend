@@ -13,8 +13,10 @@ public class CompanySubscriptionRequest {
     private String companyId;
     private String packageId;
     private String packageLabel;
+    private String packageCategory;
     private int jobPostLimit;
     private int durationDays;
+    private int quantity;
 
     public String getCompanyId() {
         return companyId;
@@ -40,6 +42,14 @@ public class CompanySubscriptionRequest {
         this.packageLabel = packageLabel;
     }
 
+    public String getPackageCategory() {
+        return packageCategory;
+    }
+
+    public void setPackageCategory(String packageCategory) {
+        this.packageCategory = packageCategory;
+    }
+
     public int getJobPostLimit() {
         return jobPostLimit;
     }
@@ -54,5 +64,13 @@ public class CompanySubscriptionRequest {
 
     public void setDurationDays(int durationDays) {
         this.durationDays = durationDays;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
     }
 }

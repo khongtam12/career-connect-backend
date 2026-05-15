@@ -42,6 +42,10 @@ public class JobResponse {
 
     private String packageId;
     private String packageLabel;
+    private String marketingAssignmentId;
+    private String marketingPackageCategory;
+    private String marketingPackageType;
+    private String marketingPackageLabel;
 
     // Thông tin chung
     private String rank;

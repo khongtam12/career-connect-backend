@@ -1,0 +1,6 @@
+# JVM crash logs
+hs_err_pid*.log
+replay_pid*.log
+
+# Generic logs at repo root
+*.log

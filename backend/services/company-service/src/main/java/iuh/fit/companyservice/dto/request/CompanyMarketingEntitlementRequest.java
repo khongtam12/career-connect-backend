@@ -1,29 +1,22 @@
-package iuh.fit.paymentservice.event;
+package iuh.fit.companyservice.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PaymentSuccessEvent {
-    private String paymentId;
+public class CompanyMarketingEntitlementRequest {
     private String companyId;
-    private String employerEmail;
+    private String paymentId;
     private String packageId;
-    private String packageName;
-    private Double amount;
-    private Integer durationDays;
-    private LocalDateTime paidAt;
-    private int jobPostLimit;
     private String packageLabel;
     private String packageCategory;
     private String packageType;
+    private int jobLimit;
     private int quantity;
-
+    private int durationDays;
 }

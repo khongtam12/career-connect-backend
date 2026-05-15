@@ -3,11 +3,14 @@ package iuh.fit.jobservice.service.impl;
 import iuh.fit.jobservice.client.CompanyServiceClient;
 import iuh.fit.jobservice.client.UserServiceClient;
 import iuh.fit.jobservice.dto.CompanyDTO;
+import iuh.fit.jobservice.dto.CompanyMarketingAssignmentDTO;
+import iuh.fit.jobservice.dto.CompanyMarketingAssignmentRequest;
 import iuh.fit.jobservice.dto.CompanySubscriptionDTO;
 import iuh.fit.jobservice.dto.IndustryDTO;
 import iuh.fit.jobservice.dto.IndustrySummary;
 import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
+import iuh.fit.jobservice.dto.request.ApplyMarketingPackageRequest;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
 import iuh.fit.jobservice.dto.response.*;
@@ -534,6 +537,61 @@ public class JobServiceImpl implements JobService {
 		return response;
 	}
 
+	@Override
+	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
+	public JobResponse applyMarketingPackage(String employerId, String jobId, ApplyMarketingPackageRequest request) {
+		validateEmployerId(employerId);
+		if (request == null || request.getEntitlementId() == null || request.getEntitlementId().isBlank()) {
+			throw new RuntimeException("Marketing entitlement is required");
+		}
+
+		Job job = getJobOrThrow(jobId);
+		ensureOwner(employerId, job);
+		String companyId = fetchCompanyIdByEmployerId(employerId);
+		if (!companyId.equals(job.getCompanyId())) {
+			throw new RuntimeException("Job does not belong to employer company");
+		}
+		if (job.getMarketingAssignmentId() != null && !job.getMarketingAssignmentId().isBlank()) {
+			throw new RuntimeException("Job already has an active marketing package");
+		}
+
+		CompanyMarketingAssignmentDTO assignment = companyServiceClient.assignMarketingEntitlement(
+				request.getEntitlementId(),
+				CompanyMarketingAssignmentRequest.builder()
+						.companyId(companyId)
+						.targetId(jobId)
+						.targetScope("JOB")
+						.placement(request.getPlacement())
+						.build()
+		);
+
+		applyMarketingAssignment(job, assignment);
+		job.setUpdatedAt(LocalDateTime.now());
+		return JobMapper.toResponse(jobRepository.save(job));
+	}
+
+	@Override
+	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
+	public JobResponse removeMarketingPackage(String employerId, String jobId) {
+		validateEmployerId(employerId);
+		Job job = getJobOrThrow(jobId);
+		ensureOwner(employerId, job);
+
+		String assignmentId = normalize(job.getMarketingAssignmentId());
+		if (assignmentId == null) {
+			throw new RuntimeException("Job does not have an active marketing package");
+		}
+
+		String companyId = fetchCompanyIdByEmployerId(employerId);
+		companyServiceClient.removeMarketingAssignment(assignmentId, companyId);
+
+		clearMarketingAssignment(job);
+		job.setUpdatedAt(LocalDateTime.now());
+		return JobMapper.toResponse(jobRepository.save(job));
+	}
+
 	private Job getJobOrThrow(String jobId) {
 		return jobRepository.findActiveById(jobId)
 				.orElseThrow(() -> new RuntimeException("Job not found"));
@@ -664,11 +722,46 @@ public class JobServiceImpl implements JobService {
 		if (subscription.getStatus() == null || !"ACTIVE".equalsIgnoreCase(subscription.getStatus())) {
 			throw new RuntimeException("Subscription is not active");
 		}
+		boolean isJobPostingPackage = "JOB_POSTING".equalsIgnoreCase(subscription.getPackageCategory())
+				|| (subscription.getPackageCategory() == null
+				&& subscription.getPackageId() != null
+				&& subscription.getPackageId().toUpperCase(Locale.ROOT).startsWith("JP"));
+		if (!isJobPostingPackage) {
+			throw new RuntimeException("Subscription is not valid for job posting");
+		}
 		if (subscription.getEndDate() != null && subscription.getEndDate().isBefore(LocalDateTime.now())) {
 			throw new RuntimeException("Subscription expired");
 		}
 		if (subscription.getJobPostedCount() >= subscription.getJobPostLimit()) {
 			throw new RuntimeException("Subscription job post limit reached");
+		}
+	}
+
+	private void applyMarketingAssignment(Job job, CompanyMarketingAssignmentDTO assignment) {
+		if (assignment == null) {
+			throw new RuntimeException("Marketing assignment failed");
+		}
+
+		job.setMarketingAssignmentId(assignment.getId());
+		job.setMarketingEntitlementId(assignment.getEntitlementId());
+		job.setMarketingPackageCategory(assignment.getPackageCategory());
+		job.setMarketingPackageType(assignment.getPackageType());
+		job.setMarketingPackageLabel(assignment.getPackageLabel());
+
+		if ("HIGHLIGHT".equalsIgnoreCase(assignment.getPackageCategory())) {
+			job.setTop(true);
+		}
+	}
+
+	private void clearMarketingAssignment(Job job) {
+		boolean wasHighlight = "HIGHLIGHT".equalsIgnoreCase(job.getMarketingPackageCategory());
+		job.setMarketingAssignmentId(null);
+		job.setMarketingEntitlementId(null);
+		job.setMarketingPackageCategory(null);
+		job.setMarketingPackageType(null);
+		job.setMarketingPackageLabel(null);
+		if (wasHighlight) {
+			job.setTop(false);
 		}
 	}
 

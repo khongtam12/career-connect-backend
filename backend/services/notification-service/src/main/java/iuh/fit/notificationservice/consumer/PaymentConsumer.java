@@ -1,8 +1,6 @@
 package iuh.fit.notificationservice.consumer;
 
-
-
-import iuh.fit.notificationservice.event.PaymentSuccessEvent;
+import iuh.fit.notificationservice.event.OrderPaymentSuccessEvent;
 import iuh.fit.notificationservice.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,19 +14,13 @@ public class PaymentConsumer {
 
     private final EmailService emailService;
 
-    @KafkaListener(topics = "payment-success", groupId = "notification-group")
-    public void handlePaymentSuccess(PaymentSuccessEvent event) {
-        log.info("📧 Nhận sự kiện thanh toán thành công để gửi mail: {}", event.getPaymentId());
+    @KafkaListener(topics = "payment-order-success", groupId = "notification-group")
+    public void handlePaymentSuccess(OrderPaymentSuccessEvent event) {
+        log.info("Nhận sự kiện thanh toán tổng hợp để gửi 1 email: {}", event.getPaymentId());
         try {
-            System.out.println(event.getEmployerEmail());
-            emailService.sendPaymentSuccessEmail(
-                    event.getEmployerEmail(),
-                    event.getPackageName(),
-                    event.getAmount(),
-                    event.getDurationDays()
-            );
+            emailService.sendPaymentSuccessEmail(event);
         } catch (Exception e) {
-            log.error("❌ Lỗi khi gửi email thanh toán: {}", e.getMessage());
+            log.error("Lỗi khi gửi email thanh toán tổng hợp: {}", e.getMessage(), e);
         }
     }
 }

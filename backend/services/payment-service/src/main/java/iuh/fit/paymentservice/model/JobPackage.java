@@ -54,9 +54,6 @@ public class JobPackage {
     @Column(name = "box_type")
     private List<BoxType> allowedBoxTypes;
 
-    @OneToMany(mappedBy = "jobPackage")
-    private List<Payment> payments;
-
     public JobPackage(String packageId) {
         this.packageId = packageId;
     }

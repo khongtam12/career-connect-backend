@@ -27,8 +27,9 @@ public class SubscriptionService {
         sub.setId(IdGenerator.generatorIdCompannySubscription());
         sub.setPackageId(cmp.getPackageId());
         sub.setPackageLabel(cmp.getPackageLabel());
+        sub.setPackageCategory(cmp.getPackageCategory());
         sub.setJobPostedCount(0);
-        sub.setJobPostLimit(cmp.getJobPostLimit());
+        sub.setJobPostLimit(cmp.getJobPostLimit() * Math.max(cmp.getQuantity(), 1));
         LocalDateTime start = LocalDateTime.now();
         LocalDateTime end = start.plusDays(cmp.getDurationDays());
         sub.setStartDate(start);
@@ -97,7 +98,8 @@ public class SubscriptionService {
                 .id(subscription.getId())
                 .companyId(subscription.getCompany() != null ? subscription.getCompany().getCompanyId() : null)
                 .packageId(subscription.getPackageId())
-            .packageLabel(subscription.getPackageLabel())
+                .packageLabel(subscription.getPackageLabel())
+                .packageCategory(subscription.getPackageCategory())
                 .jobPostLimit(subscription.getJobPostLimit())
                 .jobPostedCount(subscription.getJobPostedCount())
                 .startDate(subscription.getStartDate())

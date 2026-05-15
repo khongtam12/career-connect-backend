@@ -23,6 +23,7 @@ public class CompanySubscription {
     private Company company;
     private String packageId;
     private String packageLabel;
+    private String packageCategory;
     private int jobPostLimit;
 
     private int jobPostedCount;
@@ -37,13 +38,14 @@ public class CompanySubscription {
     public CompanySubscription() {
     }
 
-    public CompanySubscription(String id, Company company, String packageId, String packageLabel, int jobPostLimit,
+    public CompanySubscription(String id, Company company, String packageId, String packageLabel, String packageCategory, int jobPostLimit,
             int jobPostedCount,
             LocalDateTime startDate, LocalDateTime endDate, StatusPackage status) {
         this.id = id;
         this.company = company;
         this.packageId = packageId;
         this.packageLabel = packageLabel;
+        this.packageCategory = packageCategory;
         this.jobPostLimit = jobPostLimit;
         this.jobPostedCount = jobPostedCount;
         this.startDate = startDate;
@@ -82,6 +84,14 @@ public class CompanySubscription {
 
     public void setPackageLabel(String packageLabel) {
         this.packageLabel = packageLabel;
+    }
+
+    public String getPackageCategory() {
+        return packageCategory;
+    }
+
+    public void setPackageCategory(String packageCategory) {
+        this.packageCategory = packageCategory;
     }
 
     public int getJobPostLimit() {

@@ -10,16 +10,28 @@ import java.time.LocalDateTime;
 public class CompanyMapper {
     public static Company toConvertCompany(CompanyDTO dto){
         Company company = new Company();
-        company.setLogo(dto.getLogo());
-        company.setName(dto.getName());
-        company.setEmail(dto.getEmail());
-        company.setPhone(dto.getPhone());
-        company.setAddress(dto.getAddress());
-        company.setDescription(dto.getDescription());
-        company.setCompanySize(dto.getCompanySize());
+        company.setCompanyId(normalize(dto.getCompanyId()));
+        company.setLogo(normalize(dto.getLogo()));
+        company.setName(normalize(dto.getName()));
+        company.setTaxCode(normalize(dto.getTaxCode()));
+        company.setWebsite(normalize(dto.getWebsite()));
+        company.setEmail(normalize(dto.getEmail()));
+        company.setPhone(normalize(dto.getPhone()));
+        company.setAddress(normalize(dto.getAddress()));
+        company.setDescription(normalize(dto.getDescription()));
+        company.setCompanySize(dto.getCompanySize() == null ? 0 : dto.getCompanySize());
+        company.setFoundedYear(dto.getFoundedYear() == null ? 0 : dto.getFoundedYear());
         company.setStatusCompany(StatusCompany.PENDING);
 
         return company;
     }
 
+    private static String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
 }

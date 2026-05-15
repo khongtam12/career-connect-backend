@@ -1,12 +1,12 @@
 package iuh.fit.paymentservice.controller;
 
-import iuh.fit.paymentservice.Client.CompanyClient;
 import iuh.fit.paymentservice.config.VnpayConfig;
-import iuh.fit.paymentservice.dto.request.CompanySubscriptionRequest;
 import iuh.fit.paymentservice.dto.request.InvoiceCreateRequest;
 import iuh.fit.paymentservice.dto.response.VNPayResponse;
+import iuh.fit.paymentservice.event.OrderPaymentSuccessEvent;
 import iuh.fit.paymentservice.event.PaymentSuccessEvent;
 import iuh.fit.paymentservice.model.Payment;
+import iuh.fit.paymentservice.model.PaymentItem;
 import iuh.fit.paymentservice.model.StatusPayment;
 import iuh.fit.paymentservice.service.PaymentService;
 import iuh.fit.paymentservice.util.VnpayUtil;
@@ -37,9 +37,6 @@ public class PaymentController {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final PaymentService paymentService;
     private final VnpayConfig vnPayConfig;
-    private final CompanyClient companyClient;
-    @Value("${spring.kafka.bootstrap-servers}")
-    private String bootstrapServers;
 
     @Value("${FRONTEND_URL}")
     private String frontendUrl;
@@ -94,37 +91,63 @@ public class PaymentController {
             Payment payment = paymentService.findByTransactionCode(txnRef);
 
             if ("00".equals(responseCode)) {
+                if (payment.getStatus() == StatusPayment.SUCCEEDED) {
+                    log.info("Payment {} already processed successfully, skipping duplicate callback", payment.getPaymentId());
+                    return redirectToFrontend("success");
+                }
+
                 payment.setStatus(StatusPayment.SUCCEEDED);
                 payment.setPaidAt(LocalDateTime.now());
                 paymentService.save(payment);
 
-                String email = payment.getEmployerEmail();
-                PaymentSuccessEvent event = PaymentSuccessEvent.builder()
-                        .paymentId(payment.getPaymentId())
-                        .companyId(payment.getCompanyId())
-                        .employerEmail(email)
-                        .packageId(payment.getJobPackage().getPackageId())
-                        .packageName(payment.getJobPackage().getName())
-                        .amount(payment.getAmount())
-                        .packageLabel(payment.getJobPackage().getBadge() != null
-                                ? payment.getJobPackage().getBadge()
-                                : payment.getJobPackage().getName())
-                        .jobPostLimit(payment.getJobPackage().getJobPostLimit())
-                        .durationDays(payment.getDurationDays())
-                        .paidAt(LocalDateTime.now())
-                        .build();
-                System.out.println(event.getEmployerEmail());
-                log.info("Bootstrap: {}", bootstrapServers);
-                kafkaTemplate.send("payment-success", event);
-                return redirectToFrontend("success");
+                if (payment.getItems() != null && !payment.getItems().isEmpty()) {
+                    for (PaymentItem item : payment.getItems()) {
+                        PaymentSuccessEvent event = PaymentSuccessEvent.builder()
+                                .paymentId(payment.getPaymentId())
+                                .companyId(payment.getCompanyId())
+                                .employerEmail(payment.getEmployerEmail())
+                                .packageId(item.getPackageId())
+                                .packageName(item.getPackageName())
+                                .amount(item.getAmount())
+                                .durationDays(item.getDurationDays())
+                                .paidAt(payment.getPaidAt())
+                                .jobPostLimit(item.getJobPostLimit())
+                                .packageLabel(item.getPackageName())
+                                .packageCategory(item.getPackageCategory())
+                                .packageType(item.getPackageType())
+                                .quantity(item.getQuantity())
+                                .build();
 
-            } else {
-                payment.setStatus(StatusPayment.FAILED);
+                        log.info("Sending PaymentSuccessEvent for payment {} package {}", payment.getPaymentId(), item.getPackageId());
+                        kafkaTemplate.send("payment-success", event);
+                    }
+
+                    OrderPaymentSuccessEvent orderEvent = OrderPaymentSuccessEvent.builder()
+                            .paymentId(payment.getPaymentId())
+                            .companyId(payment.getCompanyId())
+                            .employerEmail(payment.getEmployerEmail())
+                            .totalAmount(payment.getAmount())
+                            .paidAt(payment.getPaidAt())
+                            .items(payment.getItems().stream()
+                                    .map(item -> OrderPaymentSuccessEvent.ItemEvent.builder()
+                                            .packageId(item.getPackageId())
+                                            .packageName(item.getPackageName())
+                                            .durationDays(item.getDurationDays())
+                                            .quantity(item.getQuantity())
+                                            .amount(item.getAmount())
+                                            .build())
+                                    .toList())
+                            .build();
+                    log.info("Sending OrderPaymentSuccessEvent for payment {}", payment.getPaymentId());
+                    kafkaTemplate.send("payment-order-success", orderEvent);
+                }
+
+                return redirectToFrontend("success");
             }
 
+            payment.setStatus(StatusPayment.FAILED);
             paymentService.save(payment);
-
-            return redirectToFrontend("00".equals(responseCode) ? "success" : "failed");
+            return redirectToFrontend("failed");
         } catch (Exception e) {
             log.error("Callback error: {}", e.getMessage(), e);
             return redirectToFrontend("failed");

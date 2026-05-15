@@ -1,5 +1,7 @@
 package iuh.fit.companyservice.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -9,9 +11,17 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class VerifyCompanyDTO {
+    @NotBlank(message = "Company ID is required")
     private String companyId;
+
+    @NotBlank(message = "Submitted tax code is required")
+    @Size(max = 30, message = "Submitted tax code must not exceed 30 characters")
     private String submittedTaxCode;
+
+    @NotBlank(message = "Business license is required")
     private String businessLicense;
+
+    @Size(max = 500, message = "Note must not exceed 500 characters")
     private String note;
 
     public VerifyCompanyDTO(String companyId, String submittedTaxCode, String businessLicense, String note) {

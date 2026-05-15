@@ -43,10 +43,17 @@ public class CompanyService {
         if (company.getCompanyId() == null || company.getCompanyId().isBlank()) {
             company.setCompanyId(IdGenerator.generatorIdCompanny());
             company.setCreatedAt(LocalDateTime.now());
+            company.setStatusCompany(StatusCompany.PENDING);
+        } else {
+            Company existingCompany = companyRepository.findById(company.getCompanyId())
+                    .orElseThrow(() -> new RuntimeException("Company not found"));
+            company.setCreatedAt(existingCompany.getCreatedAt());
+            company.setStatusCompany(existingCompany.getStatusCompany());
+            company.setSubscriptions(existingCompany.getSubscriptions());
         }
         Company savedCompany = companyRepository.save(company);
         EmployerCompanyRequest request = new EmployerCompanyRequest();
-        request.setCompanyId(company.getCompanyId());
+        request.setCompanyId(savedCompany.getCompanyId());
         request.setEmployerId(employerId);
         employerClient.saveEmployerCompany(request);
         return savedCompany;

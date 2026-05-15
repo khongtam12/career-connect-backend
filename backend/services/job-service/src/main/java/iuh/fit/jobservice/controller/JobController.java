@@ -2,6 +2,7 @@ package iuh.fit.jobservice.controller;
 
 import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
+import iuh.fit.jobservice.dto.request.ApplyMarketingPackageRequest;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
 import iuh.fit.jobservice.dto.response.*;
@@ -103,6 +104,25 @@ public class JobController {
             @RequestParam("status") String status
     ) {
         JobResponse response = jobService.employerChangeStatus(employerId, jobId, status);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/employer/{jobId}/marketing")
+    public ResponseEntity<?> applyMarketingPackage(
+            @RequestHeader("X-User-Id") String employerId,
+            @PathVariable("jobId") String jobId,
+            @RequestBody ApplyMarketingPackageRequest request
+    ) {
+        JobResponse response = jobService.applyMarketingPackage(employerId, jobId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/employer/{jobId}/marketing")
+    public ResponseEntity<?> removeMarketingPackage(
+            @RequestHeader("X-User-Id") String employerId,
+            @PathVariable("jobId") String jobId
+    ) {
+        JobResponse response = jobService.removeMarketingPackage(employerId, jobId);
         return ResponseEntity.ok(response);
     }
 

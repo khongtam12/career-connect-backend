@@ -2,6 +2,7 @@ package iuh.fit.paymentservice.dto.request;
 
 import iuh.fit.paymentservice.model.Method;
 import lombok.Data;
+import java.util.List;
 
 
 @Data
@@ -12,6 +13,5 @@ public class InvoiceCreateRequest {
     private Long amount;
     private String companyId;
     private String bankCode;
-    private String packageId;
-    private int durationDays;
+    private List<PaymentItemRequest> items;
 }

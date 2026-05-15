@@ -1,4 +1,4 @@
-package iuh.fit.paymentservice.event;
+package iuh.fit.jobservice.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,19 +11,18 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PaymentSuccessEvent {
-    private String paymentId;
+public class CompanyMarketingAssignmentDTO {
+    private String id;
+    private String entitlementId;
     private String companyId;
-    private String employerEmail;
+    private String targetId;
+    private String placement;
     private String packageId;
-    private String packageName;
-    private Double amount;
-    private Integer durationDays;
-    private LocalDateTime paidAt;
-    private int jobPostLimit;
     private String packageLabel;
     private String packageCategory;
     private String packageType;
-    private int quantity;
-
+    private String targetScope;
+    private LocalDateTime assignedAt;
+    private LocalDateTime expiresAt;
+    private String status;
 }
