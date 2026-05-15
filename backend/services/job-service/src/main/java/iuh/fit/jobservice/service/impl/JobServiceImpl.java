@@ -54,6 +54,7 @@ public class JobServiceImpl implements JobService {
 
 	private static final Logger log = LoggerFactory.getLogger(JobServiceImpl.class);
 	private static final String JOB_SEARCH_CACHE = "job-search";
+	private static final long ADMIN_APPROVAL_GRACE_HOURS = 24;
 
 	private final JobRepository jobRepository;
 	private final IndustryRepository industryRepository;
@@ -344,6 +345,7 @@ public class JobServiceImpl implements JobService {
 		StatusJob updated = JobStatusTransition.transition(Role.ADMIN, current, requested);
 
 		if (current == StatusJob.PENDING && updated == StatusJob.ACTIVE) {
+			validateAdminApprovalWindow(job);
 			String subscriptionId = normalize(job.getCompanySubscriptionId());
 			if (subscriptionId == null) {
 				throw new JobStatusException("Company subscription is required to approve job");
@@ -762,6 +764,22 @@ public class JobServiceImpl implements JobService {
 		job.setMarketingPackageLabel(null);
 		if (wasHighlight) {
 			job.setTop(false);
+		}
+	}
+
+	private void validateAdminApprovalWindow(Job job) {
+		LocalDateTime submittedAt = job.getUpdatedAt() != null ? job.getUpdatedAt() : job.getCreatedAt();
+		if (submittedAt == null) {
+			return;
+		}
+
+		LocalDateTime earliestApprovalTime = submittedAt.plusHours(ADMIN_APPROVAL_GRACE_HOURS);
+		if (LocalDateTime.now().isBefore(earliestApprovalTime)) {
+			String formattedTime = earliestApprovalTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+			throw new JobStatusException(
+					"Tin đang trong thời gian chờ duyệt 24 giờ. Admin chỉ có thể duyệt sau " + formattedTime
+							+ " để nhà tuyển dụng còn thời gian báo sai gói hoặc yêu cầu từ chối tin."
+			);
 		}
 	}
 
