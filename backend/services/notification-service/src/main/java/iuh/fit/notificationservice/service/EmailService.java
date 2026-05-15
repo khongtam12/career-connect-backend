@@ -1,10 +1,13 @@
 package iuh.fit.notificationservice.service;
 
+import iuh.fit.notificationservice.event.OrderPaymentSuccessEvent;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class EmailService {
@@ -186,5 +189,73 @@ public class EmailService {
                 .formatted(packageName, amount, durationDays);
 
         sendHtmlEmail(toEmail, subject, html);
+    }
+
+    public void sendPaymentSuccessEmail(OrderPaymentSuccessEvent event) throws MessagingException {
+        List<OrderPaymentSuccessEvent.ItemEvent> items = event.getItems() == null ? List.of() : event.getItems();
+        String rowsHtml = items.stream()
+                .map(item -> """
+                        <tr>
+                            <td style="padding: 10px 8px; border-bottom: 1px solid #e5e7eb; color: #111827;">%s</td>
+                            <td style="padding: 10px 8px; border-bottom: 1px solid #e5e7eb; color: #374151; text-align: center;">%d</td>
+                            <td style="padding: 10px 8px; border-bottom: 1px solid #e5e7eb; color: #374151; text-align: center;">%d ngay</td>
+                            <td style="padding: 10px 8px; border-bottom: 1px solid #e5e7eb; color: #059669; text-align: right; font-weight: bold;">%,.0f VND</td>
+                        </tr>
+                        """.formatted(
+                        item.getPackageName(),
+                        item.getQuantity() == null ? 0 : item.getQuantity(),
+                        item.getDurationDays() == null ? 0 : item.getDurationDays(),
+                        item.getAmount() == null ? 0D : item.getAmount()
+                ))
+                .reduce("", String::concat);
+
+        String html = """
+                <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #4f46e5, #6366f1); padding: 24px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 22px;">Thanh toan thanh cong</h1>
+                    </div>
+                    <div style="padding: 24px;">
+                        <p style="font-size: 16px; color: #374151;">Xin chao,</p>
+                        <p style="font-size: 15px; color: #4b5563;">Don hang mua goi cua ban da duoc xu ly thanh cong.</p>
+                        <div style="background: #f5f3ff; border-left: 4px solid #6366f1; padding: 16px; margin: 16px 0; border-radius: 8px;">
+                            <table style="width: 100%%; border-collapse: collapse;">
+                                <tr><td style="padding: 4px 0; color: #6b7280;">Ma thanh toan:</td><td style="font-weight: bold; color: #111827;">%s</td></tr>
+                                <tr><td style="padding: 4px 0; color: #6b7280;">Tong thanh toan:</td><td style="font-weight: bold; color: #059669;">%,.0f VND</td></tr>
+                                <tr><td style="padding: 4px 0; color: #6b7280;">So goi trong don:</td><td style="font-weight: bold; color: #111827;">%d</td></tr>
+                            </table>
+                        </div>
+                        <table style="width: 100%%; border-collapse: collapse; margin: 16px 0; border: 1px solid #e5e7eb;">
+                            <thead>
+                                <tr style="background: #eef2ff;">
+                                    <th style="padding: 10px 8px; text-align: left; color: #4338ca;">Goi</th>
+                                    <th style="padding: 10px 8px; text-align: center; color: #4338ca;">SL</th>
+                                    <th style="padding: 10px 8px; text-align: center; color: #4338ca;">Thoi han</th>
+                                    <th style="padding: 10px 8px; text-align: right; color: #4338ca;">Thanh tien</th>
+                                </tr>
+                            </thead>
+                            <tbody>%s</tbody>
+                        </table>
+                        <p style="font-size: 15px; color: #4b5563;">Ban da co the su dung cac quyen loi tu nhung goi nay de toi uu hoa viec tuyen dung.</p>
+                        <div style="text-align: center; margin-top: 24px;">
+                            <a href="http://localhost:5173/employer/jobs" style="background: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Dang tin ngay</a>
+                        </div>
+                    </div>
+                    <div style="background: #f9fafb; padding: 16px; text-align: center; font-size: 12px; color: #9ca3af;">
+                        Career Connect Platform
+                    </div>
+                </div>
+                """
+                .formatted(
+                        event.getPaymentId(),
+                        event.getTotalAmount() == null ? 0D : event.getTotalAmount(),
+                        items.size(),
+                        rowsHtml
+                );
+
+        sendHtmlEmail(
+                event.getEmployerEmail(),
+                "Xac nhan thanh toan thanh cong - don hang " + event.getPaymentId(),
+                html
+        );
     }
 }

@@ -74,6 +74,16 @@ public class Job {
 
     private String packageLabel;
 
+    private String marketingAssignmentId;
+
+    private String marketingEntitlementId;
+
+    private String marketingPackageCategory;
+
+    private String marketingPackageType;
+
+    private String marketingPackageLabel;
+
     private LocalDateTime deletedAt; // null = chưa xóa, có giá trị = đã xóa mềm
 
     // Thông tin chung
@@ -373,6 +383,46 @@ public class Job {
 
     public void setPackageLabel(String packageLabel) {
         this.packageLabel = packageLabel;
+    }
+
+    public String getMarketingAssignmentId() {
+        return marketingAssignmentId;
+    }
+
+    public void setMarketingAssignmentId(String marketingAssignmentId) {
+        this.marketingAssignmentId = marketingAssignmentId;
+    }
+
+    public String getMarketingEntitlementId() {
+        return marketingEntitlementId;
+    }
+
+    public void setMarketingEntitlementId(String marketingEntitlementId) {
+        this.marketingEntitlementId = marketingEntitlementId;
+    }
+
+    public String getMarketingPackageCategory() {
+        return marketingPackageCategory;
+    }
+
+    public void setMarketingPackageCategory(String marketingPackageCategory) {
+        this.marketingPackageCategory = marketingPackageCategory;
+    }
+
+    public String getMarketingPackageType() {
+        return marketingPackageType;
+    }
+
+    public void setMarketingPackageType(String marketingPackageType) {
+        this.marketingPackageType = marketingPackageType;
+    }
+
+    public String getMarketingPackageLabel() {
+        return marketingPackageLabel;
+    }
+
+    public void setMarketingPackageLabel(String marketingPackageLabel) {
+        this.marketingPackageLabel = marketingPackageLabel;
     }
 
     public LocalDateTime getDeletedAt() {

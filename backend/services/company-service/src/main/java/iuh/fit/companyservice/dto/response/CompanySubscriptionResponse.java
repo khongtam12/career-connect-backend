@@ -17,6 +17,7 @@ public class CompanySubscriptionResponse {
     private String companyId;
     private String packageId;
     private String packageLabel;
+    private String packageCategory;
     private int jobPostLimit;
     private int jobPostedCount;
     private LocalDateTime startDate;

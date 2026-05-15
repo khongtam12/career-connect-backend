@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 public class CandidateMatchingService {
 
     private static final Pattern YEAR_PATTERN = Pattern.compile("(\\d+(?:[.,]\\d+)?)");
+    private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]+>");
     private static final Set<String> STOP_WORDS = Set.of(
             "va", "voi", "cho", "cua", "tren", "duoi", "tai", "mot", "nhung", "cac",
             "the", "can", "yeu", "cau", "kinh", "nghiem", "lam", "viec", "ung", "vien",
@@ -255,10 +256,11 @@ public class CandidateMatchingService {
         if (extraSkills == null) {
             return;
         }
-        currentSkills.addAll(extraSkills.stream()
+        extraSkills.stream()
+                .flatMap(value -> splitRichTextContent(value).stream())
+                .map(this::toDisplaySkill)
                 .filter(value -> value != null && !value.isBlank())
-                .map(String::trim)
-                .toList());
+                .forEach(currentSkills::add);
     }
 
     private List<String> parseJsonArray(String raw) {
@@ -266,7 +268,12 @@ public class CandidateMatchingService {
             return Collections.emptyList();
         }
         try {
-            return objectMapper.readValue(raw, new TypeReference<List<String>>() {});
+            List<String> values = objectMapper.readValue(raw, new TypeReference<List<String>>() {});
+            return values.stream()
+                    .flatMap(value -> splitRichTextContent(value).stream())
+                    .map(this::toDisplaySkill)
+                    .filter(value -> value != null && !value.isBlank())
+                    .toList();
         } catch (Exception ignored) {
             return parseCsv(raw);
         }
@@ -276,14 +283,14 @@ public class CandidateMatchingService {
         if (raw == null || raw.isBlank()) {
             return Collections.emptyList();
         }
-        return Arrays.stream(raw.split("[,;\\n]"))
-                .map(String::trim)
+        return splitRichTextContent(raw).stream()
+                .map(this::toDisplaySkill)
                 .filter(value -> !value.isBlank())
                 .toList();
     }
 
     private List<String> extractKeywords(String text) {
-        String normalized = normalize(text);
+        String normalized = normalize(stripHtml(text));
         if (normalized == null) {
             return Collections.emptyList();
         }
@@ -330,5 +337,44 @@ public class CandidateMatchingService {
 
     private String valueOrEmpty(String value) {
         return value == null ? "" : value;
+    }
+
+    private List<String> splitRichTextContent(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        String cleaned = stripHtml(raw)
+                .replace("[", " ")
+                .replace("]", " ")
+                .replace("\"", " ")
+                .replace("•", "\n")
+                .replaceAll("\\s*/\\s*li\\s*>", "\n");
+
+        return Arrays.stream(cleaned.split("[,;\\n\\r]+"))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .toList();
+    }
+
+    private String stripHtml(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+
+        return HTML_TAG_PATTERN.matcher(value)
+                .replaceAll(" ")
+                .replace("&nbsp;", " ")
+                .replace("&amp;", "&")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private String toDisplaySkill(String value) {
+        String cleaned = stripHtml(value)
+                .replaceAll("^[-•]+", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+        return cleaned.isBlank() ? null : cleaned;
     }
 }

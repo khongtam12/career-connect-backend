@@ -21,11 +21,10 @@ public class Payment {
     private String companyId;
     private String employerEmail;
 
-    @ManyToOne
-    @JoinColumn(name = "packageId")
-    private JobPackage jobPackage;
+    @OneToMany(mappedBy = "payment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PaymentItem> items;
+
     private double amount;
-    private int durationDays;
     private String transactionCode;
 
     @Enumerated(EnumType.STRING)

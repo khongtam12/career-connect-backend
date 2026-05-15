@@ -2,6 +2,7 @@ package iuh.fit.jobservice.service;
 
 import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
+import iuh.fit.jobservice.dto.request.ApplyMarketingPackageRequest;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
 import iuh.fit.jobservice.dto.response.*;
@@ -20,6 +21,10 @@ public interface JobService {
     JobStatsResponse getMyStats(String employerId);
 
     JobResponse employerChangeStatus(String employerId, String jobId, String newStatus);
+
+    JobResponse applyMarketingPackage(String employerId, String jobId, ApplyMarketingPackageRequest request);
+
+    JobResponse removeMarketingPackage(String employerId, String jobId);
 
     // ===== ADMIN =====
     JobResponse adminChangeStatus(String adminId, String jobId, String newStatus);

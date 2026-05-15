@@ -20,5 +20,8 @@ public class PaymentSuccessEvent {
     private LocalDateTime paidAt;
     private int jobPostLimit;
     private String packageLabel;
+    private String packageCategory;
+    private String packageType;
+    private int quantity;
 
 }
