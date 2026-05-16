@@ -42,6 +42,7 @@ public class JobResponse {
 
     private String packageId;
     private String packageLabel;
+    private String companySubscriptionId;
     private String marketingAssignmentId;
     private String marketingPackageCategory;
     private String marketingPackageType;
