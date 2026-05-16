@@ -4,6 +4,7 @@ import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.ApplyMarketingPackageRequest;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
+import iuh.fit.jobservice.dto.request.RenewJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
 import iuh.fit.jobservice.dto.response.*;
 
@@ -21,6 +22,8 @@ public interface JobService {
     JobStatsResponse getMyStats(String employerId);
 
     JobResponse employerChangeStatus(String employerId, String jobId, String newStatus);
+
+    JobResponse renewJob(String employerId, String jobId, RenewJobRequest request);
 
     JobResponse applyMarketingPackage(String employerId, String jobId, ApplyMarketingPackageRequest request);
 
