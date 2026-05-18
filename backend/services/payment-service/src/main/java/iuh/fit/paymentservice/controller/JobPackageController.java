@@ -1,12 +1,14 @@
 package iuh.fit.paymentservice.controller;
 
+import iuh.fit.paymentservice.dto.request.JobPackageUpdateRequest;
 import iuh.fit.paymentservice.dto.response.JobPackageResponseDTO;
 import iuh.fit.paymentservice.service.JobPackageService;
-import lombok.Getter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -29,5 +31,13 @@ public class JobPackageController {
     @GetMapping("/{packageId}")
     public ResponseEntity<JobPackageResponseDTO> getJobPackageById(@PathVariable String packageId) {
         return ResponseEntity.ok(jobPackageService.getJobPackageById(packageId));
+    }
+
+    @PutMapping("/{packageId}")
+    public ResponseEntity<JobPackageResponseDTO> updateJobPackage(
+            @PathVariable String packageId,
+            @RequestBody JobPackageUpdateRequest request
+    ) {
+        return ResponseEntity.ok(jobPackageService.updateJobPackage(packageId, request));
     }
 }
