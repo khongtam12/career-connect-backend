@@ -258,4 +258,29 @@ public class EmailService {
                 html
         );
     }
+
+    // Gửi email mã OTP xác thực
+    public void sendOtpEmail(String toEmail, String otp) throws MessagingException {
+        String subject = "🔑 Mã xác thực đăng ký tài khoản - Career Connect";
+        String html = """
+                <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #059669, #10b981); padding: 24px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 22px;">Xác thực tài khoản</h1>
+                    </div>
+                    <div style="padding: 32px; text-align: center;">
+                        <p style="font-size: 16px; color: #374151; margin-bottom: 24px;">Chào bạn, mã xác thực (OTP) để hoàn tất đăng ký tài khoản của bạn là:</p>
+                        <div style="background: #f0fdf4; border: 2px dashed #10b981; padding: 20px; border-radius: 8px; display: inline-block;">
+                            <span style="font-size: 32px; font-weight: bold; color: #059669; letter-spacing: 8px;">%s</span>
+                        </div>
+                        <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">Mã này có hiệu lực trong <strong>5 phút</strong>. Vui lòng không chia sẻ mã này với bất kỳ ai để bảo vệ tài khoản của bạn.</p>
+                    </div>
+                    <div style="background: #f9fafb; padding: 16px; text-align: center; font-size: 12px; color: #9ca3af;">
+                        Career Connect Platform — Hệ sinh thái nhân sự tiên phong
+                    </div>
+                </div>
+                """
+                .formatted(otp);
+
+        sendHtmlEmail(toEmail, subject, html);
+    }
 }

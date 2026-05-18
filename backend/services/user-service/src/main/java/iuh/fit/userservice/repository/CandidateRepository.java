@@ -23,4 +23,6 @@ public interface CandidateRepository extends JpaRepository<Candidate, String> {
     org.springframework.data.domain.Page<Candidate> searchCandidates(@org.springframework.data.repository.query.Param("keyword") String keyword, @org.springframework.data.repository.query.Param("status") String status, org.springframework.data.domain.Pageable pageable);
 
     long countByStatus(iuh.fit.userservice.model.Status status);
+
+    boolean existsByEmail(String email);
 }

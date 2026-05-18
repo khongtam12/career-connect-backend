@@ -8,18 +8,20 @@ import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import iuh.fit.userservice.dto.request.AuthenticationRequest;
+import iuh.fit.userservice.dto.request.RegisterDTO;
 import iuh.fit.userservice.dto.response.AuthenticationResponse;
+import iuh.fit.userservice.dto.response.UserDTO;
 import iuh.fit.userservice.exception.AppException;
 import iuh.fit.userservice.exception.ErrorCode;
+import iuh.fit.userservice.client.NotificationClient;
+import iuh.fit.userservice.dto.request.SendEmailRequest;
 import iuh.fit.userservice.mapper.UserMapper;
-import iuh.fit.userservice.model.Admin;
-import iuh.fit.userservice.model.Candidate;
-import iuh.fit.userservice.model.Employer;
+import iuh.fit.userservice.model.*;
 import iuh.fit.userservice.repository.AdminRepository;
 import iuh.fit.userservice.repository.CandidateRepository;
 import iuh.fit.userservice.repository.EmployerRepository;
 import iuh.fit.userservice.repository.InvalidatedTokenRepository;
-import iuh.fit.userservice.model.InvalidatedToken;
+import iuh.fit.userservice.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
@@ -27,9 +29,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.text.ParseException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
@@ -52,6 +56,8 @@ public class AuthenticationService {
     @Value("${jwt.signer-key}")
     protected String SIGNER_KEY;
     private final PasswordEncoder passwordEncoder;
+    private final OtpService otpService;
+    private final NotificationClient notificationClient;
 
 
 
@@ -199,6 +205,82 @@ public class AuthenticationService {
                 throw new RuntimeException(e);
             }
         }
+        @Transactional
+        public UserDTO register(RegisterDTO registerDTO) {
+            // 1. Xác thực OTP trước khi làm bất cứ việc gì
+            if (!otpService.consumeVerifiedRegistration(registerDTO.getEmail())) {
+                throw new AppException(ErrorCode.OTP_NOT_VERIFIED);
+            }
 
+            String password = passwordEncoder.encode(registerDTO.getPassword());
 
+            switch (registerDTO.getType().toUpperCase()) {
+                case "CANDIDATE": {
+                    if (candidateRepository.existsByEmail(registerDTO.getEmail())) {
+                        throw new AppException(ErrorCode.USEREMAIL_EXISTED);
+                    }
+                    Candidate candidate = new Candidate();
+                    candidate.setCandidateId(IdGenerator.generatorIdCandidate());
+                    candidate.setEmail(registerDTO.getEmail());
+                    candidate.setFullName(registerDTO.getFullName());
+                    candidate.setPhone(registerDTO.getPhone());
+                    candidate.setPassword(password);
+                    candidate.setCreatedAt(LocalDate.now());
+                    candidate.setUpdatedAt(LocalDate.now());
+                    candidate.setStatus(Status.ACTIVE);
+                    return UserMapper.fromCandidate(candidateRepository.save(candidate));
+                }
+
+                case "EMPLOYER": {
+                    if (employerRepository.existsByEmail(registerDTO.getEmail())) {
+                        throw new AppException(ErrorCode.USEREMAIL_EXISTED);
+                    }
+                    Employer employer = new Employer();
+                    employer.setEmployerId(IdGenerator.generatorIdEmployer());
+                    employer.setEmail(registerDTO.getEmail());
+                    employer.setFullName(registerDTO.getFullName());
+                    employer.setPhone(registerDTO.getPhone());
+                    employer.setPassword(password);
+                    employer.setCreatedAt(LocalDate.now());
+                    employer.setUpdatedAt(LocalDate.now());
+                    employer.setStatus(Status.ACTIVE);
+                    return UserMapper.fromEmployer(employerRepository.save(employer));
+                }
+
+                default:
+                    throw new AppException(ErrorCode.INVALID_REQUEST);
+            }
+        }
+
+    public void sendOtp(String email, String type) {
+        switch (type.toUpperCase()) {
+            case "CANDIDATE" -> {
+                if (candidateRepository.existsByEmail(email)) {
+                    throw new AppException(ErrorCode.USEREMAIL_EXISTED);
+                }
+            }
+            case "EMPLOYER" -> {
+                if (employerRepository.existsByEmail(email)) {
+                    throw new AppException(ErrorCode.USEREMAIL_EXISTED);
+                }
+            }
+            default -> throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        String otp = otpService.generateOtp(email);
+        
+        SendEmailRequest emailRequest = SendEmailRequest.builder()
+                .to(email)
+                .type("OTP")
+                .otp(otp)
+                .build();
+                
+        notificationClient.sendEmail(emailRequest);
+    }
+
+    public void verifyOtp(String email, String otp) {
+        if (!otpService.verifyOtp(email, otp)) {
+            throw new AppException(ErrorCode.INVALID_OTP);
+        }
+    }
 }

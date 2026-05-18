@@ -53,6 +53,10 @@ public class NotificationService {
                         request.getJobName(),
                         request.getRejectionReason()
                 );
+                case "OTP" -> emailService.sendOtpEmail(
+                        request.getTo(),
+                        request.getOtp()
+                );
                 default -> log.warn("Unknown email type: {}", request.getType());
             }
 
