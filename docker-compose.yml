@@ -120,7 +120,7 @@ services:
       - postgres-data-main:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     ports:
-      - "5432:5432"
+      - "5434:5432"
     networks:
       - career-net
     deploy:
@@ -235,6 +235,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: 1234
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8082:8082"
