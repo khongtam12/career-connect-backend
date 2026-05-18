@@ -1,3 +1,8 @@
+TRUNCATE TABLE favourites CASCADE;
+TRUNCATE TABLE jobs CASCADE;
+TRUNCATE TABLE fields CASCADE;
+TRUNCATE TABLE industrys CASCADE;
+
 -- Industries
 INSERT INTO industrys (industry_id, name, description) VALUES
 ('IND001', 'Công nghệ thông tin', 'Phần mềm, mạng, AI'),
