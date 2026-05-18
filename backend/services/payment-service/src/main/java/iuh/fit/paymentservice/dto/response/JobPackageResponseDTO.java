@@ -34,6 +34,8 @@ public class JobPackageResponseDTO {
 
     private boolean showDetails;
 
+    private boolean active;
+
     // ✅ THAY MỚI
     private List<BoxType> allowedBoxTypes;
 
@@ -141,6 +143,14 @@ public class JobPackageResponseDTO {
 
     public void setShowDetails(boolean showDetails) {
         this.showDetails = showDetails;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public List<BoxType> getAllowedBoxTypes() {

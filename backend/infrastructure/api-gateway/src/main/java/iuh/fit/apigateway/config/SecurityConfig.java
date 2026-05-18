@@ -42,9 +42,9 @@ public class SecurityConfig {
                         "/api/v1/job/search",
                         "/api/v1/job/filters",
                         "/api/v1/job/stats",
-                        "/api/v1/package",
                         "/api/v1/package/payments/vnpay-callback",
-                        "/eureka/**"                ))
+                        "/eureka/**"
+                ))
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeExchange(ex -> ex.anyExchange().permitAll())
@@ -64,6 +64,7 @@ public class SecurityConfig {
 
                                 .pathMatchers("/api/v1/job/health").permitAll()
                                 .pathMatchers(HttpMethod.GET, "/api/v1/job/*").permitAll()
+                                .pathMatchers(HttpMethod.GET, "/api/v1/package/**").permitAll()
                                 .pathMatchers(org.springframework.http.HttpMethod.OPTIONS).permitAll()
 
 
@@ -81,6 +82,8 @@ public class SecurityConfig {
                                         "/api/v1/package/payments/**",
                                         "/api/v1/job/employer/**"
                                 ).hasAuthority("SCOPE_EMPLOYER")
+                                .pathMatchers(HttpMethod.PUT, "/api/v1/package/**")
+                                .hasAuthority("SCOPE_ADMIN")
                                 // Job search/detail: cả EMPLOYER và CANDIDATE đều xem được
                                 .pathMatchers("/api/v1/job/**")
                                 .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
