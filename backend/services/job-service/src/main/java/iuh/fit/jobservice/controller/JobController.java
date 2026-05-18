@@ -4,6 +4,7 @@ import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.ApplyMarketingPackageRequest;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
+import iuh.fit.jobservice.dto.request.RenewJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
 import iuh.fit.jobservice.dto.response.*;
 import iuh.fit.jobservice.service.JobService;
@@ -63,6 +64,17 @@ public class JobController {
             @RequestBody UpdateJobRequest request
     ) {
         JobResponse response = jobService.updateJob(employerId, jobId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    // gia hạn tin
+    @PutMapping("/employer/{jobId}/renew")
+    public ResponseEntity<?> renewJob(
+            @RequestHeader("X-User-Id") String employerId,
+            @PathVariable("jobId") String jobId,
+            @RequestBody RenewJobRequest request
+    ) {
+        JobResponse response = jobService.renewJob(employerId, jobId, request);
         return ResponseEntity.ok(response);
     }
 

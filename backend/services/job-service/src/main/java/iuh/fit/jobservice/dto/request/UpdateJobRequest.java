@@ -34,4 +34,5 @@ public class UpdateJobRequest {
     private String workSchedule;
     private List<String> relatedCategories;
     private List<String> skills;
+    private String companySubscriptionId;
 }

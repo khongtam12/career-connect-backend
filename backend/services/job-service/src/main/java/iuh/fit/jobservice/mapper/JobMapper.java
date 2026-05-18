@@ -39,6 +39,7 @@ public class JobMapper {
                 .status(job.getStatus() != null ? job.getStatus().name().toLowerCase() : null)
                 .packageId(job.getPackageId())
                 .packageLabel(job.getPackageLabel())
+                .companySubscriptionId(job.getCompanySubscriptionId())
                 .marketingAssignmentId(job.getMarketingAssignmentId())
                 .marketingPackageCategory(job.getMarketingPackageCategory())
                 .marketingPackageType(job.getMarketingPackageType())

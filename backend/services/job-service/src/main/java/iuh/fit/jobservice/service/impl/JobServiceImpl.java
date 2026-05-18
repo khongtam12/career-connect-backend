@@ -12,6 +12,7 @@ import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.ApplyMarketingPackageRequest;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
+import iuh.fit.jobservice.dto.request.RenewJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
 import iuh.fit.jobservice.dto.response.*;
 import iuh.fit.jobservice.exception.JobStatusException;
@@ -205,7 +206,11 @@ public class JobServiceImpl implements JobService {
 		}
 
 		if (request.getDeadline() != null && !request.getDeadline().isBlank()) {
-			job.setDeadline(parseDeadline(request.getDeadline()));
+			LocalDate newDeadline = parseDeadline(request.getDeadline());
+			job.setDeadline(newDeadline);
+			if (job.getStatus() == StatusJob.EXPIRED && newDeadline.isAfter(LocalDate.now())) {
+				job.setStatus(StatusJob.ACTIVE);
+			}
 		}
 
 		if (request.getRank() != null) {
@@ -254,6 +259,29 @@ public class JobServiceImpl implements JobService {
 			job.setSkills(JobMapper.toJson(request.getSkills()));
 		}
 
+		String newSubscriptionId = normalize(request.getCompanySubscriptionId());
+		if (newSubscriptionId != null) {
+			StatusJob currentStatus = job.getStatus();
+			if (currentStatus != StatusJob.DRAFT && currentStatus != StatusJob.PENDING && currentStatus != StatusJob.REJECTED) {
+				throw new JobStatusException("Only DRAFT, PENDING, or REJECTED jobs can change subscription");
+			}
+			String currentSubscriptionId = normalize(job.getCompanySubscriptionId());
+			if (!newSubscriptionId.equals(currentSubscriptionId)) {
+				String companyId = fetchCompanyIdByEmployerId(employerId);
+				CompanySubscriptionDTO subscription = companyServiceClient.getSubscriptionById(newSubscriptionId);
+				validateSubscription(subscription, companyId);
+				if (currentStatus == StatusJob.PENDING) {
+					long pendingCount = jobRepository.countByCompanySubscriptionIdAndStatus(newSubscriptionId, StatusJob.PENDING);
+					if ((long) subscription.getJobPostedCount() + pendingCount >= subscription.getJobPostLimit()) {
+						throw new RuntimeException("Subscription job post limit reached");
+					}
+				}
+				job.setCompanySubscriptionId(subscription.getId());
+				job.setPackageId(subscription.getPackageId());
+				job.setPackageLabel(subscription.getPackageLabel());
+			}
+		}
+
 		job.setUpdatedAt(LocalDateTime.now());
 
 		Job saved = jobRepository.save(job);
@@ -267,6 +295,9 @@ public class JobServiceImpl implements JobService {
 		validateEmployerId(employerId);
 		Job job = getJobOrThrow(jobId);
 		ensureOwner(employerId, job);
+		if (job.getNumberOfApplications() > 0) {
+			throw new RuntimeException("Cannot delete job with applicants");
+		}
 		// xóa mềm: chỉ đánh dấu deletedAt, giữ nguyên dữ liệu
 		job.setDeletedAt(LocalDateTime.now());
 		jobRepository.save(job);
@@ -313,6 +344,48 @@ public class JobServiceImpl implements JobService {
 				.build();
 	}
 
+	@Override
+	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
+	public JobResponse renewJob(String employerId, String jobId, RenewJobRequest request) {
+		validateEmployerId(employerId);
+		Job job = getJobOrThrow(jobId);
+		ensureOwner(employerId, job);
+
+		StatusJob currentStatus = job.getStatus();
+		if (currentStatus == StatusJob.DRAFT || currentStatus == StatusJob.PENDING || currentStatus == StatusJob.REJECTED) {
+			throw new IllegalArgumentException("Không thể gia hạn tin tuyển dụng chưa được duyệt (Trạng thái hiện tại: " + currentStatus + ").");
+		}
+
+		String newSubscriptionId = normalize(request.getCompanySubscriptionId());
+		if (newSubscriptionId == null) {
+			throw new RuntimeException("Company subscription is required to renew job");
+		}
+
+		String companyId = fetchCompanyIdByEmployerId(employerId);
+		CompanySubscriptionDTO subscription = companyServiceClient.getSubscriptionById(newSubscriptionId);
+		validateSubscription(subscription, companyId);
+
+		CompanySubscriptionDTO consumed = companyServiceClient.consumeSubscription(newSubscriptionId);
+		if (consumed == null) {
+			throw new RuntimeException("Failed to consume subscription");
+		}
+
+		job.setCompanySubscriptionId(consumed.getId());
+		job.setPackageId(consumed.getPackageId());
+		job.setPackageLabel(consumed.getPackageLabel());
+
+		if (request.getDeadline() != null && !request.getDeadline().isBlank()) {
+			job.setDeadline(parseDeadline(request.getDeadline()));
+		}
+
+		job.setStatus(StatusJob.ACTIVE);
+		job.setUpdatedAt(LocalDateTime.now());
+
+		Job saved = jobRepository.save(job);
+		return JobMapper.toResponse(saved);
+	}
+
 	// ── EMPLOYER: chuyển trạng thái ──────────────────────────────────────────────
 	@Override
 	@Transactional
@@ -324,6 +397,23 @@ public class JobServiceImpl implements JobService {
 
 		StatusJob requested = parseStatus(newStatus);
 		StatusJob updated = JobStatusTransition.transition(Role.EMPLOYER, job.getStatus(), requested);
+		if (updated == StatusJob.PENDING) {
+			String subscriptionId = normalize(job.getCompanySubscriptionId());
+			if (subscriptionId == null) {
+				throw new JobStatusException("Company subscription is required to submit for approval");
+			}
+			String companyId = fetchCompanyIdByEmployerId(employerId);
+			CompanySubscriptionDTO subscription = companyServiceClient.getSubscriptionById(subscriptionId);
+			validateSubscription(subscription, companyId);
+			long pendingCount = jobRepository.countByCompanySubscriptionIdAndStatus(subscriptionId, StatusJob.PENDING);
+			if ((long) subscription.getJobPostedCount() + pendingCount >= subscription.getJobPostLimit()) {
+				throw new RuntimeException("Subscription job post limit reached");
+			}
+			if (job.getPackageLabel() == null) {
+				job.setPackageId(subscription.getPackageId());
+				job.setPackageLabel(subscription.getPackageLabel());
+			}
+		}
 
 		job.setStatus(updated);
 		job.setUpdatedAt(LocalDateTime.now());
@@ -722,20 +812,20 @@ public class JobServiceImpl implements JobService {
 			throw new RuntimeException("Subscription does not belong to company");
 		}
 		if (subscription.getStatus() == null || !"ACTIVE".equalsIgnoreCase(subscription.getStatus())) {
-			throw new RuntimeException("Subscription is not active");
+			throw new IllegalArgumentException("Subscription is not active");
 		}
 		boolean isJobPostingPackage = "JOB_POSTING".equalsIgnoreCase(subscription.getPackageCategory())
 				|| (subscription.getPackageCategory() == null
 				&& subscription.getPackageId() != null
 				&& subscription.getPackageId().toUpperCase(Locale.ROOT).startsWith("JP"));
 		if (!isJobPostingPackage) {
-			throw new RuntimeException("Subscription is not valid for job posting");
+			throw new IllegalArgumentException("Subscription is not valid for job posting");
 		}
 		if (subscription.getEndDate() != null && subscription.getEndDate().isBefore(LocalDateTime.now())) {
-			throw new RuntimeException("Subscription expired");
+			throw new IllegalArgumentException("Gói tin này đã hết hạn sử dụng.");
 		}
 		if (subscription.getJobPostedCount() >= subscription.getJobPostLimit()) {
-			throw new RuntimeException("Subscription job post limit reached");
+			throw new IllegalArgumentException("Gói tin này đã hết lượt đăng.");
 		}
 	}
 
@@ -827,7 +917,8 @@ public class JobServiceImpl implements JobService {
 				break;
 		}
 
-		Sort sort = Sort.by(new Sort.Order(direction, sortField));
+		Sort sort = Sort.by(Sort.Order.desc("top"));
+		sort = sort.and(Sort.by(new Sort.Order(direction, sortField)));
 		if (!"createdAt".equals(sortField)) {
 			sort = sort.and(Sort.by(Sort.Order.desc("createdAt")));
 		}

@@ -39,7 +39,7 @@
       </jdbc-additional-properties>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
-    <data-source source="LOCAL" name="cv-service@localhost" uuid="c5dea61d-2f7b-45c9-88d9-e0f901fe1829">
+    <data-source source="LOCAL" name="postgres@localhost" uuid="c5dea61d-2f7b-45c9-88d9-e0f901fe1829">
       <driver-ref>postgresql</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.postgresql.Driver</jdbc-driver>
