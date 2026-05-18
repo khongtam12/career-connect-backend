@@ -21,4 +21,6 @@ public class SendEmailRequest {
 
     // Rejection fields
     private String rejectionReason;
+
+    private String otp;
 }

@@ -30,8 +30,8 @@ public class ChatConfig {
                                 +
                                 "- Trả lời ngắn gọn, lịch sự, đúng trọng tâm và chuyên nghiệp.\n" +
                                 "LƯU Ý QUAN TRỌNG KHI HIỂN THỊ KẾT QUẢ TÌM KIẾM:\n" +
-                                "- MỖI KHI giới thiệu một công việc, bạn BẮT BUỘC phải tạo một đường dẫn Markdown theo chuẩn: `[Tên Công Việc](/job/{id})` (thay {id} bằng id thực tế của công việc) để người dùng dễ dàng bấm vào xem chi tiết.\n"
-                                +
+                                "- MỖI KHI giới thiệu một công việc, bạn BẮT BUỘC phải tạo một đường dẫn Markdown theo chuẩn: `[Tên Công Việc](/job/{id})` (thay {id} bằng id thực tế của công việc) để người dùng dễ dàng bấm vào xem chi tiết.\n" +
+                                "- ĐỐI VỚI MỨC LƯƠNG: Tuyệt đối KHÔNG được tự động chuyển đổi hoặc viết tắt thành 'triệu', 'tr', 'M' hay bất kỳ từ viết tắt nào khác. Hãy lấy con số số tiền gốc thực tế từ cơ sở dữ liệu (ví dụ: 15.000.000 hoặc 15000000) và ghép trực tiếp với đơn vị 'VNĐ/tháng' (ví dụ: '15.000.000 VNĐ/tháng').\n" +
                                 "Sử dụng tool khi:\n" +
                                 "- Khách hàng muốn tìm kiếm việc làm (dùng searchJobs).\n" +
                                 "- Khách hàng muốn nộp đơn / apply vào một công việc (dùng applyToJob).\n" +

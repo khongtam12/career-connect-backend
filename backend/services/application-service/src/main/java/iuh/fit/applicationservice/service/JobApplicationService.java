@@ -19,6 +19,7 @@ import iuh.fit.applicationservice.model.StatusApply;
 import iuh.fit.applicationservice.repository.JobApplicationRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -63,9 +64,9 @@ public class JobApplicationService {
         if (request.getCompanyId() == null || request.getCompanyId().isEmpty()){
             throw new AppException(ErrorCode.COMPANY_NOT_FOUND);
         }
-//        if (request.getIndustryId() == null || request.getIndustryId().isEmpty()){
-//            throw new AppException(ErrorCode.INDUSTRY_NOT_FOUND);
-//        }
+
+        JobDetailClientResponse jobDetail = jobServiceClient.getJobById(request.getJobId());
+        validateJobAvailabilityForApply(jobDetail);
 
         if (jobApplicationRepository.existsByJobIdAndCandidateId(request.getJobId(),candidateId)){
             throw new AppException(ErrorCode.DUPLICATE_APPLICATION);
@@ -99,7 +100,6 @@ public class JobApplicationService {
             notificationRequest.setJobId(request.getJobId());
             notificationRequest.setCandidateId(candidateId);
 
-            JobDetailClientResponse jobDetail = jobServiceClient.getJobById(request.getJobId());
             notificationRequest.setJobTitle(jobDetail.getTitle() != null ? jobDetail.getTitle() : "");
             notificationRequest.setMessage("Có 1 ứng viên mới vừa nộp hồ sơ vị trí "+notificationRequest.getJobTitle());
             notificationServiceClient.pushCandidateApplied(notificationRequest);
@@ -269,6 +269,21 @@ public class JobApplicationService {
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    private void validateJobAvailabilityForApply(JobDetailClientResponse jobDetail) {
+        if (jobDetail == null || jobDetail.getJobId() == null || jobDetail.getJobId().isEmpty()) {
+            throw new AppException(ErrorCode.JOB_NOT_FOUND);
+        }
+        if (jobDetail.getDeletedAt() != null) {
+            throw new AppException(ErrorCode.JOB_CLOSED);
+        }
+        if (jobDetail.getStatus() == null || !"ACTIVE".equalsIgnoreCase(jobDetail.getStatus())) {
+            throw new AppException(ErrorCode.JOB_CLOSED);
+        }
+        if (jobDetail.getDeadline() != null && jobDetail.getDeadline().isBefore(LocalDate.now())) {
+            throw new AppException(ErrorCode.JOB_CLOSED);
+        }
     }
 
     private JobApplicationResponse mapToResponse(JobApplication app) {

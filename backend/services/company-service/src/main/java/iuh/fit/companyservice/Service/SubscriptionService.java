@@ -8,12 +8,14 @@ import iuh.fit.companyservice.model.StatusPackage;
 import iuh.fit.companyservice.repository.CompanySubscriptionRepository;
 import iuh.fit.companyservice.util.IdGenerator;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional
 public class SubscriptionService {
     private final CompanySubscriptionRepository companySubscriptionRepository;
 
@@ -39,12 +41,14 @@ public class SubscriptionService {
 
     }
 
+    @Transactional(readOnly = true)
     public CompanySubscriptionResponse getById(String subscriptionId) {
         CompanySubscription subscription = companySubscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new RuntimeException("Subscription not found"));
         return toResponse(subscription);
     }
 
+    @Transactional(readOnly = true)
     public List<CompanySubscriptionResponse> getByCompanyId(String companyId) {
         return companySubscriptionRepository.findByCompany_CompanyId(companyId)
                 .stream()

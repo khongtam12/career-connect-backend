@@ -1,5 +1,8 @@
 package iuh.fit.applicationservice.dto.response;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 public class JobDetailClientResponse {
     private String jobId;
     private String title;
@@ -9,6 +12,9 @@ public class JobDetailClientResponse {
     private String education;
     private String requirementTags;
     private String skills;
+    private String status;
+    private LocalDate deadline;
+    private LocalDateTime deletedAt;
     private IndustryInfo industryDTO;
 
     public String getJobId() {
@@ -81,6 +87,30 @@ public class JobDetailClientResponse {
 
     public void setSkills(String skills) {
         this.skills = skills;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public LocalDate getDeadline() {
+        return deadline;
+    }
+
+    public void setDeadline(LocalDate deadline) {
+        this.deadline = deadline;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
     public static class IndustryInfo {
