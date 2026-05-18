@@ -15,7 +15,7 @@ import java.util.List;
 @Table(name = "candidates")
 public class Candidate{
    @Id
-    private String candidateId;
+   private String candidateId;
  private String email;
  private String password;
  private String fullName;

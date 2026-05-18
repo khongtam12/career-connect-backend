@@ -2,8 +2,14 @@ package iuh.fit.userservice.controller;
 
 import com.nimbusds.jose.JOSEException;
 import iuh.fit.userservice.dto.request.AuthenticationRequest;
+import iuh.fit.userservice.dto.request.RegisterDTO;
+import iuh.fit.userservice.dto.request.VerifyOtpRequest;
+import iuh.fit.userservice.dto.response.ApiResponse;
+import iuh.fit.userservice.dto.response.UserDTO;
 import iuh.fit.userservice.service.AuthenticationService;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -76,6 +82,27 @@ public class AuthController {
         response.addHeader(HttpHeaders.SET_COOKIE,cookie.toString());
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<UserDTO>> register(@RequestBody RegisterDTO request) {
+        return ResponseEntity.ok(ApiResponse.created(authService.register(request)));
+    }
 
+    @PostMapping("/send-otp")
+    public ResponseEntity<ApiResponse<String>> sendOtp(@RequestBody SendOtpRequest request) {
+        authService.sendOtp(request.getEmail(), request.getType());
+        return ResponseEntity.ok(ApiResponse.success("Mã OTP đã được gửi đến email của bạn"));
+    }
 
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse<String>> verifyOtp(@RequestBody VerifyOtpRequest request) {
+        authService.verifyOtp(request.getEmail(), request.getOtp());
+        return ResponseEntity.ok(ApiResponse.success("Xác thực OTP thành công"));
+    }
+
+    @Getter
+    @Setter
+    public static class SendOtpRequest {
+        private String email;
+        private String type;
+    }
 }
