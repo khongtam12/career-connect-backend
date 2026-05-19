@@ -917,7 +917,7 @@ public class JobServiceImpl implements JobService {
 				break;
 		}
 
-		Sort sort = Sort.by(Sort.Order.desc("top"));
+		Sort sort = Sort.by(Sort.Order.desc("isTop"));
 		sort = sort.and(Sort.by(new Sort.Order(direction, sortField)));
 		if (!"createdAt".equals(sortField)) {
 			sort = sort.and(Sort.by(Sort.Order.desc("createdAt")));

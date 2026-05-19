@@ -13,6 +13,12 @@ public class CandidateMatchInsight {
     private List<String> matchedSkills = new ArrayList<>();
     private List<String> missingSkills = new ArrayList<>();
     private String recommendation;
+    private String summary;
+    private List<String> strengths = new ArrayList<>();
+    private List<String> concerns = new ArrayList<>();
+    private List<String> interviewFocus = new ArrayList<>();
+    private String analysisSource;
+    private String llmModel;
 
     public Double getMatchScore() {
         return matchScore;
@@ -84,5 +90,53 @@ public class CandidateMatchInsight {
 
     public void setRecommendation(String recommendation) {
         this.recommendation = recommendation;
+    }
+
+    public String getSummary() {
+        return summary;
+    }
+
+    public void setSummary(String summary) {
+        this.summary = summary;
+    }
+
+    public List<String> getStrengths() {
+        return strengths;
+    }
+
+    public void setStrengths(List<String> strengths) {
+        this.strengths = strengths;
+    }
+
+    public List<String> getConcerns() {
+        return concerns;
+    }
+
+    public void setConcerns(List<String> concerns) {
+        this.concerns = concerns;
+    }
+
+    public List<String> getInterviewFocus() {
+        return interviewFocus;
+    }
+
+    public void setInterviewFocus(List<String> interviewFocus) {
+        this.interviewFocus = interviewFocus;
+    }
+
+    public String getAnalysisSource() {
+        return analysisSource;
+    }
+
+    public void setAnalysisSource(String analysisSource) {
+        this.analysisSource = analysisSource;
+    }
+
+    public String getLlmModel() {
+        return llmModel;
+    }
+
+    public void setLlmModel(String llmModel) {
+        this.llmModel = llmModel;
     }
 }
