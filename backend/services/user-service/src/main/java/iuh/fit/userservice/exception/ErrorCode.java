@@ -13,6 +13,7 @@ public enum ErrorCode {
     INVALID_OTP(1009, "Mã OTP không hợp lệ hoặc đã hết hạn"),
     USEREMAIL_EXISTED(1010, "Email đã tồn tại"),
     OTP_NOT_VERIFIED(1011, "Email chưa được xác thực OTP"),
+    PASSWORD_INCORRECT(1012, "Mật khẩu hiện tại không chính xác"),
     INVALID_REQUEST(400, "Invalid request");
 
     private final int code;

@@ -81,8 +81,7 @@ public class AuthenticationService {
                 return new AuthenticationResponse(
                         admin.getAdminId(),
                         generateToken(admin.getAdminId(), admin.getFullName(), "ADMIN"),
-                        true
-                );
+                        true);
 
             case "CANDIDATE":
                 Candidate c = candidateRepository.findByEmail(email)
@@ -95,8 +94,7 @@ public class AuthenticationService {
                 return new AuthenticationResponse(
                         c.getCandidateId(),
                         generateToken(c.getCandidateId(), c.getFullName(), "CANDIDATE"),
-                        true
-                );
+                        true);
 
             case "EMPLOYER":
                 Employer e = employerRepository.findByEmail(email)
@@ -109,8 +107,7 @@ public class AuthenticationService {
                 return new AuthenticationResponse(
                         e.getEmployerId(),
                         generateToken(e.getEmployerId(), e.getFullName(), "EMPLOYER"),
-                        true
-                );
+                        true);
 
             default:
                 throw new AppException(ErrorCode.INVALID_REQUEST);
@@ -256,6 +253,7 @@ public class AuthenticationService {
 
     @Transactional
     public UserDTO register(RegisterDTO registerDTO) {
+        // 1. Xác thực OTP trước khi làm bất cứ việc gì
         if (!otpService.consumeVerifiedRegistration(registerDTO.getEmail())) {
             throw new AppException(ErrorCode.OTP_NOT_VERIFIED);
         }
@@ -382,6 +380,44 @@ public class AuthenticationService {
     public void verifyOtp(String email, String otp) {
         if (!otpService.verifyOtp(email, otp)) {
             throw new AppException(ErrorCode.INVALID_OTP);
+        }
+    }
+
+    @Transactional
+    public void changePassword(String token, String currentPassword, String newPassword) throws JOSEException, ParseException {
+        var claims = verify(token);
+        String userId = claims.getStringClaim("userId");
+        String role = claims.getStringClaim("scope");
+
+        switch (role.toUpperCase()) {
+            case "ADMIN" -> {
+                Admin admin = adminRepository.findById(userId)
+                        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+                if (!passwordEncoder.matches(currentPassword, admin.getPassword())) {
+                    throw new AppException(ErrorCode.PASSWORD_INCORRECT);
+                }
+                admin.setPassword(passwordEncoder.encode(newPassword));
+                adminRepository.save(admin);
+            }
+            case "CANDIDATE" -> {
+                Candidate candidate = candidateRepository.findById(userId)
+                        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+                if (!passwordEncoder.matches(currentPassword, candidate.getPassword())) {
+                    throw new AppException(ErrorCode.PASSWORD_INCORRECT);
+                }
+                candidate.setPassword(passwordEncoder.encode(newPassword));
+                candidateRepository.save(candidate);
+            }
+            case "EMPLOYER" -> {
+                Employer employer = employerRepository.findById(userId)
+                        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+                if (!passwordEncoder.matches(currentPassword, employer.getPassword())) {
+                    throw new AppException(ErrorCode.PASSWORD_INCORRECT);
+                }
+                employer.setPassword(passwordEncoder.encode(newPassword));
+                employerRepository.save(employer);
+            }
+            default -> throw new AppException(ErrorCode.INVALID_REQUEST);
         }
     }
 }

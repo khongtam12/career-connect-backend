@@ -5,6 +5,7 @@ import iuh.fit.userservice.dto.request.AuthenticationRequest;
 import iuh.fit.userservice.dto.request.RegisterDTO;
 import iuh.fit.userservice.dto.request.SendOtpRequest;
 import iuh.fit.userservice.dto.request.VerifyOtpRequest;
+import iuh.fit.userservice.dto.request.ResetPasswordRequest;
 import iuh.fit.userservice.dto.response.ApiResponse;
 import iuh.fit.userservice.dto.response.AuthenticationResponse;
 import iuh.fit.userservice.dto.response.UserDTO;
@@ -110,8 +111,8 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(@RequestHeader(value = "Authorization", required = false) String authHeader) throws ParseException, JOSEException {
         if (authHeader == null || authHeader.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).
-                    body(Map.of("error", "No token provided."));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "No token provided."));
         }
         try {
             String token = authHeader.substring(7);
@@ -153,6 +154,23 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Xác thực OTP thành công"));
     }
 
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody ChangePasswordRequest request) throws ParseException, JOSEException {
+        if (authHeader == null || authHeader.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                ApiResponse.builder()
+                    .status(HttpStatus.UNAUTHORIZED.value())
+                    .message("No token provided.")
+                    .build()
+            );
+        }
+        String token = authHeader.substring(7);
+        authService.changePassword(token, request.getCurrentPassword(), request.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.success("Đổi mật khẩu thành công"));
+    }
+
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestBody Map<String, String> request, @RequestParam("type") String type) {
         authService.sendOtpForgotPassword(request.get("email"), type);
@@ -160,8 +178,16 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<ApiResponse<String>> resetPassword(@RequestBody iuh.fit.userservice.dto.request.ResetPasswordRequest request, @RequestParam("type") String type) {
+    public ResponseEntity<ApiResponse<String>> resetPassword(@RequestBody ResetPasswordRequest request, @RequestParam("type") String type) {
         authService.resetPassword(request, type);
         return ResponseEntity.ok(ApiResponse.success("Đặt lại mật khẩu thành công"));
+    }
+
+    @Getter
+    @Setter
+    public static class ChangePasswordRequest {
+        private String currentPassword;
+        private String newPassword;
+        private String confirmPassword;
     }
 }
