@@ -17,6 +17,7 @@ import iuh.fit.applicationservice.exception.ErrorCode;
 import iuh.fit.applicationservice.model.JobApplication;
 import iuh.fit.applicationservice.model.StatusApply;
 import iuh.fit.applicationservice.repository.JobApplicationRepository;
+import feign.FeignException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -53,6 +54,9 @@ public class JobApplicationService {
     public JobApplicationResponse applyForJob(String candidateId, CreateJobApplicationRequest request){
         //check ung cu vien ton tai
         if(candidateId == null || candidateId.isEmpty()){
+            throw new AppException(ErrorCode.CANDIDATE_NOT_FOUND);
+        }
+        if (safeGetCandidateById(candidateId) == null) {
             throw new AppException(ErrorCode.CANDIDATE_NOT_FOUND);
         }
         if (request.getJobId() == null || request.getJobId().isEmpty()){
@@ -322,6 +326,7 @@ public class JobApplicationService {
 
         return applications.stream()
                 .map(this::mapToCandidateApplicationResponse)
+                .filter(response -> response != null)
                 .sorted(Comparator
                         .comparing(
                                 (CandidateApplicationResponse response) -> {
@@ -337,7 +342,10 @@ public class JobApplicationService {
     }
 
     private CandidateApplicationResponse mapToCandidateApplicationResponse(JobApplication app) {
-        CandidateSummaryClientResponse candidate = userServiceClient.getCandidateById(app.getCandidateId());
+        CandidateSummaryClientResponse candidate = safeGetCandidateById(app.getCandidateId());
+        if (candidate == null) {
+            return null;
+        }
         JobDetailClientResponse job = jobServiceClient.getJobById(app.getJobId());
 
         CandidateApplicationResponse res = new CandidateApplicationResponse();
@@ -369,7 +377,7 @@ public class JobApplicationService {
         }
 
         try {
-            CvDetailClientResponse cv = cvServiceClient.getCvById(app.getCvId());
+            CvDetailClientResponse cv = resolveCvForMatching(app, candidate);
             res.setMatchInsight(candidateMatchingService.match(
                     job,
                     cv,
@@ -382,5 +390,60 @@ public class JobApplicationService {
         }
 
         return res;
+    }
+
+    private CandidateSummaryClientResponse safeGetCandidateById(String candidateId) {
+        if (candidateId == null || candidateId.isBlank()) {
+            return null;
+        }
+
+        try {
+            return userServiceClient.getCandidateById(candidateId);
+        } catch (FeignException ex) {
+            return null;
+        }
+    }
+
+    private CvDetailClientResponse resolveCvForMatching(JobApplication app, CandidateSummaryClientResponse candidate) {
+        String cvId = app.getCvId();
+        if (cvId != null && !cvId.isBlank() && !looksLikeExternalFileReference(cvId)) {
+            try {
+                return cvServiceClient.getCvById(cvId);
+            } catch (FeignException ignored) {
+                // Fall through to external-file fallback below.
+            }
+        }
+
+        String externalFileUrl = resolveExternalCvFileUrl(app);
+        if (externalFileUrl == null) {
+            throw new AppException(ErrorCode.CV_NOT_FOUND);
+        }
+
+        CvDetailClientResponse externalCv = new CvDetailClientResponse();
+        externalCv.setId(cvId);
+        externalCv.setFullName(candidate != null ? candidate.getFullName() : null);
+        externalCv.setFileUrl(externalFileUrl);
+        return externalCv;
+    }
+
+    private String resolveExternalCvFileUrl(JobApplication app) {
+        if (app.getUrl() != null && !app.getUrl().isBlank()) {
+            return app.getUrl();
+        }
+        if (app.getCvId() != null && app.getCvId().startsWith("http")) {
+            return app.getCvId();
+        }
+        return null;
+    }
+
+    private boolean looksLikeExternalFileReference(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+
+        String normalized = value.trim().toLowerCase();
+        return normalized.startsWith("http")
+                || normalized.startsWith("applications/")
+                || normalized.endsWith(".pdf");
     }
 }
