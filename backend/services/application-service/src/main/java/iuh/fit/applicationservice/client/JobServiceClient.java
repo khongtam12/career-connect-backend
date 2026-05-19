@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-@FeignClient(name = "job-service", url = "http://localhost:8082")
+@FeignClient(name = "job-service")
 public interface JobServiceClient {
 
     @GetMapping("/api/v1/job/{jobId}")

@@ -68,8 +68,7 @@ public class JobServiceImpl implements JobService {
 			IndustryRepository industryRepository,
 			CompanyServiceClient companyServiceClient,
 			UserServiceClient userServiceClient,
-			CacheManager cacheManager
-	) {
+			CacheManager cacheManager) {
 		this.jobRepository = jobRepository;
 		this.industryRepository = industryRepository;
 		this.companyServiceClient = companyServiceClient;
@@ -99,7 +98,8 @@ public class JobServiceImpl implements JobService {
 		String companyIdForCheck = fetchCompanyIdByEmployerId(employerId);
 		CompanyDTO company = companyServiceClient.getCompanyById(companyIdForCheck);
 		if (company == null || !"VERIFIED".equalsIgnoreCase(company.getStatusCompany())) {
-			throw new RuntimeException("Công ty của bạn chưa được phê duyệt. Vui lòng chờ admin xác minh công ty trước khi đăng tin tuyển dụng.");
+			throw new RuntimeException(
+					"Công ty của bạn chưa được phê duyệt. Vui lòng chờ admin xác minh công ty trước khi đăng tin tuyển dụng.");
 		}
 
 		LocalDateTime now = LocalDateTime.now();
@@ -262,7 +262,8 @@ public class JobServiceImpl implements JobService {
 		String newSubscriptionId = normalize(request.getCompanySubscriptionId());
 		if (newSubscriptionId != null) {
 			StatusJob currentStatus = job.getStatus();
-			if (currentStatus != StatusJob.DRAFT && currentStatus != StatusJob.PENDING && currentStatus != StatusJob.REJECTED) {
+			if (currentStatus != StatusJob.DRAFT && currentStatus != StatusJob.PENDING
+					&& currentStatus != StatusJob.REJECTED) {
 				throw new JobStatusException("Only DRAFT, PENDING, or REJECTED jobs can change subscription");
 			}
 			String currentSubscriptionId = normalize(job.getCompanySubscriptionId());
@@ -271,7 +272,8 @@ public class JobServiceImpl implements JobService {
 				CompanySubscriptionDTO subscription = companyServiceClient.getSubscriptionById(newSubscriptionId);
 				validateSubscription(subscription, companyId);
 				if (currentStatus == StatusJob.PENDING) {
-					long pendingCount = jobRepository.countByCompanySubscriptionIdAndStatus(newSubscriptionId, StatusJob.PENDING);
+					long pendingCount = jobRepository.countByCompanySubscriptionIdAndStatus(newSubscriptionId,
+							StatusJob.PENDING);
 					if ((long) subscription.getJobPostedCount() + pendingCount >= subscription.getJobPostLimit()) {
 						throw new RuntimeException("Subscription job post limit reached");
 					}
@@ -315,11 +317,10 @@ public class JobServiceImpl implements JobService {
 				employerId,
 				normalizedStatus,
 				normalizedSearch,
-				pageable
-		);
+				pageable);
 
 		return PageResponse.<JobResponse>builder()
-				.content(jobsPage.getContent().stream().map(JobMapper::toResponse).toList())
+				.content(mapJobsToResponseWithCompanyData(jobsPage.getContent()))
 				.page(jobsPage.getNumber() + 1)
 				.size(jobsPage.getSize())
 				.totalElements(jobsPage.getTotalElements())
@@ -353,8 +354,10 @@ public class JobServiceImpl implements JobService {
 		ensureOwner(employerId, job);
 
 		StatusJob currentStatus = job.getStatus();
-		if (currentStatus == StatusJob.DRAFT || currentStatus == StatusJob.PENDING || currentStatus == StatusJob.REJECTED) {
-			throw new IllegalArgumentException("Không thể gia hạn tin tuyển dụng chưa được duyệt (Trạng thái hiện tại: " + currentStatus + ").");
+		if (currentStatus == StatusJob.DRAFT || currentStatus == StatusJob.PENDING
+				|| currentStatus == StatusJob.REJECTED) {
+			throw new IllegalArgumentException(
+					"Không thể gia hạn tin tuyển dụng chưa được duyệt (Trạng thái hiện tại: " + currentStatus + ").");
 		}
 
 		String newSubscriptionId = normalize(request.getCompanySubscriptionId());
@@ -453,7 +456,7 @@ public class JobServiceImpl implements JobService {
 
 	// ── SYSTEM: tự động expire khi hết hạn ───────────────────────────────────
 	@Override
-	@Scheduled(cron = "0 0 1 * * *")   // mỗi ngày 01:00
+	@Scheduled(cron = "0 0 1 * * *") // mỗi ngày 01:00
 	@Transactional
 	public int expireOverdueJobs() {
 		LocalDate today = LocalDate.now();
@@ -471,7 +474,7 @@ public class JobServiceImpl implements JobService {
 	}
 
 	// ── SYSTEM: tự động đóng job khi gói tin hết hạn ──────────────────────────
-	@Scheduled(cron = "0 30 1 * * *")   // mỗi ngày 01:30
+	@Scheduled(cron = "0 30 1 * * *") // mỗi ngày 01:30
 	@Transactional
 	public int closeJobsByExpiredSubscriptions() {
 		List<String> expiredSubscriptionIds = companyServiceClient.expireSubscriptions();
@@ -480,7 +483,8 @@ public class JobServiceImpl implements JobService {
 		}
 
 		List<StatusJob> closableStatuses = List.of(StatusJob.ACTIVE, StatusJob.PENDING, StatusJob.PAUSED);
-		List<Job> jobs = jobRepository.findByCompanySubscriptionIdInAndStatusIn(expiredSubscriptionIds, closableStatuses);
+		List<Job> jobs = jobRepository.findByCompanySubscriptionIdInAndStatusIn(expiredSubscriptionIds,
+				closableStatuses);
 		if (jobs.isEmpty()) {
 			return 0;
 		}
@@ -508,8 +512,7 @@ public class JobServiceImpl implements JobService {
 		}
 		if (industry != null) {
 			industryDTO = new IndustryDTO(
-					industry.getIndustryId(), industry.getName(), industry.getDescription()
-			);
+					industry.getIndustryId(), industry.getName(), industry.getDescription());
 		}
 		CompanyDTO companyDTO = null;
 		if (job.getCompanyId() != null) {
@@ -519,14 +522,16 @@ public class JobServiceImpl implements JobService {
 				System.err.println("Lỗi gọi company-service: " + e.getMessage());
 			}
 		}
-		return new JobDetailResponse(job.getJobId(),job.getTitle(),job.getDescription(),job.getCandidateRequirements(),
-				job.getSalaryDetail(),job.getBenefitsDetail(),job.getWorkSchedule(),job.getLocation(),
-				job.getSalaryMin(),job.getSalaryMax(),job.isSalaryNegotiable(),job.getExperience(),
-				job.getDeadline(),job.getCreatedAt(),job.getUpdatedAt(),job.getViews(),job.getNumberOfApplications(),
-				job.isTop(),job.getPackageId(),job.getPackageLabel(),job.getDeletedAt(),job.getRank(),job.getEducation(),job.getQuantity(),job.getAgeRange(),
-				job.getIndustry(),job.getStatus(),job.getJobType(),job.getRequirementTags(),job.getBenefitTags(),
-				job.getSpecialties(),job.getRelatedCategories(),job.getSkills(),companyDTO,industryDTO
-		);
+		return new JobDetailResponse(job.getJobId(), job.getTitle(), job.getDescription(),
+				job.getCandidateRequirements(),
+				job.getSalaryDetail(), job.getBenefitsDetail(), job.getWorkSchedule(), job.getLocation(),
+				job.getSalaryMin(), job.getSalaryMax(), job.isSalaryNegotiable(), job.getExperience(),
+				job.getDeadline(), job.getCreatedAt(), job.getUpdatedAt(), job.getViews(),
+				job.getNumberOfApplications(),
+				job.isTop(), job.getPackageId(), job.getPackageLabel(), job.getDeletedAt(), job.getRank(),
+				job.getEducation(), job.getQuantity(), job.getAgeRange(),
+				job.getIndustry(), job.getStatus(), job.getJobType(), job.getRequirementTags(), job.getBenefitTags(),
+				job.getSpecialties(), job.getRelatedCategories(), job.getSkills(), companyDTO, industryDTO);
 
 	}
 
@@ -544,8 +549,7 @@ public class JobServiceImpl implements JobService {
 			String sortBy,
 			String sortDir,
 			int page,
-			int size
-	) {
+			int size) {
 		String cacheKey = buildSearchCacheKey(
 				keyword,
 				industryId,
@@ -559,8 +563,7 @@ public class JobServiceImpl implements JobService {
 				sortBy,
 				sortDir,
 				page,
-				size
-		);
+				size);
 
 		Cache cache = cacheManager.getCache(JOB_SEARCH_CACHE);
 		if (cache != null) {
@@ -579,8 +582,7 @@ public class JobServiceImpl implements JobService {
 		Pageable pageable = PageRequest.of(
 				safePage(page),
 				safeSize(size),
-				buildSort(sortBy, sortDir)
-		);
+				buildSort(sortBy, sortDir));
 
 		String normalizedKeyword = normalizeForQuery(keyword);
 		String normalizedLocation = normalizeForQuery(location);
@@ -614,7 +616,7 @@ public class JobServiceImpl implements JobService {
 		Page<Job> jobsPage = jobRepository.findAll(spec, pageable);
 
 		PageResponse<JobResponse> response = PageResponse.<JobResponse>builder()
-				.content(jobsPage.getContent().stream().map(JobMapper::toResponse).toList())
+				.content(mapJobsToResponseWithCompanyData(jobsPage.getContent()))
 				.page(jobsPage.getNumber() + 1)
 				.size(jobsPage.getSize())
 				.totalElements(jobsPage.getTotalElements())
@@ -655,8 +657,7 @@ public class JobServiceImpl implements JobService {
 						.targetId(jobId)
 						.targetScope("JOB")
 						.placement(request.getPlacement())
-						.build()
-		);
+						.build());
 
 		applyMarketingAssignment(job, assignment);
 		job.setUpdatedAt(LocalDateTime.now());
@@ -700,7 +701,6 @@ public class JobServiceImpl implements JobService {
 			throw new RuntimeException("Employer id is required");
 		}
 	}
-
 
 	private StatusJob parseStatus(String status) {
 		if (status == null || status.isBlank()) {
@@ -786,7 +786,8 @@ public class JobServiceImpl implements JobService {
 
 	private String fetchCompanyIdByEmployerId(String employerId) {
 		EmployerCompanyResponse employerCompany = userServiceClient.getEmployerById(employerId);
-		if (employerCompany == null || employerCompany.getCompanyId() == null || employerCompany.getCompanyId().isBlank()) {
+		if (employerCompany == null || employerCompany.getCompanyId() == null
+				|| employerCompany.getCompanyId().isBlank()) {
 			throw new RuntimeException("Employer company not found");
 		}
 		return employerCompany.getCompanyId().trim();
@@ -816,8 +817,8 @@ public class JobServiceImpl implements JobService {
 		}
 		boolean isJobPostingPackage = "JOB_POSTING".equalsIgnoreCase(subscription.getPackageCategory())
 				|| (subscription.getPackageCategory() == null
-				&& subscription.getPackageId() != null
-				&& subscription.getPackageId().toUpperCase(Locale.ROOT).startsWith("JP"));
+						&& subscription.getPackageId() != null
+						&& subscription.getPackageId().toUpperCase(Locale.ROOT).startsWith("JP"));
 		if (!isJobPostingPackage) {
 			throw new IllegalArgumentException("Subscription is not valid for job posting");
 		}
@@ -868,13 +869,9 @@ public class JobServiceImpl implements JobService {
 			String formattedTime = earliestApprovalTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
 			throw new JobStatusException(
 					"Tin đang trong thời gian chờ duyệt 24 giờ. Admin chỉ có thể duyệt sau " + formattedTime
-							+ " để nhà tuyển dụng còn thời gian báo sai gói hoặc yêu cầu từ chối tin."
-			);
+							+ " để nhà tuyển dụng còn thời gian báo sai gói hoặc yêu cầu từ chối tin.");
 		}
 	}
-
-
-
 
 	private int safePage(int page) {
 		return Math.max(page, 1) - 1;
@@ -894,8 +891,7 @@ public class JobServiceImpl implements JobService {
 				List.of(JobType.values()),
 				List.of(StatusJob.values()),
 				jobRepository.findDistinctLocations(),
-				industries
-		);
+				industries);
 	}
 
 	private Sort buildSort(String sortBy, String sortDir) {
@@ -935,17 +931,17 @@ public class JobServiceImpl implements JobService {
 
 		return new JobStats(totalJobs, activeJobs, newJobs24h, pendingJobs, rejectedJobs);
 	}
-	public PageResponse<JobAdminResponse> getAllJobByAdmin( String search, String status, int page, int size) {
-		if(search == null || search.isEmpty()) {
+
+	public PageResponse<JobAdminResponse> getAllJobByAdmin(String search, String status, int page, int size) {
+		if (search == null || search.isEmpty()) {
 			search = "*";
 		}
 		if (status == null) {
 			status = "all";
 		}
-		Pageable pageable = PageRequest.of(safePage(page), safeSize(size),Sort.by("createdAt").descending());
-		Page<Job> jobPage=jobRepository.findAll(
-				JobSpecifications.filter(search,status),pageable
-		);
+		Pageable pageable = PageRequest.of(safePage(page), safeSize(size), Sort.by("createdAt").descending());
+		Page<Job> jobPage = jobRepository.findAll(
+				JobSpecifications.filter(search, status), pageable);
 		List<JobAdminResponse> data = jobPage.getContent().stream()
 				.map(job -> JobAdminResponse.builder()
 						.jobId(job.getJobId())
@@ -959,8 +955,7 @@ public class JobServiceImpl implements JobService {
 						.createdAt(job.getCreatedAt())
 						.views(job.getViews())
 						.numberOfApplications(job.getNumberOfApplications())
-						.build()
-				)
+						.build())
 				.toList();
 		return PageResponse.<JobAdminResponse>builder()
 				.page(page)
@@ -970,10 +965,8 @@ public class JobServiceImpl implements JobService {
 				.content(data)
 				.build();
 
-
-
-
 	}
+
 	@Override
 	@Transactional
 	@CacheEvict(cacheNames = "job-search", allEntries = true)
@@ -984,7 +977,6 @@ public class JobServiceImpl implements JobService {
 
 		Job job = jobRepository.findById(jobId)
 				.orElseThrow(() -> new RuntimeException("Job not found"));
-
 
 		if (job.getDeletedAt() != null) {
 			throw new RuntimeException("Job already deleted");
@@ -1009,8 +1001,7 @@ public class JobServiceImpl implements JobService {
 			String sortBy,
 			String sortDir,
 			int page,
-			int size
-	) {
+			int size) {
 		StringBuilder key = new StringBuilder();
 		key.append("keyword=").append(normalizeForKey(keyword))
 				.append("|industryId=").append(normalizeForKey(industryId))
@@ -1032,6 +1023,28 @@ public class JobServiceImpl implements JobService {
 		return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
 	}
 
-
+	private List<JobResponse> mapJobsToResponseWithCompanyData(List<Job> jobs) {
+		java.util.Map<String, CompanyDTO> companyCache = new java.util.HashMap<>();
+		return jobs.stream().map(job -> {
+			JobResponse response = JobMapper.toResponse(job);
+			if (job.getCompanyId() != null) {
+				if (!companyCache.containsKey(job.getCompanyId())) {
+					try {
+						CompanyDTO companyDTO = companyServiceClient.getCompanyById(job.getCompanyId());
+						companyCache.put(job.getCompanyId(), companyDTO);
+					} catch (Exception e) {
+						log.warn("Lỗi gọi company-service cho companyId: {}", job.getCompanyId());
+						companyCache.put(job.getCompanyId(), null);
+					}
+				}
+				CompanyDTO companyDTO = companyCache.get(job.getCompanyId());
+				if (companyDTO != null) {
+					response.setCompanyName(companyDTO.getName());
+					response.setLogo(companyDTO.getLogo());
+				}
+			}
+			return response;
+		}).toList();
+	}
 
 }
