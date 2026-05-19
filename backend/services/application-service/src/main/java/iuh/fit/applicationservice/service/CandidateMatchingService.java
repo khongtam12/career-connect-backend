@@ -32,11 +32,17 @@ public class CandidateMatchingService {
     );
 
     private final ObjectMapper objectMapper;
-    private final AiSemanticMatchingClient aiSemanticMatchingClient;
+    private final PdfTextExtractionService pdfTextExtractionService;
+    private final LlmMatchAnalysisService llmMatchAnalysisService;
 
-    public CandidateMatchingService(ObjectMapper objectMapper, AiSemanticMatchingClient aiSemanticMatchingClient) {
+    public CandidateMatchingService(
+            ObjectMapper objectMapper,
+            PdfTextExtractionService pdfTextExtractionService,
+            LlmMatchAnalysisService llmMatchAnalysisService
+    ) {
         this.objectMapper = objectMapper;
-        this.aiSemanticMatchingClient = aiSemanticMatchingClient;
+        this.pdfTextExtractionService = pdfTextExtractionService;
+        this.llmMatchAnalysisService = llmMatchAnalysisService;
     }
 
     public CandidateMatchInsight match(JobDetailClientResponse job, CvDetailClientResponse cv, String candidateExperienceYear) {
@@ -52,8 +58,12 @@ public class CandidateMatchingService {
             return insight;
         }
 
+        String cvPdfText = pdfTextExtractionService.extractText(cv.getFileUrl());
+        String jobContextText = buildJobContextText(job);
+        String cvContextText = buildCvContextText(cv, candidateExperienceYear, cvPdfText);
+
         List<String> jobSkills = extractJobSkills(job);
-        List<String> cvSkills = extractCvSkills(cv);
+        List<String> cvSkills = extractCvSkills(cv, cvPdfText);
 
         Set<String> matchedSkills = new LinkedHashSet<>();
         Set<String> missingSkills = new LinkedHashSet<>();
@@ -66,19 +76,15 @@ public class CandidateMatchingService {
             }
         }
 
-        AiSemanticMatchResult aiResult = aiSemanticMatchingClient.match(
+        AiSemanticMatchResult aiResult = llmMatchAnalysisService.analyze(
                 job,
                 cv,
                 candidateExperienceYear,
                 jobSkills,
-                cvSkills
+                cvSkills,
+                jobContextText,
+                cvContextText
         );
-
-        if (aiResult != null) {
-            mergeSkills(matchedSkills, aiResult.getMatchedSkills());
-            mergeSkills(missingSkills, aiResult.getMissingSkills());
-            missingSkills.removeIf(skill -> containsNormalized(new ArrayList<>(matchedSkills), skill));
-        }
 
         double skillScore = jobSkills.isEmpty()
                 ? 80D
@@ -94,7 +100,7 @@ public class CandidateMatchingService {
                 : Math.min(candidateYears / requiredYears, 1D) * 100D;
 
         double educationScore = calculateEducationScore(job, cv);
-        double keywordScore = calculateKeywordScore(job, cv, matchedSkills, cvSkills);
+        double keywordScore = calculateKeywordScore(job, cv, matchedSkills, cvSkills, cvPdfText);
         double semanticScore = aiResult != null && aiResult.getSemanticScore() != null
                 ? aiResult.getSemanticScore()
                 : keywordScore;
@@ -113,6 +119,12 @@ public class CandidateMatchingService {
         insight.setSemanticScore(round(semanticScore));
         insight.setMatchedSkills(new ArrayList<>(matchedSkills));
         insight.setMissingSkills(new ArrayList<>(missingSkills));
+        insight.setSummary(aiResult != null ? aiResult.getSummary() : null);
+        insight.setStrengths(aiResult != null && aiResult.getStrengths() != null ? aiResult.getStrengths() : new ArrayList<>());
+        insight.setConcerns(aiResult != null && aiResult.getConcerns() != null ? aiResult.getConcerns() : new ArrayList<>());
+        insight.setInterviewFocus(aiResult != null && aiResult.getInterviewFocus() != null ? aiResult.getInterviewFocus() : new ArrayList<>());
+        insight.setAnalysisSource(aiResult != null ? aiResult.getAnalysisSource() : "rule-based");
+        insight.setLlmModel(aiResult != null ? aiResult.getLlmModel() : null);
         insight.setRecommendation(
                 aiResult != null && aiResult.getRecommendation() != null && !aiResult.getRecommendation().isBlank()
                         ? aiResult.getRecommendation()
@@ -125,19 +137,24 @@ public class CandidateMatchingService {
     private List<String> extractJobSkills(JobDetailClientResponse job) {
         Set<String> result = new LinkedHashSet<>();
         result.addAll(parseJsonArray(job.getSkills()));
-        result.addAll(parseCsv(job.getCandidateRequirements()));
         result.addAll(parseCsv(job.getRequirementTags()));
-        if (job.getTitle() != null) {
-            result.addAll(extractKeywords(job.getTitle()));
+
+        // Keep the visible skill list focused on explicit skills/tags only.
+        // Rich requirement prose is still used for keyword/semantic scoring,
+        // but it should not appear as "matched/missing skills" chips.
+        if (result.isEmpty()) {
+            result.addAll(parseCsv(job.getCandidateRequirements()));
         }
+
         return result.stream()
                 .map(String::trim)
                 .filter(value -> !value.isBlank())
+                .filter(this::isLikelySkill)
                 .limit(12)
                 .toList();
     }
 
-    private List<String> extractCvSkills(CvDetailClientResponse cv) {
+    private List<String> extractCvSkills(CvDetailClientResponse cv, String cvPdfText) {
         Set<String> result = new LinkedHashSet<>();
         if (cv.getSkills() != null) {
             cv.getSkills().stream()
@@ -157,7 +174,14 @@ public class CandidateMatchingService {
                 result.addAll(extractKeywords(exp.getDescription()));
             });
         }
-        return new ArrayList<>(result);
+
+        if (result.size() < 3 && cvPdfText != null && !cvPdfText.isBlank()) {
+            result.addAll(extractKeywords(cvPdfText).stream().limit(20).toList());
+        }
+
+        return result.stream()
+                .filter(this::isLikelySkill)
+                .toList();
     }
 
     private double calculateEducationScore(JobDetailClientResponse job, CvDetailClientResponse cv) {
@@ -197,7 +221,13 @@ public class CandidateMatchingService {
         return 60D;
     }
 
-    private double calculateKeywordScore(JobDetailClientResponse job, CvDetailClientResponse cv, Set<String> matchedSkills, List<String> cvSkills) {
+    private double calculateKeywordScore(
+            JobDetailClientResponse job,
+            CvDetailClientResponse cv,
+            Set<String> matchedSkills,
+            List<String> cvSkills,
+            String cvPdfText
+    ) {
         Set<String> jobKeywords = new LinkedHashSet<>();
         jobKeywords.addAll(extractKeywords(job.getTitle()));
         jobKeywords.addAll(extractKeywords(job.getDescription()));
@@ -207,6 +237,7 @@ public class CandidateMatchingService {
         cvKeywords.addAll(extractKeywords(cv.getJobTitle()));
         cvKeywords.addAll(extractKeywords(cv.getSummary()));
         cvKeywords.addAll(cvSkills.stream().map(this::normalize).filter(value -> value != null && !value.isBlank()).toList());
+        cvKeywords.addAll(extractKeywords(cvPdfText));
 
         if (jobKeywords.isEmpty()) {
             return matchedSkills.isEmpty() ? 60D : 90D;
@@ -214,6 +245,55 @@ public class CandidateMatchingService {
 
         long overlap = jobKeywords.stream().filter(cvKeywords::contains).count();
         return Math.min(((double) overlap / jobKeywords.size()) * 100D, 100D);
+    }
+
+    private String buildJobContextText(JobDetailClientResponse job) {
+        return String.join(" ",
+                valueOrEmpty(job.getTitle()),
+                valueOrEmpty(job.getDescription()),
+                valueOrEmpty(job.getCandidateRequirements()),
+                valueOrEmpty(job.getExperience()),
+                valueOrEmpty(job.getEducation()),
+                valueOrEmpty(job.getRequirementTags()),
+                valueOrEmpty(job.getSkills())
+        ).trim();
+    }
+
+    private String buildCvContextText(CvDetailClientResponse cv, String candidateExperienceYear, String cvPdfText) {
+        List<String> sections = new ArrayList<>();
+        sections.add(valueOrEmpty(cv.getFullName()));
+        sections.add(valueOrEmpty(cv.getJobTitle()));
+        sections.add(valueOrEmpty(cv.getSummary()));
+        sections.add(valueOrEmpty(candidateExperienceYear));
+
+        if (cv.getSkills() != null) {
+            cv.getSkills().stream()
+                    .map(CvDetailClientResponse.SkillInfo::getName)
+                    .filter(name -> name != null && !name.isBlank())
+                    .forEach(sections::add);
+        }
+
+        if (cv.getExperiences() != null) {
+            cv.getExperiences().forEach(exp -> sections.add(String.join(" ",
+                    valueOrEmpty(exp.getCompany()),
+                    valueOrEmpty(exp.getRole()),
+                    valueOrEmpty(exp.getDescription()))));
+        }
+
+        if (cv.getEducations() != null) {
+            cv.getEducations().forEach(education -> sections.add(String.join(" ",
+                    valueOrEmpty(education.getSchool()),
+                    valueOrEmpty(education.getMajor()),
+                    valueOrEmpty(education.getDescription()))));
+        }
+
+        if (cvPdfText != null && !cvPdfText.isBlank()) {
+            sections.add(cvPdfText);
+        }
+
+        return sections.stream()
+                .filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.joining(" "));
     }
 
     private String buildRecommendation(double overallScore, double semanticScore, int matchedSkillCount, int missingSkillCount, double requiredYears, double candidateYears) {
@@ -243,24 +323,11 @@ public class CandidateMatchingService {
             if (normalizedValue == null) {
                 continue;
             }
-            if (normalizedValue.equals(normalizedTarget)
-                    || normalizedValue.contains(normalizedTarget)
-                    || normalizedTarget.contains(normalizedValue)) {
+            if (skillsEquivalent(normalizedValue, normalizedTarget)) {
                 return true;
             }
         }
         return false;
-    }
-
-    private void mergeSkills(Set<String> currentSkills, List<String> extraSkills) {
-        if (extraSkills == null) {
-            return;
-        }
-        extraSkills.stream()
-                .flatMap(value -> splitRichTextContent(value).stream())
-                .map(this::toDisplaySkill)
-                .filter(value -> value != null && !value.isBlank())
-                .forEach(currentSkills::add);
     }
 
     private List<String> parseJsonArray(String raw) {
@@ -273,6 +340,7 @@ public class CandidateMatchingService {
                     .flatMap(value -> splitRichTextContent(value).stream())
                     .map(this::toDisplaySkill)
                     .filter(value -> value != null && !value.isBlank())
+                    .filter(this::isLikelySkill)
                     .toList();
         } catch (Exception ignored) {
             return parseCsv(raw);
@@ -286,6 +354,7 @@ public class CandidateMatchingService {
         return splitRichTextContent(raw).stream()
                 .map(this::toDisplaySkill)
                 .filter(value -> !value.isBlank())
+                .filter(this::isLikelySkill)
                 .toList();
     }
 
@@ -329,6 +398,59 @@ public class CandidateMatchingService {
                 .replaceAll("\\s+", " ")
                 .trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private boolean skillsEquivalent(String left, String right) {
+        if (left.equals(right)) {
+            return true;
+        }
+
+        String compactLeft = left.replace(" ", "");
+        String compactRight = right.replace(" ", "");
+        if (compactLeft.equals(compactRight)) {
+            return true;
+        }
+
+        String[] leftTokens = left.split("\\s+");
+        String[] rightTokens = right.split("\\s+");
+        int minTokens = Math.min(leftTokens.length, rightTokens.length);
+        int maxTokens = Math.max(leftTokens.length, rightTokens.length);
+
+        if (minTokens <= 2 && maxTokens <= 3) {
+            if ((left.startsWith(right + " ") || left.endsWith(" " + right) || left.contains(" " + right + " "))
+                    && right.length() >= 3) {
+                return true;
+            }
+            if ((right.startsWith(left + " ") || right.endsWith(" " + left) || right.contains(" " + left + " "))
+                    && left.length() >= 3) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isLikelySkill(String value) {
+        String cleaned = value == null ? null : value.trim();
+        if (cleaned == null || cleaned.isBlank()) {
+            return false;
+        }
+
+        if (cleaned.length() > 40) {
+            return false;
+        }
+
+        String normalized = normalize(cleaned);
+        if (normalized == null) {
+            return false;
+        }
+
+        String[] tokens = normalized.split("\\s+");
+        if (tokens.length > 4) {
+            return false;
+        }
+
+        return !normalized.matches(".*\\b(co|can|yeu|uu|toi|lam|viec|kinh|nghiem|thoi|gian|duoi|ap|luc)\\b.*");
     }
 
     private double round(double value) {
