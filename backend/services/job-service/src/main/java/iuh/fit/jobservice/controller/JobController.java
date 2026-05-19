@@ -194,7 +194,7 @@ public class JobController {
         String resolvedKeyword = keyword != null ? keyword : search;
         String resolvedIndustry = industryId != null ? industryId : industry;
 
-        PageResponse<JobResponse> response = jobService.searchJobs(
+        PageResponse<JobCardResponse> response = jobService.searchJobs(
             resolvedKeyword,
             resolvedIndustry,
             jobType,
