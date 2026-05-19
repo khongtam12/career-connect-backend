@@ -8,7 +8,6 @@
 #  Tạo network trước khi chạy lần đầu:
 #    docker network create career-net
 # ==============================================================
-
 networks:
   career-net:
     external: true 
@@ -162,7 +161,6 @@ services:
   # ==============================================================
   # 3. MICROSERVICES
   # ==============================================================
-
   user-service:
     build:
       context: ./backend
@@ -279,23 +277,6 @@ services:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
-    networks:
-      - career-net
-    restart: on-failure
-
-  ai-service:
-    build:
-      context: ./backend
-      dockerfile: services/ai-service/Dockerfile
-    container_name: ai-service
-    environment:
-      EMBEDDING_MODEL_NAME: sentence-transformers/all-MiniLM-L6-v2
-    ports:
-      - "8090:8090"
-    deploy:
-      resources:
-        limits:
-          memory: 1024M
     networks:
       - career-net
     restart: on-failure
