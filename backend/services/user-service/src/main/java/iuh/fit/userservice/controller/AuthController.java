@@ -29,59 +29,55 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthenticationRequest request, HttpServletResponse response
-                                   ) {
+    public ResponseEntity<?> login(@RequestBody AuthenticationRequest request, HttpServletResponse response) {
 
         var authRes = authService.authenticate(request);
 
-        ResponseCookie cookie=ResponseCookie.from("access_token",authRes.getToken())
+        ResponseCookie cookie = ResponseCookie.from("access_token", authRes.getToken())
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("None")
                 .path("/")
                 .maxAge(3600)
                 .build();
-        response.addHeader(HttpHeaders.SET_COOKIE,cookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         return ResponseEntity.ok(
                 Map.of(
                         "token", authRes.getToken(),
-                        "userId", authRes.getUserId()
-                )
-        );
+                        "userId", authRes.getUserId()));
     }
+
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(@RequestHeader(value = "Authorization", required = false) String authHeader) throws ParseException, JOSEException {
-        if(authHeader == null || authHeader.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).
-                    body(Map.of("error", "No token provided."));
+    public ResponseEntity<?> getCurrentUser(@RequestHeader(value = "Authorization", required = false) String authHeader)
+            throws ParseException, JOSEException {
+        if (authHeader == null || authHeader.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "No token provided."));
         }
         try {
             String token = authHeader.substring(7);
             var user = authService.getCurrentUser(token);
             return ResponseEntity.ok(user);
-        }catch (Exception e) {
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
 
         }
 
-
-
-
-
     }
+
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
-        ResponseCookie cookie=ResponseCookie.from("access_token","")
+        ResponseCookie cookie = ResponseCookie.from("access_token", "")
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("None")
                 .path("/")
                 .maxAge(0)
                 .build();
-        response.addHeader(HttpHeaders.SET_COOKIE,cookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
+
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserDTO>> register(@RequestBody RegisterDTO request) {
         return ResponseEntity.ok(ApiResponse.created(authService.register(request)));
@@ -99,10 +95,35 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Xác thực OTP thành công"));
     }
 
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody ChangePasswordRequest request) throws ParseException, JOSEException {
+        if (authHeader == null || authHeader.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                ApiResponse.builder()
+                    .status(HttpStatus.UNAUTHORIZED.value())
+                    .message("No token provided.")
+                    .build()
+            );
+        }
+        String token = authHeader.substring(7);
+        authService.changePassword(token, request.getCurrentPassword(), request.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.success("Đổi mật khẩu thành công"));
+    }
+
     @Getter
     @Setter
     public static class SendOtpRequest {
         private String email;
         private String type;
+    }
+
+    @Getter
+    @Setter
+    public static class ChangePasswordRequest {
+        private String currentPassword;
+        private String newPassword;
+        private String confirmPassword;
     }
 }
