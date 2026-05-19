@@ -81,7 +81,11 @@ public class AuthenticationService {
                 return new AuthenticationResponse(
                         admin.getAdminId(),
                         generateToken(admin.getAdminId(), admin.getFullName(), "ADMIN"),
-                        true);
+
+                        generateRefreshToken(admin.getAdminId(), admin.getFullName(), "ADMIN"),
+                        true
+                );
+
 
             case "CANDIDATE":
                 Candidate c = candidateRepository.findByEmail(email)
@@ -94,7 +98,10 @@ public class AuthenticationService {
                 return new AuthenticationResponse(
                         c.getCandidateId(),
                         generateToken(c.getCandidateId(), c.getFullName(), "CANDIDATE"),
-                        true);
+                        generateRefreshToken(c.getCandidateId(), c.getFullName(), "CANDIDATE"),
+                        true
+                );
+
 
             case "EMPLOYER":
                 Employer e = employerRepository.findByEmail(email)
@@ -107,7 +114,10 @@ public class AuthenticationService {
                 return new AuthenticationResponse(
                         e.getEmployerId(),
                         generateToken(e.getEmployerId(), e.getFullName(), "EMPLOYER"),
-                        true);
+                        generateRefreshToken(e.getEmployerId(), e.getFullName(), "EMPLOYER"),
+                        true
+                );
+
 
             default:
                 throw new AppException(ErrorCode.INVALID_REQUEST);
@@ -142,6 +152,7 @@ public class AuthenticationService {
             return new AuthenticationResponse(
                     employer.getEmployerId(),
                     generateToken(employer.getEmployerId(), employer.getFullName(), "EMPLOYER"),
+                    generateRefreshToken(employer.getEmployerId(), employer.getFullName(), "EMPLOYER"),
                     true
             );
         } else {
@@ -160,6 +171,7 @@ public class AuthenticationService {
             return new AuthenticationResponse(
                     candidate.getCandidateId(),
                     generateToken(candidate.getCandidateId(), candidate.getFullName(), "CANDIDATE"),
+                    generateRefreshToken(candidate.getCandidateId(), candidate.getFullName(), "CANDIDATE"),
                     true
             );
         }
@@ -232,7 +244,7 @@ public class AuthenticationService {
                 .issuer("carrreconnect")
                 .issueTime(new Date())
                 .expirationTime(new Date(
-                        Instant.now().plus(1, ChronoUnit.HOURS).toEpochMilli()
+                        Instant.now().plus(15, ChronoUnit.MINUTES).toEpochMilli()
                 ))
                 .jwtID(java.util.UUID.randomUUID().toString())
                 .claim("userId", UserId)
@@ -249,6 +261,60 @@ public class AuthenticationService {
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public String generateRefreshToken(String UserId, String FullName, String role) {
+        JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
+        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
+                .subject(UserId)
+                .issuer("carrreconnect")
+                .issueTime(new Date())
+                .expirationTime(new Date(
+                        Instant.now().plus(24, ChronoUnit.HOURS).toEpochMilli()
+                ))
+                .jwtID(java.util.UUID.randomUUID().toString())
+                .claim("userId", UserId)
+                .claim("fullname", FullName)
+                .claim("scope", role)
+                .build();
+        Payload payload = new Payload(jwtClaimsSet.toJSONObject());
+
+        JWSObject jwsObject = new JWSObject(header, payload);
+
+        try {
+            jwsObject.sign(new MACSigner(SIGNER_KEY.getBytes()));
+            return jwsObject.serialize();
+        } catch (JOSEException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public AuthenticationResponse refreshToken(String refreshToken) throws JOSEException, ParseException {
+        var signedJWT = verify(refreshToken);
+
+        var jti = signedJWT.getJWTID();
+        var expiryTime = signedJWT.getExpirationTime();
+
+        InvalidatedToken invalidatedToken = InvalidatedToken.builder()
+                .id(jti)
+                .expiryTime(expiryTime)
+                .build();
+
+        invalidatedTokenRepository.save(invalidatedToken);
+
+        var userId = signedJWT.getSubject();
+        var fullName = signedJWT.getStringClaim("fullname");
+        var role = signedJWT.getStringClaim("scope");
+
+        var token = generateToken(userId, fullName, role);
+        var newRefreshToken = generateRefreshToken(userId, fullName, role);
+
+        return AuthenticationResponse.builder()
+                .token(token)
+                .refreshToken(newRefreshToken)
+                .userId(userId)
+                .authenticated(true)
+                .build();
     }
 
     @Transactional

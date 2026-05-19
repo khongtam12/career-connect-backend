@@ -1,11 +1,7 @@
 package iuh.fit.userservice.controller;
 
 import com.nimbusds.jose.JOSEException;
-import iuh.fit.userservice.dto.request.AuthenticationRequest;
-import iuh.fit.userservice.dto.request.RegisterDTO;
-import iuh.fit.userservice.dto.request.SendOtpRequest;
-import iuh.fit.userservice.dto.request.VerifyOtpRequest;
-import iuh.fit.userservice.dto.request.ResetPasswordRequest;
+import iuh.fit.userservice.dto.request.*;
 import iuh.fit.userservice.dto.response.ApiResponse;
 import iuh.fit.userservice.dto.response.AuthenticationResponse;
 import iuh.fit.userservice.dto.response.UserDTO;
@@ -37,21 +33,11 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody AuthenticationRequest request, HttpServletResponse response) {
         try {
             AuthenticationResponse authRes = authService.authenticate(request);
-
-            ResponseCookie cookie = ResponseCookie.from("access_token", authRes.getToken())
-                    .httpOnly(true)
-                    .secure(true)
-                    .sameSite("None")
-                    .path("/")
-                    .maxAge(3600)
-                    .build();
-            response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-            return ResponseEntity.ok(
-                    Map.of(
-                            "token", authRes.getToken(),
-                            "userId", authRes.getUserId()
-                    )
-            );
+            setAuthCookies(response, authRes);
+            return ResponseEntity.ok(Map.of(
+                    "userId", authRes.getUserId(),
+                    "authenticated", authRes.isAuthenticated()
+            ));
         } catch (AppException e) {
             ErrorCode errorCode = e.getErrorCode();
             HttpStatus status = errorCode == ErrorCode.UNAUTHENTICATED || errorCode == ErrorCode.USER_NOT_EXISTED
@@ -76,22 +62,11 @@ public class AuthController {
     public ResponseEntity<?> outboundAuthenticate(@RequestParam("code") String code, @RequestParam("type") String type, HttpServletResponse response) {
         try {
             AuthenticationResponse authRes = authService.outboundAuthenticate(code, type);
-
-            ResponseCookie cookie = ResponseCookie.from("access_token", authRes.getToken())
-                    .httpOnly(true)
-                    .secure(true)
-                    .sameSite("None")
-                    .path("/")
-                    .maxAge(3600)
-                    .build();
-            response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-
-            return ResponseEntity.ok(
-                    Map.of(
-                            "token", authRes.getToken(),
-                            "userId", authRes.getUserId()
-                    )
-            );
+            setAuthCookies(response, authRes);
+            return ResponseEntity.ok(Map.of(
+                    "userId", authRes.getUserId(),
+                    "authenticated", authRes.isAuthenticated()
+            ));
         } catch (AppException e) {
             ErrorCode errorCode = e.getErrorCode();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -125,15 +100,18 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletResponse response) {
-        ResponseCookie cookie = ResponseCookie.from("access_token", "")
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
-                .path("/")
-                .maxAge(0)
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    public ResponseEntity<?> logout(
+            @CookieValue(value = "access_token", required = false) String accessToken,
+            @CookieValue(value = "refresh_token", required = false) String refreshToken,
+            HttpServletResponse response
+    ) {
+        if (accessToken != null && !accessToken.isBlank()) {
+            authService.logout(accessToken);
+        }
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            authService.logout(refreshToken);
+        }
+        clearAuthCookies(response);
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
@@ -183,11 +161,65 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Đặt lại mật khẩu thành công"));
     }
 
-    @Getter
-    @Setter
-    public static class ChangePasswordRequest {
-        private String currentPassword;
-        private String newPassword;
-        private String confirmPassword;
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> refresh(
+            @CookieValue(value = "refresh_token", required = false) String refreshToken,
+            HttpServletResponse response
+    ) throws JOSEException, ParseException {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.<Map<String, Object>>builder()
+                            .status(ErrorCode.UNAUTHENTICATED.getCode())
+                            .message("Refresh token không tồn tại")
+                            .build());
+        }
+
+        AuthenticationResponse authRes = authService.refreshToken(refreshToken);
+        setAuthCookies(response, authRes);
+        return ResponseEntity.ok(ApiResponse.success(Map.of(
+                "userId", authRes.getUserId(),
+                "authenticated", authRes.isAuthenticated()
+        )));
     }
+
+    private void setAuthCookies(HttpServletResponse response, AuthenticationResponse authRes) {
+        ResponseCookie accessCookie = ResponseCookie.from("access_token", authRes.getToken())
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(3600)
+                .build();
+        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", authRes.getRefreshToken())
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(86400)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+    }
+
+    private void clearAuthCookies(HttpServletResponse response) {
+        ResponseCookie accessCookie = ResponseCookie.from("access_token", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(0)
+                .build();
+        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
+}
 }

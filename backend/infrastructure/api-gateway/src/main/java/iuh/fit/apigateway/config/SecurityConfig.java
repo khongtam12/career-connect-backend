@@ -44,6 +44,7 @@ public class SecurityConfig {
                                                 "/api/v1/user/auth/outbound/authentication",
                                                 "/api/v1/user/auth/forgot-password",
                                                 "/api/v1/user/auth/reset-password",
+                                                "/api/v1/user/auth/refresh",
                                                 "/api/v1/job/search",
                                                 "/api/v1/job/filters",
                                                 "/api/v1/job/stats",

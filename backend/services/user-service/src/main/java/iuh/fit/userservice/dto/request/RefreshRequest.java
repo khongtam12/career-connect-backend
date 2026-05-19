@@ -1,16 +1,13 @@
-package iuh.fit.userservice.dto.response;
+package iuh.fit.userservice.dto.request;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-@Builder
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class AuthenticationResponse {
-    String userId;
+public class RefreshRequest {
     String token;
-    String refreshToken;
-    boolean authenticated;
 }
