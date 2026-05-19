@@ -320,7 +320,7 @@ public class JobServiceImpl implements JobService {
 				pageable);
 
 		return PageResponse.<JobResponse>builder()
-				.content(jobsPage.getContent().stream().map(JobMapper::toResponse).toList())
+				.content(mapJobsToResponseWithCompanyData(jobsPage.getContent()))
 				.page(jobsPage.getNumber() + 1)
 				.size(jobsPage.getSize())
 				.totalElements(jobsPage.getTotalElements())
@@ -616,7 +616,7 @@ public class JobServiceImpl implements JobService {
 		Page<Job> jobsPage = jobRepository.findAll(spec, pageable);
 
 		PageResponse<JobResponse> response = PageResponse.<JobResponse>builder()
-				.content(jobsPage.getContent().stream().map(JobMapper::toResponse).toList())
+				.content(mapJobsToResponseWithCompanyData(jobsPage.getContent()))
 				.page(jobsPage.getNumber() + 1)
 				.size(jobsPage.getSize())
 				.totalElements(jobsPage.getTotalElements())
@@ -1021,6 +1021,30 @@ public class JobServiceImpl implements JobService {
 
 	private String normalizeForKey(String value) {
 		return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+	}
+
+	private List<JobResponse> mapJobsToResponseWithCompanyData(List<Job> jobs) {
+		java.util.Map<String, CompanyDTO> companyCache = new java.util.HashMap<>();
+		return jobs.stream().map(job -> {
+			JobResponse response = JobMapper.toResponse(job);
+			if (job.getCompanyId() != null) {
+				if (!companyCache.containsKey(job.getCompanyId())) {
+					try {
+						CompanyDTO companyDTO = companyServiceClient.getCompanyById(job.getCompanyId());
+						companyCache.put(job.getCompanyId(), companyDTO);
+					} catch (Exception e) {
+						log.warn("Lỗi gọi company-service cho companyId: {}", job.getCompanyId());
+						companyCache.put(job.getCompanyId(), null);
+					}
+				}
+				CompanyDTO companyDTO = companyCache.get(job.getCompanyId());
+				if (companyDTO != null) {
+					response.setCompanyName(companyDTO.getName());
+					response.setLogo(companyDTO.getLogo());
+				}
+			}
+			return response;
+		}).toList();
 	}
 
 }
