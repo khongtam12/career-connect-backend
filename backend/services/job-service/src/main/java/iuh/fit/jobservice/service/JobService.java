@@ -38,7 +38,7 @@ public interface JobService {
     // ===== PUBLIC =====
     JobDetailResponse getJobDetail(String jobId);
 
-        PageResponse<JobResponse> searchJobs(
+        PageResponse<JobCardResponse> searchJobs(
             String keyword,
             String industryId,
             String jobType,
