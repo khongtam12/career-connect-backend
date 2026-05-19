@@ -53,7 +53,7 @@ public class LlmMatchAnalysisService {
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
     }
-
+//
     public AiSemanticMatchResult analyze(
             JobDetailClientResponse job,
             CvDetailClientResponse cv,

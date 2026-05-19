@@ -8,7 +8,6 @@
 #  Tạo network trước khi chạy lần đầu:
 #    docker network create career-net
 # ==============================================================
-
 networks:
   career-net:
     external: true 
@@ -162,7 +161,6 @@ services:
   # ==============================================================
   # 3. MICROSERVICES
   # ==============================================================
-
   user-service:
     build:
       context: ./backend
