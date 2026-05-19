@@ -112,6 +112,7 @@ public class CompanyService {
             CompanyPendingDTO dto = new CompanyPendingDTO();
             dto.setId(company.getCompanyId());
             dto.setName(company.getName());
+            dto.setLogo(company.getLogo());
             dto.setCreatedAt(company.getCreatedAt());
             dto.setRequestedBy("N/A");
             return dto;
