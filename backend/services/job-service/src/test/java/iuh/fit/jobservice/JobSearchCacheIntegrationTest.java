@@ -1,6 +1,7 @@
 package iuh.fit.jobservice;
 
 import iuh.fit.jobservice.dto.response.JobResponse;
+import iuh.fit.jobservice.dto.response.JobCardResponse;
 import iuh.fit.jobservice.dto.response.PageResponse;
 import iuh.fit.jobservice.model.Job;
 import iuh.fit.jobservice.model.JobType;
@@ -87,7 +88,7 @@ class JobSearchCacheIntegrationTest {
     void searchJobs_usesCacheOnSecondCall() {
         String keyword = "cache-demo-" + jobId;
 
-        PageResponse<JobResponse> first = jobService.searchJobs(
+        PageResponse<JobCardResponse> first = jobService.searchJobs(
                 keyword,
                 "ind-1",
                 "FULL_TIME",
@@ -103,7 +104,7 @@ class JobSearchCacheIntegrationTest {
                 10
         );
 
-        PageResponse<JobResponse> second = jobService.searchJobs(
+        PageResponse<JobCardResponse> second = jobService.searchJobs(
                 keyword,
                 "ind-1",
                 "FULL_TIME",
