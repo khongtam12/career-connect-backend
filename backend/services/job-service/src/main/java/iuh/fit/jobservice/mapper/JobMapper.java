@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import iuh.fit.jobservice.dto.response.JobResponse;
+import iuh.fit.jobservice.dto.response.JobCardResponse;
 import iuh.fit.jobservice.model.Job;
 
 import java.time.format.DateTimeFormatter;
@@ -14,6 +15,26 @@ public class JobMapper {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    public static JobCardResponse toCardResponse(Job job) {
+        return JobCardResponse.builder()
+                .jobId(job.getJobId())
+                .companyName(job.getCompanyName())
+                .logo(job.getCompanyLogoUrl())
+                .title(job.getTitle())
+                .location(job.getLocation())
+                .salaryMin(job.getSalaryMin())
+                .salaryMax(job.getSalaryMax())
+                .salaryNegotiable(job.isSalaryNegotiable())
+                .deadline(job.getDeadline() != null ? job.getDeadline().format(DATE_FMT) : null)
+                .createdAt(job.getCreatedAt())
+                .views(job.getViews())
+                .isTop(job.isTop())
+                .marketingPackageCategory(job.getMarketingPackageCategory())
+                .marketingPackageType(job.getMarketingPackageType())
+                .benefitTags(parseJsonList(job.getBenefitTags()))
+                .build();
+    }
 
     public static JobResponse toResponse(Job job) {
         return JobResponse.builder()

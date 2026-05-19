@@ -536,7 +536,7 @@ public class JobServiceImpl implements JobService {
 	}
 
 	@Override
-	public PageResponse<JobResponse> searchJobs(
+	public PageResponse<JobCardResponse> searchJobs(
 			String keyword,
 			String industryId,
 			String jobType,
@@ -573,7 +573,7 @@ public class JobServiceImpl implements JobService {
 				if (cached instanceof PageResponse) {
 					log.info("Job search cache HIT: key={}", cacheKey);
 					@SuppressWarnings("unchecked")
-					PageResponse<JobResponse> cachedResponse = (PageResponse<JobResponse>) cached;
+					PageResponse<JobCardResponse> cachedResponse = (PageResponse<JobCardResponse>) cached;
 					return cachedResponse;
 				}
 			}
@@ -615,8 +615,8 @@ public class JobServiceImpl implements JobService {
 
 		Page<Job> jobsPage = jobRepository.findAll(spec, pageable);
 
-		PageResponse<JobResponse> response = PageResponse.<JobResponse>builder()
-				.content(mapJobsToResponseWithCompanyData(jobsPage.getContent()))
+		PageResponse<JobCardResponse> response = PageResponse.<JobCardResponse>builder()
+				.content(mapJobsToCardResponseWithCompanyData(jobsPage.getContent()))
 				.page(jobsPage.getNumber() + 1)
 				.size(jobsPage.getSize())
 				.totalElements(jobsPage.getTotalElements())
@@ -1027,6 +1027,30 @@ public class JobServiceImpl implements JobService {
 		java.util.Map<String, CompanyDTO> companyCache = new java.util.HashMap<>();
 		return jobs.stream().map(job -> {
 			JobResponse response = JobMapper.toResponse(job);
+			if (job.getCompanyId() != null) {
+				if (!companyCache.containsKey(job.getCompanyId())) {
+					try {
+						CompanyDTO companyDTO = companyServiceClient.getCompanyById(job.getCompanyId());
+						companyCache.put(job.getCompanyId(), companyDTO);
+					} catch (Exception e) {
+						log.warn("Lỗi gọi company-service cho companyId: {}", job.getCompanyId());
+						companyCache.put(job.getCompanyId(), null);
+					}
+				}
+				CompanyDTO companyDTO = companyCache.get(job.getCompanyId());
+				if (companyDTO != null) {
+					response.setCompanyName(companyDTO.getName());
+					response.setLogo(companyDTO.getLogo());
+				}
+			}
+			return response;
+		}).toList();
+	}
+
+	private List<JobCardResponse> mapJobsToCardResponseWithCompanyData(List<Job> jobs) {
+		java.util.Map<String, CompanyDTO> companyCache = new java.util.HashMap<>();
+		return jobs.stream().map(job -> {
+			JobCardResponse response = JobMapper.toCardResponse(job);
 			if (job.getCompanyId() != null) {
 				if (!companyCache.containsKey(job.getCompanyId())) {
 					try {

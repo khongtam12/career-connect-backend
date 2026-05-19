@@ -1,6 +1,7 @@
 package iuh.fit.jobservice.tools;
 
 import iuh.fit.jobservice.dto.response.JobResponse;
+import iuh.fit.jobservice.dto.response.JobCardResponse;
 import iuh.fit.jobservice.dto.response.PageResponse;
 import iuh.fit.jobservice.service.JobService;
 import org.springframework.ai.chat.model.ToolContext;
@@ -21,7 +22,7 @@ public class JobTools {
     @Tool(description = "Dùng để TÌM KIẾM, GỢI Ý hoặc TRA CỨU thông tin các công việc hiện đang tuyển dụng. " +
                         "Sử dụng tool này khi người dùng hỏi về: danh sách việc làm, tìm việc theo từ khóa, ngành nghề, mức lương, kinh nghiệm hoặc địa điểm. " +
                         "LƯU Ý QUAN TRỌNG: Tool này CHỈ dùng để đọc dữ liệu và đưa ra gợi ý, KHÔNG được dùng khi người dùng có ý định nộp đơn (apply) vào một công việc cụ thể.")
-    public PageResponse<JobResponse> searchJobs(
+    public PageResponse<JobCardResponse> searchJobs(
             @ToolParam(description = "Từ khóa tìm kiếm (ví dụ: Java, React, Manager)") String keyword,
             @ToolParam(description = "Địa điểm làm việc. Bạn (AI) có trách nhiệm sử dụng kiến thức địa lý để tự phân tích câu nói của người dùng (ví dụ: từ các quận/huyện như Quận 1, Cầu Giấy; từ các thành phố trực thuộc như Nha Trang, Đà Lạt, Buôn Ma Thuột; từ các tên gọi khác/viết tắt/không dấu như Sài Gòn, tp hcm, hn, da nang, hue...) và TỰ ĐỘNG CHUYỂN ĐỔI / CHỌN lựa chính xác tên tỉnh/thành tương ứng từ danh sách hỗ trợ dưới đây để điền vào tham số này. Nếu người dùng không chỉ định địa điểm, hãy để trống.\n" +
                                      "Danh sách các tỉnh/thành được hỗ trợ (điền chính xác một trong các chuỗi sau):\n" +
