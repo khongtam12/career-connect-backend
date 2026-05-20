@@ -19,8 +19,12 @@ public class JobPackageService {
         this.jobPackageMapper = jobPackageMapper;
     }
 
-    public List<JobPackageResponseDTO> getAllJobPackage(){
-        return jobPackageRepository.findAll()
+    public List<JobPackageResponseDTO> getAllJobPackage(boolean includeInactive){
+        List<JobPackage> packages = includeInactive
+                ? jobPackageRepository.findAll()
+                : jobPackageRepository.findByIsActiveTrue();
+
+        return packages
                 .stream()
                 .map(jobPackageMapper::toDTO)
                 .toList();

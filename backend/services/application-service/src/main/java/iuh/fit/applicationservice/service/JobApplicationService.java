@@ -1,5 +1,6 @@
 package iuh.fit.applicationservice.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import iuh.fit.applicationservice.client.CvServiceClient;
 import iuh.fit.applicationservice.client.JobServiceClient;
 import iuh.fit.applicationservice.client.NotificationServiceClient;
@@ -36,19 +37,22 @@ public class JobApplicationService {
     private final NotificationServiceClient notificationServiceClient;
     private final CvServiceClient cvServiceClient;
     private final CandidateMatchingService candidateMatchingService;
+    private final ObjectMapper objectMapper;
 
     public JobApplicationService(JobApplicationRepository jobApplicationRepository,
                                  UserServiceClient userServiceClient,
                                  JobServiceClient jobServiceClient,
                                  NotificationServiceClient notificationServiceClient,
                                  CvServiceClient cvServiceClient,
-                                 CandidateMatchingService candidateMatchingService) {
+                                 CandidateMatchingService candidateMatchingService,
+                                 ObjectMapper objectMapper) {
         this.jobApplicationRepository = jobApplicationRepository;
         this.userServiceClient = userServiceClient;
         this.jobServiceClient = jobServiceClient;
         this.notificationServiceClient = notificationServiceClient;
         this.cvServiceClient = cvServiceClient;
         this.candidateMatchingService = candidateMatchingService;
+        this.objectMapper = objectMapper;
     }
 
     public JobApplicationResponse applyForJob(String candidateId, CreateJobApplicationRequest request){
@@ -310,7 +314,12 @@ public class JobApplicationService {
     }
 
     //lay danh sach ung vien
-    public List<CandidateApplicationResponse> getCandidatesByEmployer(String employerId, String jobId) {
+    public List<CandidateApplicationResponse> getCandidatesByEmployer(
+            String employerId,
+            String jobId,
+            boolean includeAi,
+            boolean forceAiRefresh
+    ) {
         if (employerId == null || employerId.isEmpty()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
@@ -325,11 +334,14 @@ public class JobApplicationService {
                 : jobApplicationRepository.findByCompanyIdOrderByAppliedAtDesc(employer.getCompanyId());
 
         return applications.stream()
-                .map(this::mapToCandidateApplicationResponse)
+                .map(application -> mapToCandidateApplicationResponse(application, includeAi, forceAiRefresh))
                 .filter(response -> response != null)
                 .sorted(Comparator
                         .comparing(
                                 (CandidateApplicationResponse response) -> {
+                                    if (!includeAi) {
+                                        return -1D;
+                                    }
                                     CandidateMatchInsight insight = response.getMatchInsight();
                                     return insight != null && insight.getMatchScore() != null
                                             ? insight.getMatchScore()
@@ -341,7 +353,11 @@ public class JobApplicationService {
                 .toList();
     }
 
-    private CandidateApplicationResponse mapToCandidateApplicationResponse(JobApplication app) {
+    private CandidateApplicationResponse mapToCandidateApplicationResponse(
+            JobApplication app,
+            boolean includeAi,
+            boolean forceAiRefresh
+    ) {
         CandidateSummaryClientResponse candidate = safeGetCandidateById(app.getCandidateId());
         if (candidate == null) {
             return null;
@@ -376,16 +392,30 @@ public class JobApplicationService {
             res.setIndustryName(job.getIndustryDTO().getName());
         }
 
+        if (!includeAi) {
+            return res;
+        }
+
         try {
             CvDetailClientResponse cv = resolveCvForMatching(app, candidate);
-            res.setMatchInsight(candidateMatchingService.match(
+            String candidateExperienceYear = candidate != null ? candidate.getExperienceYear() : null;
+            String currentFingerprint = candidateMatchingService.buildAnalysisFingerprint(job, cv, candidateExperienceYear);
+            CandidateMatchInsight cachedInsight = loadCachedInsight(app, currentFingerprint, forceAiRefresh);
+            if (cachedInsight != null) {
+                res.setMatchInsight(cachedInsight);
+                return res;
+            }
+
+            CandidateMatchInsight freshInsight = candidateMatchingService.match(
                     job,
                     cv,
-                    candidate != null ? candidate.getExperienceYear() : null
-            ));
+                    candidateExperienceYear
+            );
+            res.setMatchInsight(freshInsight);
+            saveMatchInsightCache(app, freshInsight, currentFingerprint);
         } catch (Exception ex) {
             CandidateMatchInsight fallback = new CandidateMatchInsight();
-            fallback.setRecommendation("Không thể phân tích CV này tự động.Vui long đánh giá thủ công hoặc yêu cầu ứng viên tạo CV trên hệ thống.");
+            fallback.setRecommendation("Không thể phân tích CV này tự động. Vui lòng đánh giá thủ công hoặc yêu cầu ứng viên tạo CV trên hệ thống.");
             res.setMatchInsight(fallback);
         }
 
@@ -447,6 +477,33 @@ public class JobApplicationService {
                 || normalized.endsWith(".pdf");
     }
 
+    private CandidateMatchInsight loadCachedInsight(JobApplication app, String currentFingerprint, boolean forceAiRefresh) {
+        if (forceAiRefresh) {
+            return null;
+        }
+        if (app.getMatchInsightJson() == null || app.getMatchInsightJson().isBlank()) {
+            return null;
+        }
+        if (app.getAnalysisFingerprint() == null || !app.getAnalysisFingerprint().equals(currentFingerprint)) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(app.getMatchInsightJson(), CandidateMatchInsight.class);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private void saveMatchInsightCache(JobApplication app, CandidateMatchInsight insight, String fingerprint) {
+        try {
+            app.setMatchInsightJson(objectMapper.writeValueAsString(insight));
+            app.setAnalysisFingerprint(fingerprint);
+            app.setAnalyzedAt(LocalDateTime.now());
+            jobApplicationRepository.save(app);
+        } catch (Exception ignored) {
+            // Ignore cache write failures so the response can still return fresh insight.
+        }
+    }
     public List<java.util.Map<String, Object>> getWeeklyApplications() {
         LocalDateTime startDate = LocalDateTime.now().minusDays(6).with(java.time.LocalTime.MIN);
         List<Object[]> rawData = jobApplicationRepository.countApplicationsByDay(startDate);
@@ -459,4 +516,5 @@ public class JobApplicationService {
         }
         return result;
     }
+
 }
