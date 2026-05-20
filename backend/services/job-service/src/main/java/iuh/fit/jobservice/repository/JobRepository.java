@@ -28,6 +28,8 @@ public interface JobRepository extends JpaRepository<Job, String>, JpaSpecificat
 
         long countByCreatedAtAfter(LocalDateTime createdAt);
 
+        long countByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
+
         // ===== FEATURE (giữ full) =====
 
         // tìm job chưa bị xóa mềm
@@ -96,6 +98,39 @@ public interface JobRepository extends JpaRepository<Job, String>, JpaSpecificat
 
         // Tăng số lượng ứng viên trực tiếp bằng query
         @Modifying
-        @Query("UPDATE Job j SET j.numberOfApplications = j.numberOfApplications + 1 WHERE j.jobId = :jobId")
-        int incrementApplications(@Param("jobId") String jobId);
+        @Query("UPDATE Job j SET j.numberOfApplications = j.numberOfApplications + 1, j.updatedAt = :updatedAt WHERE j.jobId = :jobId")
+        int incrementApplications(@Param("jobId") String jobId, @Param("updatedAt") LocalDateTime updatedAt);
+
+        Page<Job> findByDeletedAtIsNullOrderByCreatedAtDesc(Pageable pageable);
+
+        Page<Job> findByStatusInAndDeletedAtIsNullOrderByUpdatedAtDesc(List<StatusJob> statuses, Pageable pageable);
+
+        @Query("SELECT j FROM Job j WHERE j.status IN :statuses AND j.deletedAt IS NULL ORDER BY COALESCE(j.updatedAt, j.createdAt) DESC")
+        Page<Job> findRecentStatusActivities(@Param("statuses") List<StatusJob> statuses, Pageable pageable);
+
+        Page<Job> findByNumberOfApplicationsGreaterThanAndDeletedAtIsNullOrderByUpdatedAtDesc(int min, Pageable pageable);
+
+        // thống kê số tin và lượt xem theo employer
+        @Query(value = "SELECT j.employer_id AS employerId, COUNT(*) AS jobCount, COALESCE(SUM(j.views), 0) AS viewCount " +
+                        "FROM jobs j " +
+                        "WHERE j.deleted_at IS NULL " +
+                        "AND j.employer_id IN :employerIds " +
+                        "AND j.status IN ('ACTIVE', 'CLOSED') " +
+                        "AND j.created_at >= :startDate " +
+                        "AND j.created_at < :endDate " +
+                        "GROUP BY j.employer_id", nativeQuery = true)
+        List<EmployerJobStatsView> findEmployerJobStats(
+                @Param("employerIds") List<String> employerIds,
+                @Param("startDate") java.time.LocalDateTime startDate,
+                @Param("endDate") java.time.LocalDateTime endDate);
+
+        // Đếm việc làm mới theo ngày trong khoảng thời gian (chỉ lấy ACTIVE hoặc CLOSED và chưa bị xóa)
+        @Query(value = "SELECT DATE(j.created_at) as date, COUNT(j.job_id) as count " +
+                       "FROM jobs j " +
+                       "WHERE j.created_at >= :startDate " +
+                       "AND j.deleted_at IS NULL " +
+                       "AND j.status IN ('ACTIVE', 'CLOSED') " +
+                       "GROUP BY DATE(j.created_at) " +
+                       "ORDER BY DATE(j.created_at) ASC", nativeQuery = true)
+        List<Object[]> countNewJobsByDay(@Param("startDate") java.time.LocalDateTime startDate);
 }

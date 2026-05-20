@@ -22,6 +22,7 @@ public class JobCardResponse {
     private double salaryMax;
     private boolean salaryNegotiable;
     private String deadline;
+    private boolean deadlineExpired;
     private LocalDateTime createdAt;
     private int views;
     private boolean isTop;

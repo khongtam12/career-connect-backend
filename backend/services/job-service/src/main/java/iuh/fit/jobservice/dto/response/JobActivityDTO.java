@@ -7,24 +7,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class JobAdminResponse {
+@AllArgsConstructor
+public class JobActivityDTO {
+    private String type;
     private String jobId;
     private String title;
     private String companyName;
-    private String companyLogoUrl;
-    private String location;
-    private double salaryMin;
-
-    private double salaryMax;
     private StatusJob status;
-    private LocalDateTime createdAt;
-    private boolean deadlineExpired;
-    private int views;
-    private int numberOfApplications;
-
-
+    private LocalDateTime eventAt;
+    private Integer numberOfApplications;
 }

@@ -12,6 +12,7 @@ import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.ApplyMarketingPackageRequest;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
+import iuh.fit.jobservice.dto.request.EmployerStatsRequest;
 import iuh.fit.jobservice.dto.request.RenewJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
 import iuh.fit.jobservice.dto.response.*;
@@ -22,6 +23,7 @@ import iuh.fit.jobservice.model.Job;
 import iuh.fit.jobservice.model.JobType;
 import iuh.fit.jobservice.model.StatusJob;
 import iuh.fit.jobservice.repository.IndustryRepository;
+import iuh.fit.jobservice.repository.EmployerJobStatsView;
 import iuh.fit.jobservice.repository.JobRepository;
 import iuh.fit.jobservice.service.JobService;
 import iuh.fit.jobservice.service.JobStatusTransition;
@@ -44,8 +46,10 @@ import org.springframework.data.jpa.domain.Specification;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -82,7 +86,7 @@ public class JobServiceImpl implements JobService {
 		if (jobId == null || jobId.isBlank()) {
 			throw new IllegalArgumentException("jobId is required");
 		}
-		int updated = jobRepository.incrementApplications(jobId);
+		int updated = jobRepository.incrementApplications(jobId, LocalDateTime.now());
 		if (updated == 0) {
 			throw new RuntimeException("Job not found");
 		}
@@ -208,9 +212,6 @@ public class JobServiceImpl implements JobService {
 		if (request.getDeadline() != null && !request.getDeadline().isBlank()) {
 			LocalDate newDeadline = parseDeadline(request.getDeadline());
 			job.setDeadline(newDeadline);
-			if (job.getStatus() == StatusJob.EXPIRED && newDeadline.isAfter(LocalDate.now())) {
-				job.setStatus(StatusJob.ACTIVE);
-			}
 		}
 
 		if (request.getRank() != null) {
@@ -456,21 +457,9 @@ public class JobServiceImpl implements JobService {
 
 	// ── SYSTEM: tự động expire khi hết hạn ───────────────────────────────────
 	@Override
-	@Scheduled(cron = "0 0 1 * * *") // mỗi ngày 01:00
-	@Transactional
 	public int expireOverdueJobs() {
-		LocalDate today = LocalDate.now();
-		List<Job> overdueJobs = jobRepository.findByStatusAndDeadlineBefore(
-				StatusJob.ACTIVE, today);
-
-		for (Job job : overdueJobs) {
-			job.setStatus(StatusJob.EXPIRED);
-			job.setUpdatedAt(LocalDateTime.now());
-		}
-		if (!overdueJobs.isEmpty()) {
-			jobRepository.saveAll(overdueJobs);
-		}
-		return overdueJobs.size();
+		// Deadline chỉ dùng để hiển thị trạng thái, không đổi StatusJob.
+		return 0;
 	}
 
 	// ── SYSTEM: tự động đóng job khi gói tin hết hạn ──────────────────────────
@@ -526,7 +515,7 @@ public class JobServiceImpl implements JobService {
 				job.getCandidateRequirements(),
 				job.getSalaryDetail(), job.getBenefitsDetail(), job.getWorkSchedule(), job.getLocation(),
 				job.getSalaryMin(), job.getSalaryMax(), job.isSalaryNegotiable(), job.getExperience(),
-				job.getDeadline(), job.getCreatedAt(), job.getUpdatedAt(), job.getViews(),
+				job.getDeadline(), isDeadlineExpired(job.getDeadline()), job.getCreatedAt(), job.getUpdatedAt(), job.getViews(),
 				job.getNumberOfApplications(),
 				job.isTop(), job.getPackageId(), job.getPackageLabel(), job.getDeletedAt(), job.getRank(),
 				job.getEducation(), job.getQuantity(), job.getAgeRange(),
@@ -772,6 +761,11 @@ public class JobServiceImpl implements JobService {
 		}
 	}
 
+	private boolean isDeadlineExpired(LocalDate deadline) {
+		if (deadline == null) return false;
+		return deadline.isBefore(LocalDate.now());
+	}
+
 	private String normalize(String value) {
 		if (value == null) {
 			return null;
@@ -932,6 +926,138 @@ public class JobServiceImpl implements JobService {
 		return new JobStats(totalJobs, activeJobs, newJobs24h, pendingJobs, rejectedJobs);
 	}
 
+	@Override
+	public List<EmployerStatsResponse> getEmployerJobStats(EmployerStatsRequest request) {
+		if (request == null || request.getEmployerIds() == null || request.getEmployerIds().isEmpty()) {
+			return List.of();
+		}
+		if (request.getStartDate() == null || request.getEndDate() == null) {
+			return List.of();
+		}
+		List<EmployerJobStatsView> rows = jobRepository.findEmployerJobStats(
+				request.getEmployerIds(),
+				request.getStartDate(),
+				request.getEndDate());
+		List<EmployerStatsResponse> result = new ArrayList<>(rows.size());
+		for (EmployerJobStatsView row : rows) {
+			EmployerStatsResponse item = new EmployerStatsResponse();
+			item.setEmployerId(row.getEmployerId());
+			item.setJobCount(row.getJobCount() != null ? row.getJobCount() : 0L);
+			item.setViewCount(row.getViewCount() != null ? row.getViewCount() : 0L);
+			result.add(item);
+		}
+		return result;
+	}
+
+	@Override
+	public MonthlyJobStatsResponse getMonthlyJobStats() {
+		LocalDate now = LocalDate.now();
+		LocalDate currentStart = now.withDayOfMonth(1);
+		LocalDate currentEnd = now.with(TemporalAdjusters.lastDayOfMonth());
+		LocalDate previousStart = currentStart.minusMonths(1);
+		LocalDate previousEnd = previousStart.with(TemporalAdjusters.lastDayOfMonth());
+
+		long currentCount = jobRepository.countByCreatedAtBetween(
+				currentStart.atStartOfDay(),
+				currentEnd.atTime(23, 59, 59));
+		long previousCount = jobRepository.countByCreatedAtBetween(
+				previousStart.atStartOfDay(),
+				previousEnd.atTime(23, 59, 59));
+
+		MonthlyJobStatsResponse response = new MonthlyJobStatsResponse();
+		response.setCurrentMonthJobs(currentCount);
+		response.setPreviousMonthJobs(previousCount);
+		return response;
+	}
+
+	@Override
+	public List<JobActivityDTO> getRecentActivities(int limit) {
+		int size = limit <= 0 ? 8 : Math.min(limit, 20);
+		List<JobActivityDTO> activities = new ArrayList<>();
+		java.util.Set<String> activityKeys = new java.util.HashSet<>();
+		int newJobLimit = Math.max(5, size / 2);
+		int statusLimit = Math.max(4, size / 3);
+		int applicationLimit = Math.max(3, size / 4);
+
+		java.util.function.Consumer<JobActivityDTO> addActivity = (activity) -> {
+			String key = String.format("%s|%s|%s",
+					activity.getType(),
+					activity.getJobId(),
+					activity.getEventAt() != null ? activity.getEventAt().toString() : "");
+			if (activityKeys.add(key)) {
+				activities.add(activity);
+			}
+		};
+
+		Pageable newJobPage = PageRequest.of(0, newJobLimit, Sort.by("createdAt").descending());
+		List<Job> newJobs = jobRepository.findByDeletedAtIsNullOrderByCreatedAtDesc(newJobPage).getContent();
+		for (Job job : newJobs) {
+			addActivity.accept(JobActivityDTO.builder()
+					.type("NEW_JOB")
+					.jobId(job.getJobId())
+					.title(job.getTitle())
+					.companyName(job.getCompanyName())
+					.status(job.getStatus())
+					.eventAt(job.getCreatedAt())
+					.build());
+		}
+
+
+		Pageable applicationPage = PageRequest.of(0, applicationLimit, Sort.by("updatedAt").descending());
+		List<Job> applicationJobs = jobRepository
+				.findByNumberOfApplicationsGreaterThanAndDeletedAtIsNullOrderByUpdatedAtDesc(0, applicationPage)
+				.getContent();
+		for (Job job : applicationJobs) {
+			if (job.getUpdatedAt() == null) {
+				continue;
+			}
+			addActivity.accept(JobActivityDTO.builder()
+					.type("NEW_APPLICATION")
+					.jobId(job.getJobId())
+					.title(job.getTitle())
+					.companyName(job.getCompanyName())
+					.status(job.getStatus())
+					.eventAt(job.getUpdatedAt())
+					.numberOfApplications(job.getNumberOfApplications())
+					.build());
+		}
+
+		List<StatusJob> statusFilters = List.of(
+				StatusJob.ACTIVE,
+				StatusJob.REJECTED,
+				StatusJob.CLOSED,
+				StatusJob.PAUSED
+		);
+		Pageable statusPage = PageRequest.of(0, statusLimit);
+		List<Job> statusJobs = jobRepository
+				.findRecentStatusActivities(statusFilters, statusPage)
+				.getContent();
+		for (Job job : statusJobs) {
+			LocalDateTime updatedAt = job.getUpdatedAt() != null ? job.getUpdatedAt() : job.getCreatedAt();
+			if (updatedAt == null) {
+				continue;
+			}
+			addActivity.accept(JobActivityDTO.builder()
+					.type("JOB_STATUS_CHANGED")
+					.jobId(job.getJobId())
+					.title(job.getTitle())
+					.companyName(job.getCompanyName())
+					.status(job.getStatus())
+					.eventAt(updatedAt)
+					.build());
+		}
+
+		activities.sort((a, b) -> {
+			LocalDateTime dateA = a.getEventAt();
+			LocalDateTime dateB = b.getEventAt();
+			if (dateA == null && dateB == null) return 0;
+			if (dateA == null) return 1;
+			if (dateB == null) return -1;
+			return dateB.compareTo(dateA);
+		});
+		return activities.size() > size ? activities.subList(0, size) : activities;
+	}
+
 	public PageResponse<JobAdminResponse> getAllJobByAdmin(String search, String status, int page, int size) {
 		if (search == null || search.isEmpty()) {
 			search = "*";
@@ -953,6 +1079,7 @@ public class JobServiceImpl implements JobService {
 						.salaryMax(job.getSalaryMax())
 						.status(job.getStatus())
 						.createdAt(job.getCreatedAt())
+						.deadlineExpired(isDeadlineExpired(job.getDeadline()))
 						.views(job.getViews())
 						.numberOfApplications(job.getNumberOfApplications())
 						.build())
@@ -965,6 +1092,20 @@ public class JobServiceImpl implements JobService {
 				.content(data)
 				.build();
 
+	}
+
+	@Override
+	public List<java.util.Map<String, Object>> getWeeklyNewJobs() {
+		LocalDateTime startDate = LocalDateTime.now().minusDays(6).with(java.time.LocalTime.MIN);
+		List<Object[]> rawData = jobRepository.countNewJobsByDay(startDate);
+		List<java.util.Map<String, Object>> result = new ArrayList<>();
+		for (Object[] row : rawData) {
+			java.util.Map<String, Object> map = new java.util.HashMap<>();
+			map.put("date", row[0].toString());
+			map.put("count", ((Number) row[1]).longValue());
+			result.add(map);
+		}
+		return result;
 	}
 
 	@Override

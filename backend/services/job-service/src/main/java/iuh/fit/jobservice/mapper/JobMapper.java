@@ -7,6 +7,7 @@ import iuh.fit.jobservice.dto.response.JobResponse;
 import iuh.fit.jobservice.dto.response.JobCardResponse;
 import iuh.fit.jobservice.model.Job;
 
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
@@ -27,6 +28,7 @@ public class JobMapper {
                 .salaryMax(job.getSalaryMax())
                 .salaryNegotiable(job.isSalaryNegotiable())
                 .deadline(job.getDeadline() != null ? job.getDeadline().format(DATE_FMT) : null)
+                .deadlineExpired(isDeadlineExpired(job))
                 .createdAt(job.getCreatedAt())
                 .views(job.getViews())
                 .isTop(job.isTop())
@@ -52,6 +54,7 @@ public class JobMapper {
                 .salaryMax(job.getSalaryMax())
                 .salaryNegotiable(job.isSalaryNegotiable())
                 .deadline(job.getDeadline() != null ? job.getDeadline().format(DATE_FMT) : null)
+                .deadlineExpired(isDeadlineExpired(job))
                 .createdAt(job.getCreatedAt())
                 .updatedAt(job.getUpdatedAt())
                 .views(job.getViews())
@@ -80,6 +83,11 @@ public class JobMapper {
                 .relatedCategories(parseJsonList(job.getRelatedCategories()))
                 .skills(parseJsonList(job.getSkills()))
                 .build();
+    }
+
+    private static boolean isDeadlineExpired(Job job) {
+        if (job == null || job.getDeadline() == null) return false;
+        return job.getDeadline().isBefore(LocalDate.now());
     }
 
     public static String toJson(List<String> list) {
