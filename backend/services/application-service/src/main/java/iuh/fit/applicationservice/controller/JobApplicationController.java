@@ -116,4 +116,10 @@ public class JobApplicationController {
 
         return new ApiResponse<>(200, "Reject application success", res);
     }
+
+    @GetMapping("/admin/weekly-stats")
+    public ApiResponse<List<java.util.Map<String, Object>>> getWeeklyApplications() {
+        List<java.util.Map<String, Object>> res = jobApplicationService.getWeeklyApplications();
+        return new ApiResponse<>(200, "Get weekly stats success", res);
+    }
 }

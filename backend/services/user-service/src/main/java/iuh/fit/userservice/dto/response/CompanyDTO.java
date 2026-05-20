@@ -6,4 +6,5 @@ import lombok.Data;
 public class CompanyDTO {
     private String companyId;
     private String name;
+    private String logo;
 }

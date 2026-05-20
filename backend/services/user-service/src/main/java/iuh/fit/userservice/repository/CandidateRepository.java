@@ -24,5 +24,7 @@ public interface CandidateRepository extends JpaRepository<Candidate, String> {
 
     long countByStatus(iuh.fit.userservice.model.Status status);
 
+    long countByCreatedAtBetween(java.time.LocalDate startDate, java.time.LocalDate endDate);
+
     boolean existsByEmail(String email);
 }

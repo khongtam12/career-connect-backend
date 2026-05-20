@@ -23,7 +23,7 @@ import java.util.Set;
  *   PENDING  → REJECTED
  *
  * SYSTEM transitions:
- *   ACTIVE   → EXPIRED   (tự động khi hết deadline)
+ *   ACTIVE/PENDING/PAUSED → CLOSED (khi gói tin hết hạn)
  * </pre>
  */
 public class JobStatusTransition {
@@ -55,7 +55,9 @@ public class JobStatusTransition {
 
         // ── SYSTEM ──
         Map<StatusJob, Set<StatusJob>> system = new EnumMap<>(StatusJob.class);
-        system.put(StatusJob.ACTIVE, EnumSet.of(StatusJob.EXPIRED));
+        system.put(StatusJob.ACTIVE, EnumSet.of(StatusJob.CLOSED));
+        system.put(StatusJob.PENDING, EnumSet.of(StatusJob.CLOSED));
+        system.put(StatusJob.PAUSED, EnumSet.of(StatusJob.CLOSED));
         ALLOWED.put(Role.SYSTEM, system);
     }
 

@@ -32,4 +32,11 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     List<JobApplication> findByCompanyIdOrderByAppliedAtDesc(String companyId);
 
     List<JobApplication> findByCompanyIdAndJobIdOrderByAppliedAtDesc(String companyId, String jobId);
+
+    @org.springframework.data.jpa.repository.Query(value = "SELECT DATE(a.applied_at) as date, COUNT(a.id) as count " +
+                   "FROM job_applications a " +
+                   "WHERE a.applied_at >= :startDate " +
+                   "GROUP BY DATE(a.applied_at) " +
+                   "ORDER BY DATE(a.applied_at) ASC", nativeQuery = true)
+    List<Object[]> countApplicationsByDay(@org.springframework.data.repository.query.Param("startDate") java.time.LocalDateTime startDate);
 }

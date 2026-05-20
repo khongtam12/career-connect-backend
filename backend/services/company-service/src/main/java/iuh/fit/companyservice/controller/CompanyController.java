@@ -79,4 +79,10 @@ public class CompanyController {
         CompanyApprovalResponseDTO response = companyService.processApproval(request, adminId);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/recent-approvals")
+    public ResponseEntity<?> getRecentApprovals(
+            @RequestParam(value = "limit", defaultValue = "10") int limit) {
+        return ResponseEntity.ok(companyService.getRecentApprovals(limit));
+    }
 }

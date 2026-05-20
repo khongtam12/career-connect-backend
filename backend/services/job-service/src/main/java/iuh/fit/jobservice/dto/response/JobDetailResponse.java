@@ -33,6 +33,7 @@ public class JobDetailResponse {
     private boolean salaryNegotiable;
     private String experience;
     private LocalDate deadline;
+    private boolean deadlineExpired;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private int views;

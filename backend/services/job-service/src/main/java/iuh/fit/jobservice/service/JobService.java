@@ -4,9 +4,12 @@ import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.ApplyMarketingPackageRequest;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
+import iuh.fit.jobservice.dto.request.EmployerStatsRequest;
 import iuh.fit.jobservice.dto.request.RenewJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
 import iuh.fit.jobservice.dto.response.*;
+
+import java.util.List;
 
 public interface JobService {
 
@@ -31,6 +34,14 @@ public interface JobService {
 
     // ===== ADMIN =====
     JobResponse adminChangeStatus(String adminId, String jobId, String newStatus);
+
+    List<EmployerStatsResponse> getEmployerJobStats(EmployerStatsRequest request);
+
+    MonthlyJobStatsResponse getMonthlyJobStats();
+
+    List<JobActivityDTO> getRecentActivities(int limit);
+
+    List<java.util.Map<String, Object>> getWeeklyNewJobs();
 
     // ===== SYSTEM =====
     int expireOverdueJobs();
