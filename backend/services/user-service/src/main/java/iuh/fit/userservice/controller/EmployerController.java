@@ -40,7 +40,8 @@ public class EmployerController {
         }
         return new EmployerCompanyResponse(
                 employer.getEmployerId(),
-                employer.getCompanyId()
+                employer.getCompanyId(),
+                employer.getEmail()
         );
     }
 

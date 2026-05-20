@@ -204,6 +204,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: 1234
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_CONSUMER_GROUP_ID: company-group
       JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8081:8081"
@@ -235,6 +237,7 @@ services:
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8082:8082"
@@ -295,6 +298,7 @@ services:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
       FRONTEND_URL: http://localhost:3000
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JAVA_OPTS: "-Xmx384m -Xms256m"
     ports:
       - "8086:8086"
@@ -321,6 +325,8 @@ services:
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_CONSUMER_GROUP_ID: notification-group-v3
       JAVA_OPTS: "-Xmx256m -Xms128m"
     ports:
       - "8085:8085"

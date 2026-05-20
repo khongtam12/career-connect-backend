@@ -2,6 +2,7 @@ package iuh.fit.notificationservice.service;
 
 import iuh.fit.notificationservice.dto.ApplicationNotificationRequest;
 import iuh.fit.notificationservice.dto.SendEmailRequest;
+import iuh.fit.notificationservice.event.EmployerJobStatusChangedEvent;
 import iuh.fit.notificationservice.model.Notification;
 import iuh.fit.notificationservice.model.NotificationType;
 import iuh.fit.notificationservice.model.UserType;
@@ -61,7 +62,6 @@ public class NotificationService {
             }
 
             try {
-                // Luu notification vao MongoDB
                 Notification notification = Notification.builder()
                         .title(buildTitle(request.getType(), request.getJobName()))
                         .message(buildMessage(request))
@@ -94,8 +94,12 @@ public class NotificationService {
 
     private String buildMessage(SendEmailRequest request) {
         return switch (request.getType()) {
-            case "INTERVIEW_SCHEDULE" -> String.format("Bạn được mời phỏng vấn vị trí %s vào %s lúc %s tại %s",
-                    request.getJobName(), request.getInterviewDate(), request.getInterviewTime(), request.getInterviewLocation());
+            case "INTERVIEW_SCHEDULE" -> String.format(
+                    "Bạn được mời phỏng vấn vị trí %s vào %s lúc %s tại %s",
+                    request.getJobName(),
+                    request.getInterviewDate(),
+                    request.getInterviewTime(),
+                    request.getInterviewLocation());
             case "INTERVIEW_CANCEL" -> "Lịch phỏng vấn vị trí " + request.getJobName() + " đã bị hủy";
             case "ACCEPTED" -> "Chúc mừng! Bạn đã được chấp nhận cho vị trí " + request.getJobName();
             case "REJECTED" -> "Hồ sơ ứng tuyển vị trí " + request.getJobName() + " đã bị từ chối";
@@ -113,7 +117,7 @@ public class NotificationService {
 
     public void sendCandidateAppliedNotification(ApplicationNotificationRequest request) {
         Notification notification = Notification.builder()
-                .userId(request.getCompanyId()) // Lưu companyId vào cột userId
+                .userId(request.getCompanyId())
                 .title("Ứng viên mới: " + request.getJobTitle())
                 .message(request.getMessage() != null ? request.getMessage() : "Có ứng viên vừa ứng tuyển")
                 .type(NotificationType.SYSTEM)
@@ -122,12 +126,71 @@ public class NotificationService {
                 .createdAt(LocalDateTime.now())
                 .build();
         notification = notificationRepository.save(notification);
-        // Phát sự kiện qua Websocket
         messagingTemplate.convertAndSend("/topic/company/" + request.getCompanyId() + "/notifications", notification);
     }
+
+    public void sendEmployerJobStatusNotification(EmployerJobStatusChangedEvent request) {
+        String normalizedStatus = request.getStatus() == null ? "" : request.getStatus().trim().toUpperCase();
+        log.info(
+                "Processing employer job status notification for job {} status {} companyId {} employerEmail {}",
+                request.getJobId(),
+                normalizedStatus,
+                request.getCompanyId(),
+                request.getEmployerEmail());
+
+        if (request.getEmployerEmail() != null && !request.getEmployerEmail().isBlank()) {
+            try {
+                emailService.sendEmployerJobStatusEmail(
+                        request.getEmployerEmail(),
+                        request.getCompanyName(),
+                        request.getJobTitle(),
+                        normalizedStatus
+                );
+                log.info("Employer job status email sent successfully to {}", request.getEmployerEmail());
+            } catch (Exception e) {
+                log.error("Failed to send employer job status email to {}: {}", request.getEmployerEmail(), e.getMessage());
+            }
+        } else {
+            log.warn(
+                    "Skipping employer job status email for job {} because employerEmail is missing",
+                    request.getJobId());
+        }
+
+        Notification notification = Notification.builder()
+                .userId(request.getCompanyId())
+                .title(buildEmployerJobStatusTitle(normalizedStatus, request.getJobTitle()))
+                .message(buildEmployerJobStatusMessage(normalizedStatus, request.getJobTitle()))
+                .type(NotificationType.SYSTEM)
+                .userType(UserType.EMPLOYER)
+                .isRead(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+        notification = notificationRepository.save(notification);
+        messagingTemplate.convertAndSend("/topic/company/" + request.getCompanyId() + "/notifications", notification);
+    }
+
+    private String buildEmployerJobStatusTitle(String status, String jobTitle) {
+        return switch (status) {
+            case "ACTIVE" -> "Tin tuyển dụng đã được duyệt: " + jobTitle;
+            case "REJECTED" -> "Tin tuyển dụng bị từ chối: " + jobTitle;
+            case "EXPIRED" -> "Tin tuyển dụng đã hết hạn: " + jobTitle;
+            default -> "Cập nhật tin tuyển dụng: " + jobTitle;
+        };
+    }
+
+    private String buildEmployerJobStatusMessage(String status, String jobTitle) {
+        return switch (status) {
+            case "ACTIVE" -> "Tin tuyển dụng \"" + jobTitle + "\" đã được admin duyệt và đang hiển thị trên hệ thống.";
+            case "REJECTED" -> "Tin tuyển dụng \"" + jobTitle + "\" chưa được admin duyệt. Vui lòng kiểm tra lại nội dung và gửi lại.";
+            case "EXPIRED" -> "Tin tuyển dụng \"" + jobTitle + "\" đã tự động chuyển sang trạng thái hết hạn do quá hạn đăng tuyển.";
+            default -> "Tin tuyển dụng \"" + jobTitle + "\" vừa được cập nhật trạng thái.";
+        };
+    }
+
     public List<Notification> getNotificationsByCompanyId(String companyId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(companyId);
     }
+
     public void markAsRead(String id) {
         notificationRepository.findById(id).ifPresent(noti -> {
             noti.setRead(true);

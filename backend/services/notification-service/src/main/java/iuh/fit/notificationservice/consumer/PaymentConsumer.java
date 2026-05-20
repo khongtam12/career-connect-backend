@@ -14,7 +14,7 @@ public class PaymentConsumer {
 
     private final EmailService emailService;
 
-    @KafkaListener(topics = "payment-order-success", groupId = "notification-group")
+    @KafkaListener(topics = "payment-order-success")
     public void handlePaymentSuccess(OrderPaymentSuccessEvent event) {
         log.info("Nhận sự kiện thanh toán tổng hợp để gửi 1 email: {}", event.getPaymentId());
         try {

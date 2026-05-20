@@ -283,4 +283,56 @@ public class EmailService {
 
         sendHtmlEmail(toEmail, subject, html);
     }
+    public void sendEmployerJobStatusEmail(String toEmail, String companyName, String jobTitle, String status)
+            throws MessagingException {
+        String safeCompanyName = companyName == null || companyName.isBlank() ? "Quý nhà tuyển dụng" : companyName;
+        String normalizedStatus = status == null ? "" : status.trim().toUpperCase();
+        String subject = switch (normalizedStatus) {
+            case "ACTIVE" -> "Tin tuyển dụng đã được duyệt - " + jobTitle;
+            case "REJECTED" -> "Tin tuyển dụng chưa được duyệt - " + jobTitle;
+            case "EXPIRED" -> "Tin tuyển dụng đã hết hạn - " + jobTitle;
+            default -> "Cập nhật trạng thái tin tuyển dụng - " + jobTitle;
+        };
+        String statusLabel = switch (normalizedStatus) {
+            case "ACTIVE" -> "Đã được duyệt";
+            case "REJECTED" -> "Bị từ chối";
+            case "EXPIRED" -> "Đã hết hạn";
+            default -> "Đã được cập nhật";
+        };
+        String accentColor = switch (normalizedStatus) {
+            case "ACTIVE" -> "#059669";
+            case "REJECTED" -> "#dc2626";
+            case "EXPIRED" -> "#d97706";
+            default -> "#2563eb";
+        };
+        String detailMessage = switch (normalizedStatus) {
+            case "ACTIVE" -> "Tin tuyển dụng của bạn đã được admin duyệt và hiện đang hiển thị trên hệ thống.";
+            case "REJECTED" -> "Tin tuyển dụng của bạn chưa được admin duyệt. Vui lòng rà soát lại nội dung và gửi lại khi đã chỉnh sửa.";
+            case "EXPIRED" -> "Tin tuyển dụng của bạn đã tự động chuyển sang trạng thái hết hạn do quá hạn đăng tuyển.";
+            default -> "Trạng thái tin tuyển dụng của bạn vừa được cập nhật trên hệ thống.";
+        };
+
+        String html = """
+                <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, %1$s, #1f2937); padding: 24px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 22px;">Cập nhật trạng thái tin tuyển dụng</h1>
+                    </div>
+                    <div style="padding: 24px;">
+                        <p style="font-size: 16px; color: #374151;">Xin chào <strong>%2$s</strong>,</p>
+                        <p style="font-size: 15px; color: #4b5563;">%3$s</p>
+                        <div style="background: #f9fafb; border-left: 4px solid %1$s; padding: 16px; margin: 16px 0; border-radius: 8px;">
+                            <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">Tin tuyển dụng</p>
+                            <h3 style="margin: 0; color: #111827;">%4$s</h3>
+                        </div>
+                        <p style="font-size: 15px; color: #111827;">Trạng thái mới: <strong style="color: %1$s;">%5$s</strong></p>
+                        <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">Bạn có thể đăng nhập vào trang nhà tuyển dụng để xem chi tiết và thực hiện các thao tác tiếp theo nếu cần.</p>
+                    </div>
+                    <div style="background: #f9fafb; padding: 16px; text-align: center; font-size: 12px; color: #9ca3af;">
+                        Career Connect Platform
+                    </div>
+                </div>
+                """.formatted(accentColor, safeCompanyName, detailMessage, jobTitle, statusLabel);
+
+        sendHtmlEmail(toEmail, subject, html);
+    }
 }

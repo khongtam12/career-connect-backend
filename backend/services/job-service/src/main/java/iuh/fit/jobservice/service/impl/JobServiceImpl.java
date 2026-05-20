@@ -15,6 +15,7 @@ import iuh.fit.jobservice.dto.request.CreateJobRequest;
 import iuh.fit.jobservice.dto.request.RenewJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
 import iuh.fit.jobservice.dto.response.*;
+import iuh.fit.jobservice.event.EmployerJobStatusChangedEvent;
 import iuh.fit.jobservice.exception.JobStatusException;
 import iuh.fit.jobservice.mapper.JobMapper;
 import iuh.fit.jobservice.model.Industry;
@@ -36,6 +37,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +63,7 @@ public class JobServiceImpl implements JobService {
 	private final IndustryRepository industryRepository;
 	private final CompanyServiceClient companyServiceClient;
 	private final UserServiceClient userServiceClient;
+	private final KafkaTemplate<String, Object> kafkaTemplate;
 	private final CacheManager cacheManager;
 
 	public JobServiceImpl(
@@ -68,11 +71,13 @@ public class JobServiceImpl implements JobService {
 			IndustryRepository industryRepository,
 			CompanyServiceClient companyServiceClient,
 			UserServiceClient userServiceClient,
+			KafkaTemplate<String, Object> kafkaTemplate,
 			CacheManager cacheManager) {
 		this.jobRepository = jobRepository;
 		this.industryRepository = industryRepository;
 		this.companyServiceClient = companyServiceClient;
 		this.userServiceClient = userServiceClient;
+		this.kafkaTemplate = kafkaTemplate;
 		this.cacheManager = cacheManager;
 	}
 
@@ -420,7 +425,11 @@ public class JobServiceImpl implements JobService {
 
 		job.setStatus(updated);
 		job.setUpdatedAt(LocalDateTime.now());
-		return JobMapper.toResponse(jobRepository.save(job));
+		Job saved = jobRepository.save(job);
+		if (updated == StatusJob.ACTIVE || updated == StatusJob.REJECTED) {
+			notifyEmployerAboutStatusChange(saved, updated);
+		}
+		return JobMapper.toResponse(saved);
 	}
 
 	// ── ADMIN: duyệt / từ chối ────────────────────────────────────────────────
@@ -451,7 +460,11 @@ public class JobServiceImpl implements JobService {
 
 		job.setStatus(updated);
 		job.setUpdatedAt(LocalDateTime.now());
-		return JobMapper.toResponse(jobRepository.save(job));
+		Job saved = jobRepository.save(job);
+		if (updated == StatusJob.ACTIVE || updated == StatusJob.REJECTED) {
+			notifyEmployerAboutStatusChange(saved, updated);
+		}
+		return JobMapper.toResponse(saved);
 	}
 
 	// ── SYSTEM: tự động expire khi hết hạn ───────────────────────────────────
@@ -463,12 +476,14 @@ public class JobServiceImpl implements JobService {
 		List<Job> overdueJobs = jobRepository.findByStatusAndDeadlineBefore(
 				StatusJob.ACTIVE, today);
 
+		LocalDateTime now = LocalDateTime.now();
 		for (Job job : overdueJobs) {
 			job.setStatus(StatusJob.EXPIRED);
-			job.setUpdatedAt(LocalDateTime.now());
+			job.setUpdatedAt(now);
 		}
 		if (!overdueJobs.isEmpty()) {
 			jobRepository.saveAll(overdueJobs);
+			overdueJobs.forEach(job -> notifyEmployerAboutStatusChange(job, StatusJob.EXPIRED));
 		}
 		return overdueJobs.size();
 	}
@@ -870,6 +885,41 @@ public class JobServiceImpl implements JobService {
 			throw new JobStatusException(
 					"Tin đang trong thời gian chờ duyệt 24 giờ. Admin chỉ có thể duyệt sau " + formattedTime
 							+ " để nhà tuyển dụng còn thời gian báo sai gói hoặc yêu cầu từ chối tin.");
+		}
+	}
+
+	private void notifyEmployerAboutStatusChange(Job job, StatusJob status) {
+		if (job == null || status == null || job.getCompanyId() == null || job.getCompanyId().isBlank()) {
+			return;
+		}
+
+		try {
+			CompanyDTO company = companyServiceClient.getCompanyById(job.getCompanyId());
+			EmployerCompanyResponse employer = null;
+			if (job.getEmployerId() != null && !job.getEmployerId().isBlank()) {
+				employer = userServiceClient.getEmployerById(job.getEmployerId());
+			}
+			EmployerJobStatusChangedEvent event = EmployerJobStatusChangedEvent.builder()
+					.companyId(job.getCompanyId())
+					.companyName(company != null && company.getName() != null ? company.getName() : job.getCompanyName())
+					.employerEmail(employer != null ? employer.getEmail() : null)
+					.jobId(job.getJobId())
+					.jobTitle(job.getTitle())
+					.status(status.name())
+					.build();
+			log.info(
+					"Publishing employer job status event for job {} with status {} to employerId {} and email {}",
+					job.getJobId(),
+					status,
+					job.getEmployerId(),
+					event.getEmployerEmail());
+			kafkaTemplate.send("job-status-changed", event);
+		} catch (Exception ex) {
+			log.warn(
+					"Failed to publish employer job status event for job {} with status {}: {}",
+					job.getJobId(),
+					status,
+					ex.getMessage());
 		}
 	}
 
