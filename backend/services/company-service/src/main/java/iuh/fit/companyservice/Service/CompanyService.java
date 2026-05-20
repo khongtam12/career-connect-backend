@@ -4,6 +4,7 @@ import iuh.fit.companyservice.client.EmployerClient;
 import iuh.fit.companyservice.dto.request.CompanyApprovalRequestDTO;
 import iuh.fit.companyservice.dto.request.CompanyProfileUpdateRequest;
 import iuh.fit.companyservice.dto.request.EmployerCompanyRequest;
+import iuh.fit.companyservice.dto.response.CompanyApprovalActivityDTO;
 import iuh.fit.companyservice.dto.response.CompanyApprovalResponseDTO;
 import iuh.fit.companyservice.dto.response.CompanyFullDetailDTO;
 import iuh.fit.companyservice.dto.response.CompanyPendingDTO;
@@ -21,6 +22,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -160,6 +162,22 @@ public class CompanyService {
         response.setNote(saved.getNote());
 
         return response;
+    }
+
+    public List<CompanyApprovalActivityDTO> getRecentApprovals(int limit) {
+        int size = limit <= 0 ? 8 : Math.min(limit, 20);
+        List<StatusVerification> statuses = List.of(StatusVerification.APPROVED, StatusVerification.REJECTED);
+        Page<CompanyVerification> page = companyVerificationRepository
+                .findByStatusInOrderByVerifiedAtDesc(statuses, PageRequest.of(0, size));
+        return page.getContent().stream().map(verification -> {
+            Company company = verification.getCompany();
+            return CompanyApprovalActivityDTO.builder()
+                    .companyId(company != null ? company.getCompanyId() : null)
+                    .companyName(company != null ? company.getName() : null)
+                    .status(verification.getStatus())
+                    .verifiedAt(verification.getVerifiedAt())
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     // ---- Company profile management ----

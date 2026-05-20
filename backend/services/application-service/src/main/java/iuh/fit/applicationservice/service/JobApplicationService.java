@@ -446,4 +446,17 @@ public class JobApplicationService {
                 || normalized.startsWith("applications/")
                 || normalized.endsWith(".pdf");
     }
+
+    public List<java.util.Map<String, Object>> getWeeklyApplications() {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(6).with(java.time.LocalTime.MIN);
+        List<Object[]> rawData = jobApplicationRepository.countApplicationsByDay(startDate);
+        List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+        for (Object[] row : rawData) {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("date", row[0].toString());
+            map.put("count", ((Number) row[1]).longValue());
+            result.add(map);
+        }
+        return result;
+    }
 }

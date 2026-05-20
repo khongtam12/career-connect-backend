@@ -17,6 +17,8 @@ public interface EmployerRepository extends JpaRepository<Employer,String> {
     @org.springframework.data.jpa.repository.Query("SELECT COUNT(e) FROM Employer e WHERE e.createdAt = :date")
     long countByCreatedAt(@org.springframework.data.repository.query.Param("date") LocalDate date);
 
+        long countByCreatedAtBetween(LocalDate startDate, LocalDate endDate);
+
     @org.springframework.data.jpa.repository.Query("SELECT e FROM Employer e WHERE " +
             "(:keyword IS NULL OR :keyword = '' OR LOWER(e.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(e.email) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
             "AND (:status IS NULL OR e.status = :status)")

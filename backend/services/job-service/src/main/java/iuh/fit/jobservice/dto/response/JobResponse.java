@@ -32,6 +32,7 @@ public class JobResponse {
     private boolean salaryNegotiable;
 
     private String deadline;
+    private boolean deadlineExpired;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

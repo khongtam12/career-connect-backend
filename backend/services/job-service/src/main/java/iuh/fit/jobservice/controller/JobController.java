@@ -4,6 +4,7 @@ import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.ApplyMarketingPackageRequest;
 import iuh.fit.jobservice.dto.request.CreateJobRequest;
+import iuh.fit.jobservice.dto.request.EmployerStatsRequest;
 import iuh.fit.jobservice.dto.request.RenewJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
 import iuh.fit.jobservice.dto.response.*;
@@ -147,6 +148,26 @@ public class JobController {
     ) {
         JobResponse response = jobService.adminChangeStatus(adminId, jobId, status);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/admin/employer-stats")
+    public ResponseEntity<?> getEmployerStats(@RequestBody EmployerStatsRequest request) {
+        return ResponseEntity.ok(jobService.getEmployerJobStats(request));
+    }
+
+    @GetMapping("/admin/monthly-job-stats")
+    public ResponseEntity<?> getMonthlyJobStats() {
+        return ResponseEntity.ok(jobService.getMonthlyJobStats());
+    }
+
+    @GetMapping("/admin/recent-activities")
+    public ResponseEntity<?> getRecentActivities(@RequestParam(value = "limit", defaultValue = "10") int limit) {
+        return ResponseEntity.ok(jobService.getRecentActivities(limit));
+    }
+
+    @GetMapping("/admin/weekly-stats")
+    public ResponseEntity<?> getWeeklyNewJobs() {
+        return ResponseEntity.ok(jobService.getWeeklyNewJobs());
     }
 
     @DeleteMapping("/admin/{jobId}")

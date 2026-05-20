@@ -9,7 +9,9 @@ package iuh.fit.jobservice.model;
  *              PAUSED  → ACTIVE
  *              REJECTED → (edit) → PENDING
  *   Admin    : PENDING → ACTIVE | REJECTED
- *   System   : ACTIVE  → EXPIRED (khi hết deadline)
+ *   System   : ACTIVE/PENDING/PAUSED → CLOSED (khi gói tin hết hạn)
+ *
+ *   Deadline chỉ dùng để hiển thị "hết hạn nộp", không đổi StatusJob.
  */
 public enum StatusJob {
     DRAFT,
