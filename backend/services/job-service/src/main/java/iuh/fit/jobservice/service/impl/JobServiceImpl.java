@@ -1206,6 +1206,8 @@ public class JobServiceImpl implements JobService {
 		jobRepository.save(job);
 	}
 
+
+
 	public String buildSearchCacheKey(
 			String keyword,
 			String industryId,
