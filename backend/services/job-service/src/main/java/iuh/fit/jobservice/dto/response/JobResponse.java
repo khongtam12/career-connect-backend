@@ -24,6 +24,9 @@ public class JobResponse {
     private String title;
     private String industry;
     private String location;
+    private String province;
+    private String ward;
+    private String addressDetail;
     private String jobType;
     private String experience;
 

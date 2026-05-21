@@ -36,7 +36,7 @@ public final class JobSpecifications {
                 return cb.conjunction();
             }
             String like = "%" + location.toLowerCase() + "%";
-            return cb.like(cb.lower(root.get("location")), like);
+            return cb.like(cb.lower(root.get("province")), like);
         };
     }
 

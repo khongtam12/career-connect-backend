@@ -45,7 +45,11 @@ public class Job {
     @Column(columnDefinition = "TEXT")
     private String workSchedule;
 
-    private String location;
+    private String province;
+
+    private String ward;
+
+    private String addressDetail;
 
     private double salaryMin;
 
@@ -66,7 +70,8 @@ public class Job {
 
     private int numberOfApplications;
 
-    private boolean isTop;
+    @Column(name = "is_top")
+    private boolean top;
 
     private String companySubscriptionId;
 
@@ -141,7 +146,6 @@ public class Job {
             double salaryMin,
             double salaryMax,
             boolean salaryNegotiable,
-            String location,
             String experience,
             LocalDate deadline,
             LocalDateTime createdAt,
@@ -163,7 +167,6 @@ public class Job {
         this.salaryMin = salaryMin;
         this.salaryMax = salaryMax;
         this.salaryNegotiable = salaryNegotiable;
-        this.location = location;
         this.experience = experience;
         this.deadline = deadline;
         this.createdAt = createdAt;
@@ -273,12 +276,30 @@ public class Job {
         this.workSchedule = workSchedule;
     }
 
-    public String getLocation() {
-        return location;
+
+
+    public String getProvince() {
+        return province;
     }
 
-    public void setLocation(String location) {
-        this.location = location;
+    public void setProvince(String province) {
+        this.province = province;
+    }
+
+    public String getWard() {
+        return ward;
+    }
+
+    public void setWard(String ward) {
+        this.ward = ward;
+    }
+
+    public String getAddressDetail() {
+        return addressDetail;
+    }
+
+    public void setAddressDetail(String addressDetail) {
+        this.addressDetail = addressDetail;
     }
 
     public double getSalaryMin() {
@@ -354,11 +375,11 @@ public class Job {
     }
 
     public boolean isTop() {
-        return isTop;
+        return top;
     }
 
     public void setTop(boolean top) {
-        isTop = top;
+        this.top = top;
     }
 
     public String getCompanySubscriptionId() {
