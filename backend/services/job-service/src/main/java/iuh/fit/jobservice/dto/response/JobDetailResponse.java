@@ -28,6 +28,9 @@ public class JobDetailResponse {
     private String benefitsDetail;
     private String workSchedule;
     private String location;
+    private String province;
+    private String ward;
+    private String addressDetail;
     private double salaryMin;
     private double salaryMax;
     private boolean salaryNegotiable;

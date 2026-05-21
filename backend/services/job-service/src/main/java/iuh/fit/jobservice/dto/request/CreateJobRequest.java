@@ -14,6 +14,9 @@ public class CreateJobRequest {
     private String title;
     private String industry;
     private String address;
+    private String province;
+    private String ward;
+    private String addressDetail;
     private String jobType;
     private String experience;
     private Double salaryMin;
