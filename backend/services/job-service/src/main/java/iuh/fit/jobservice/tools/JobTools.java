@@ -43,9 +43,11 @@ public class JobTools {
             String normalizedLocation = LocationNormalizer.normalizeLocation(location);
             // Mặc định status "ACTIVE", gọi hàm search public từ JobService
             return jobService.searchJobs(
-                    keyword, null, null, null, null, normalizedLocation, "ACTIVE",
+                    keyword, null, null, null, null,
+                    normalizedLocation, "ACTIVE",
                     null, null, salaryMin, null,
-                    "createdAt", "desc", 1, 10);
+                    "createdAt", "desc", 1, 10
+            );
         } catch (Exception e) {
             System.err.println("Error running searchJobs tool: " + e.getMessage());
             // Trả về PageResponse trống để AI tự thông báo không tìm thấy kết quả
