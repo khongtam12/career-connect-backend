@@ -76,6 +76,24 @@ public final class JobSpecifications {
         };
     }
 
+    public static Specification<Job> marketingPackageCategoryEquals(String marketingPackageCategory) {
+        return (root, query, cb) -> {
+            if (marketingPackageCategory == null || marketingPackageCategory.isBlank()) {
+                return cb.conjunction();
+            }
+            return cb.equal(cb.upper(root.get("marketingPackageCategory")), marketingPackageCategory.trim().toUpperCase());
+        };
+    }
+
+    public static Specification<Job> marketingPackageTypeEquals(String marketingPackageType) {
+        return (root, query, cb) -> {
+            if (marketingPackageType == null || marketingPackageType.isBlank()) {
+                return cb.conjunction();
+            }
+            return cb.equal(cb.upper(root.get("marketingPackageType")), marketingPackageType.trim().toUpperCase());
+        };
+    }
+
     public static Specification<Job> experienceMin(Integer min) {
         return (root, query, cb) -> {
             if (min == null) {

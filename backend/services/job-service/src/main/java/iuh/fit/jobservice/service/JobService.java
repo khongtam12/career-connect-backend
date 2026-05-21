@@ -53,6 +53,8 @@ public interface JobService {
             String keyword,
             String industryId,
             String jobType,
+            String marketingPackageCategory,
+            String marketingPackageType,
             String location,
             String status,
             Integer experienceMin,
