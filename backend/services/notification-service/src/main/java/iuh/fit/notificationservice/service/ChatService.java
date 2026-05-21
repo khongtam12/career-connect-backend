@@ -24,6 +24,17 @@ public class ChatService {
         // Update ChatRoom
         ChatRoom room = chatRoomRepository.findById(message.getRoomId())
                 .orElseGet(() -> createRoom(message));
+
+        if (message.getCompanyName() != null && !message.getCompanyName().isBlank()) {
+            room.setCompanyName(message.getCompanyName());
+        }
+        if (message.getCompanyLogo() != null && !message.getCompanyLogo().isBlank()) {
+            room.setCompanyLogo(message.getCompanyLogo());
+        }
+        if (message.getSenderName() != null && !message.getSenderName().isBlank()
+                && message.getSenderId().equals(room.getCandidateId())) {
+            room.setCandidateName(message.getSenderName());
+        }
         
         room.setLastMessage(message.getContent());
         room.setLastUpdate(LocalDateTime.now());

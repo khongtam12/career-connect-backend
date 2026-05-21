@@ -49,6 +49,7 @@ public class SecurityConfig {
                                                 "/api/v1/job/filters",
                                                 "/api/v1/job/stats",
                                                 "/api/v1/package/payments/vnpay-callback",
+                                                "/fallback/**",
                                                 "/eureka/**"))
                                 .csrf(csrf -> csrf.disable())
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))

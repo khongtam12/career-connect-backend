@@ -42,8 +42,9 @@ public class JobTools {
             String normalizedLocation = LocationNormalizer.normalizeLocation(location);
             // Mặc định status "ACTIVE", gọi hàm search public từ JobService
             return jobService.searchJobs(
-                    keyword, null, null, normalizedLocation, "ACTIVE", 
-                    null, null, salaryMin, null, 
+                    keyword, null, null, null, null,
+                    normalizedLocation, "ACTIVE",
+                    null, null, salaryMin, null,
                     "createdAt", "desc", 1, 10
             );
         } catch (Exception e) {
