@@ -529,6 +529,8 @@ public class JobServiceImpl implements JobService {
 			String keyword,
 			String industryId,
 			String jobType,
+			String marketingPackageCategory,
+			String marketingPackageType,
 			String location,
 			String status,
 			Integer experienceMin,
@@ -543,6 +545,8 @@ public class JobServiceImpl implements JobService {
 				keyword,
 				industryId,
 				jobType,
+					marketingPackageCategory,
+					marketingPackageType,
 				location,
 				status,
 				experienceMin,
@@ -595,11 +599,23 @@ public class JobServiceImpl implements JobService {
 		if (jobType != null && !jobType.isBlank()) {
 			spec = spec.and(JobSpecifications.jobTypeEquals(parseJobType(jobType)));
 		}
+		if (marketingPackageCategory != null && !marketingPackageCategory.isBlank()) {
+			spec = spec.and(JobSpecifications.marketingPackageCategoryEquals(marketingPackageCategory));
+		}
+		if (marketingPackageType != null && !marketingPackageType.isBlank()) {
+			spec = spec.and(JobSpecifications.marketingPackageTypeEquals(marketingPackageType));
+		}
 		if (salaryMin != null) {
 			spec = spec.and(JobSpecifications.salaryMin(salaryMin));
 		}
 		if (salaryMax != null) {
 			spec = spec.and(JobSpecifications.salaryMax(salaryMax));
+		}
+		if (experienceMin != null) {
+			spec = spec.and(JobSpecifications.experienceMin(experienceMin));
+		}
+		if (experienceMax != null) {
+			spec = spec.and(JobSpecifications.experienceMax(experienceMax));
 		}
 
 		Page<Job> jobsPage = jobRepository.findAll(spec, pageable);
@@ -1133,6 +1149,8 @@ public class JobServiceImpl implements JobService {
 			String keyword,
 			String industryId,
 			String jobType,
+			String marketingPackageCategory,
+			String marketingPackageType,
 			String location,
 			String status,
 			Integer experienceMin,
@@ -1147,6 +1165,8 @@ public class JobServiceImpl implements JobService {
 		key.append("keyword=").append(normalizeForKey(keyword))
 				.append("|industryId=").append(normalizeForKey(industryId))
 				.append("|jobType=").append(normalizeForKey(jobType))
+				.append("|marketingPackageCategory=").append(normalizeForKey(marketingPackageCategory))
+				.append("|marketingPackageType=").append(normalizeForKey(marketingPackageType))
 				.append("|location=").append(normalizeForKey(location))
 				.append("|status=").append(normalizeForKey(status))
 				.append("|experienceMin=").append(experienceMin != null ? experienceMin : "")
