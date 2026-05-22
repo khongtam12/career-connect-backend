@@ -1,8 +1,12 @@
 package iuh.fit.jobservice.tools;
 
 import java.text.Normalizer;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public class LocationNormalizer {
@@ -20,6 +24,7 @@ public class LocationNormalizer {
     private static final Map<String, String> CUSTOM_MAPPINGS = new HashMap<>();
     private static final Map<String, String> NORMALIZED_PROVINCE_MAP = new HashMap<>();
     private static final Map<String, String> NO_SPACE_PROVINCE_MAP = new HashMap<>();
+    private static final Map<String, String> DISPLAY_LABELS = new HashMap<>();
 
     static {
         // Build basic normalized maps
@@ -28,6 +33,41 @@ public class LocationNormalizer {
             NORMALIZED_PROVINCE_MAP.put(norm, province);
             NO_SPACE_PROVINCE_MAP.put(stripWhitespace(norm), province);
         }
+
+        DISPLAY_LABELS.put("Tuyen Quang", "Tỉnh Tuyên Quang");
+        DISPLAY_LABELS.put("Lao Cai", "Tỉnh Lào Cai");
+        DISPLAY_LABELS.put("Thai Nguyen", "Tỉnh Thái Nguyên");
+        DISPLAY_LABELS.put("Phu Tho", "Tỉnh Phú Thọ");
+        DISPLAY_LABELS.put("Bac Ninh", "Tỉnh Bắc Ninh");
+        DISPLAY_LABELS.put("Hung Yen", "Tỉnh Hưng Yên");
+        DISPLAY_LABELS.put("Hai Phong", "Thành phố Hải Phòng");
+        DISPLAY_LABELS.put("Ninh Binh", "Tỉnh Ninh Bình");
+        DISPLAY_LABELS.put("Quang Tri", "Tỉnh Quảng Trị");
+        DISPLAY_LABELS.put("Da Nang", "Thành phố Đà Nẵng");
+        DISPLAY_LABELS.put("Quang Ngai", "Tỉnh Quảng Ngãi");
+        DISPLAY_LABELS.put("Gia Lai", "Tỉnh Gia Lai");
+        DISPLAY_LABELS.put("Khanh Hoa", "Tỉnh Khánh Hòa");
+        DISPLAY_LABELS.put("Lam Dong", "Tỉnh Lâm Đồng");
+        DISPLAY_LABELS.put("Dak Lak", "Tỉnh Đắk Lắk");
+        DISPLAY_LABELS.put("HCM", "Thành phố Hồ Chí Minh");
+        DISPLAY_LABELS.put("Dong Nai", "Tỉnh Đồng Nai");
+        DISPLAY_LABELS.put("Tay Ninh", "Tỉnh Tây Ninh");
+        DISPLAY_LABELS.put("Can Tho", "Thành phố Cần Thơ");
+        DISPLAY_LABELS.put("Vinh Long", "Tỉnh Vĩnh Long");
+        DISPLAY_LABELS.put("Dong Thap", "Tỉnh Đồng Tháp");
+        DISPLAY_LABELS.put("Ca Mau", "Tỉnh Cà Mau");
+        DISPLAY_LABELS.put("An Giang", "Tỉnh An Giang");
+        DISPLAY_LABELS.put("Ha Noi", "Thành phố Hà Nội");
+        DISPLAY_LABELS.put("Hue", "Thành phố Huế");
+        DISPLAY_LABELS.put("Lai Chau", "Tỉnh Lai Châu");
+        DISPLAY_LABELS.put("Dien Bien", "Tỉnh Điện Biên");
+        DISPLAY_LABELS.put("Son La", "Tỉnh Sơn La");
+        DISPLAY_LABELS.put("Lang Son", "Tỉnh Lạng Sơn");
+        DISPLAY_LABELS.put("Quang Ninh", "Tỉnh Quảng Ninh");
+        DISPLAY_LABELS.put("Thanh Hoa", "Tỉnh Thanh Hóa");
+        DISPLAY_LABELS.put("Nghe An", "Tỉnh Nghệ An");
+        DISPLAY_LABELS.put("Ha Tinh", "Tỉnh Hà Tĩnh");
+        DISPLAY_LABELS.put("Cao Bang", "Tỉnh Cao Bằng");
 
         // Custom Mappings for cities, abbreviations, and common alternatives
         CUSTOM_MAPPINGS.put("hcm", "HCM");
@@ -156,5 +196,64 @@ public class LocationNormalizer {
         
         // Fallback: return original if nothing matched
         return location;
+    }
+
+    public static boolean isRecognizedProvince(String location) {
+        if (location == null || location.isBlank()) {
+            return false;
+        }
+
+        String cleaned = normalizeString(location);
+        String noSpaceCleaned = stripWhitespace(cleaned);
+        return CUSTOM_MAPPINGS.containsKey(cleaned)
+                || NORMALIZED_PROVINCE_MAP.containsKey(cleaned)
+                || CUSTOM_MAPPINGS.containsKey(noSpaceCleaned)
+                || NO_SPACE_PROVINCE_MAP.containsKey(noSpaceCleaned);
+    }
+
+    public static String toDisplayLabel(String location) {
+        String normalized = normalizeLocation(location);
+        if (normalized == null || normalized.isBlank()) {
+            return null;
+        }
+
+        String display = DISPLAY_LABELS.get(normalized);
+        return display != null ? display : normalized;
+    }
+
+    public static List<String> getSearchTerms(String location) {
+        if (location == null || location.isBlank()) {
+            return List.of();
+        }
+
+        Set<String> terms = new LinkedHashSet<>();
+        String normalized = normalizeLocation(location);
+        String display = toDisplayLabel(location);
+
+        addTermVariants(terms, location);
+        addTermVariants(terms, normalized);
+        addTermVariants(terms, display);
+
+        return new ArrayList<>(terms);
+    }
+
+    private static void addTermVariants(Set<String> terms, String value) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+
+        String cleaned = normalizeString(value);
+        if (!cleaned.isBlank()) {
+            terms.add(cleaned);
+            String noSpace = stripWhitespace(cleaned);
+            if (!noSpace.isBlank()) {
+                terms.add(noSpace);
+            }
+        }
+
+        String stripped = value.trim().toLowerCase();
+        if (!stripped.isBlank()) {
+            terms.add(stripped);
+        }
     }
 }
