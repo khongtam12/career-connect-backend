@@ -6,6 +6,8 @@ on:
       - Build And Push Backend Images
     types:
       - completed
+    branches:
+      - deloy-test
 
 jobs:
   deploy:
@@ -27,8 +29,8 @@ jobs:
             cd ${{ secrets.APP_DIR }}
 
             git fetch origin
-            git checkout develop
-            git pull origin develop
+            git checkout deloy-test
+            git pull origin deloy-test
 
             docker network create career-net || true
 
