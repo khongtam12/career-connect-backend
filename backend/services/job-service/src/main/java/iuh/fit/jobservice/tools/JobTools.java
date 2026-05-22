@@ -28,16 +28,16 @@ public class JobTools {
             @ToolParam(description = "Địa điểm làm việc. Bạn (AI) có trách nhiệm sử dụng kiến thức địa lý để tự phân tích câu nói của người dùng (ví dụ: từ các quận/huyện như Quận 1, Cầu Giấy; từ các thành phố trực thuộc như Nha Trang, Đà Lạt, Buôn Ma Thuột; từ các tên gọi khác/viết tắt/không dấu như Sài Gòn, tp hcm, hn, da nang, hue...) và TỰ ĐỘNG CHUYỂN ĐỔI / CHỌN lựa chính xác tên tỉnh/thành tương ứng từ danh sách hỗ trợ dưới đây để điền vào tham số này. Nếu người dùng không chỉ định địa điểm, hãy để trống.\n"
                     +
                     "Danh sách các tỉnh/thành được hỗ trợ (điền chính xác một trong các chuỗi sau):\n" +
-                    "- 'Ha Noi' (Hà Nội, Thủ đô)\n" +
-                    "- 'HCM' (TP. Hồ Chí Minh, Sài Gòn, các quận/huyện thuộc HCM)\n" +
-                    "- 'Da Nang' (Đà Nẵng)\n" +
-                    "- 'Hue' (Huế, Thừa Thiên Huế)\n" +
-                    "- 'Hai Phong' (Hải Phòng)\n" +
-                    "- 'Can Tho' (Cần Thơ)\n" +
-                    "- 'Khanh Hoa' (Khánh Hòa, Nha Trang)\n" +
-                    "- 'Lam Dong' (Lâm Đồng, Đà Lạt)\n" +
-                    "- 'Dak Lak' (Đắk Lắk, Đắc Lắc, Buôn Ma Thuột)\n" +
-                    "- 'Tuyen Quang', 'Lao Cai', 'Thai Nguyen', 'Phu Tho', 'Bac Ninh', 'Hung Yen', 'Ninh Binh', 'Quang Tri', 'Quang Ngai', 'Gia Lai', 'Dong Nai', 'Tay Ninh', 'Vinh Long', 'Dong Thap', 'Ca Mau', 'An Giang', 'Lai Chau', 'Dien Bien', 'Son La', 'Lang Son', 'Quang Ninh', 'Thanh Hoa', 'Nghe An', 'Ha Tinh', 'Cao Bang'") String location,
+                    "- 'Thành phố Hà Nội' (Hà Nội, Thủ đô)\n" +
+                    "- 'Thành phố Hồ Chí Minh' (TP. Hồ Chí Minh, Sài Gòn, các quận/huyện thuộc HCM)\n" +
+                    "- 'Thành phố Đà Nẵng' (Đà Nẵng)\n" +
+                    "- 'Thành phố Huế' (Huế, Thừa Thiên Huế)\n" +
+                    "- 'Thành phố Hải Phòng' (Hải Phòng)\n" +
+                    "- 'Thành phố Cần Thơ' (Cần Thơ)\n" +
+                    "- 'Tỉnh Khánh Hòa' (Khánh Hòa, Nha Trang)\n" +
+                    "- 'Tỉnh Lâm Đồng' (Lâm Đồng, Đà Lạt)\n" +
+                    "- 'Tỉnh Đắk Lắk' (Đắk Lắk, Đắc Lắc, Buôn Ma Thuột)\n" +
+                    "- 'Tỉnh Cao Bằng', 'Tỉnh Tuyên Quang', 'Tỉnh Điện Biên', 'Tỉnh Lai Châu', 'Tỉnh Sơn La', 'Tỉnh Lào Cai', 'Tỉnh Thái Nguyên', 'Tỉnh Lạng Sơn', 'Tỉnh Quảng Ninh', 'Tỉnh Bắc Ninh', 'Tỉnh Phú Thọ', 'Tỉnh Hưng Yên', 'Tỉnh Ninh Bình', 'Tỉnh Thanh Hóa', 'Tỉnh Nghệ An', 'Tỉnh Hà Tĩnh', 'Tỉnh Quảng Trị', 'Tỉnh Quảng Ngãi', 'Tỉnh Gia Lai', 'Tỉnh Đồng Nai', 'Tỉnh Tây Ninh', 'Tỉnh Đồng Tháp', 'Tỉnh Vĩnh Long', 'Tỉnh An Giang', 'Tỉnh Cà Mau'") String location,
             @ToolParam(description = "Mức lương tối thiểu mong muốn. LƯU Ý QUAN TRỌNG: Truyền CHÍNH XÁC con số thô người dùng nhập/yêu cầu (ví dụ: người dùng nói '1000' thì điền 1000.0, nói '1500' thì điền 1500.0, nói '15000000' thì điền 15000000.0). Tuyệt đối KHÔNG được nhân lên, chia nhỏ, quy đổi hay biên dịch ý nghĩa (ví dụ: người dùng nói '1000' thì CẤM tự ý hiểu là '1 triệu' và điền 1000000.0, hãy điền đúng 1000.0).") Double salaryMin) {
         try {
             String normalizedLocation = LocationNormalizer.normalizeLocation(location);

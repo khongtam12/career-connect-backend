@@ -37,16 +37,16 @@ public class ChatConfig {
                                 "QUY TẮC NHẬN DIỆN VÀ CHUẨN HÓA ĐỊA ĐIỂM (CỰC KỲ QUAN TRỌNG):\n" +
                                 "- Khi người dùng nhắc đến bất kỳ địa điểm nào trong câu hỏi (ví dụ: 'ở Sài Gòn', 'ở thủ đô', 'tại quận 1', 'Đà Lạt', 'Nha Trang', 'ở Đắk Lắk',...), bạn phải tự nhận diện và chuyển đổi chính xác sang Tên Tỉnh/Thành chuẩn tương ứng trong danh sách 34 tỉnh/thành được hỗ trợ trước khi gọi tool `searchJobs`.\n" +
                                 "- Bảng ánh xạ tiêu biểu gợi ý:\n" +
-                                "  + Sài Gòn, TP.HCM, tphcm, Quận 1, Thủ Đức... -> điền 'HCM'\n" +
-                                "  + Hà Nội, hn, Cầu Giấy, Mỹ Đình, Hoàn Kiếm, Thủ đô... -> điền 'Ha Noi'\n" +
-                                "  + Đà Lạt... -> điền 'Lam Dong'\n" +
-                                "  + Nha Trang... -> điền 'Khanh Hoa'\n" +
-                                "  + Buôn Ma Thuột, BMT... -> điền 'Dak Lak'\n" +
-                                "  + Đà Nẵng, dn... -> điền 'Da Nang'\n" +
-                                "  + Huế, Thừa Thiên Huế... -> điền 'Hue'\n" +
-                                "  + Hải Phòng, hp... -> điền 'Hai Phong'\n" +
-                                "  + Cần Thơ, ct... -> điền 'Can Tho'\n" +
-                                "- Hãy chọn tên tỉnh/thành phù hợp nhất từ danh sách 34 tỉnh/thành sau để làm tham số cho `searchJobs`: 'Tuyen Quang', 'Lao Cai', 'Thai Nguyen', 'Phu Tho', 'Bac Ninh', 'Hung Yen', 'Hai Phong', 'Ninh Binh', 'Quang Tri', 'Da Nang', 'Quang Ngai', 'Gia Lai', 'Khanh Hoa', 'Lam Dong', 'Dak Lak', 'HCM', 'Dong Nai', 'Tay Ninh', 'Can Tho', 'Vinh Long', 'Dong Thap', 'Ca Mau', 'An Giang', 'Ha Noi', 'Hue', 'Lai Chau', 'Dien Bien', 'Son La', 'Lang Son', 'Quang Ninh', 'Thanh Hoa', 'Nghe An', 'Ha Tinh', 'Cao Bang'.\n" +
+                                "  + Sài Gòn, TP.HCM, tphcm, Quận 1, Thủ Đức... -> điền 'Thành phố Hồ Chí Minh'\n" +
+                                "  + Hà Nội, hn, Cầu Giấy, Mỹ Đình, Hoàn Kiếm, Thủ đô... -> điền 'Thành phố Hà Nội'\n" +
+                                "  + Đà Lạt... -> điền 'Tỉnh Lâm Đồng'\n" +
+                                "  + Nha Trang... -> điền 'Tỉnh Khánh Hòa'\n" +
+                                "  + Buôn Ma Thuột, BMT... -> điền 'Tỉnh Đắk Lắk'\n" +
+                                "  + Đà Nẵng, dn... -> điền 'Thành phố Đà Nẵng'\n" +
+                                "  + Huế, Thừa Thiên Huế... -> điền 'Thành phố Huế'\n" +
+                                "  + Hải Phòng, hp... -> điền 'Thành phố Hải Phòng'\n" +
+                                "  + Cần Thơ, ct... -> điền 'Thành phố Cần Thơ'\n" +
+                                "- Hãy chọn tên tỉnh/thành phù hợp nhất từ danh sách 34 tỉnh/thành sau để làm tham số cho `searchJobs`: 'Thành phố Hà Nội', 'Tỉnh Cao Bằng', 'Tỉnh Tuyên Quang', 'Tỉnh Điện Biên', 'Tỉnh Lai Châu', 'Tỉnh Sơn La', 'Tỉnh Lào Cai', 'Tỉnh Thái Nguyên', 'Tỉnh Lạng Sơn', 'Tỉnh Quảng Ninh', 'Tỉnh Bắc Ninh', 'Tỉnh Phú Thọ', 'Thành phố Hải Phòng', 'Tỉnh Hưng Yên', 'Tỉnh Ninh Bình', 'Tỉnh Thanh Hóa', 'Tỉnh Nghệ An', 'Tỉnh Hà Tĩnh', 'Tỉnh Quảng Trị', 'Thành phố Huế', 'Thành phố Đà Nẵng', 'Tỉnh Quảng Ngãi', 'Tỉnh Gia Lai', 'Tỉnh Khánh Hòa', 'Tỉnh Đắk Lắk', 'Tỉnh Lâm Đồng', 'Tỉnh Đồng Nai', 'Thành phố Hồ Chí Minh', 'Tỉnh Tây Ninh', 'Tỉnh Đồng Tháp', 'Tỉnh Vĩnh Long', 'Tỉnh An Giang', 'Thành phố Cần Thơ', 'Tỉnh Cà Mau'.\n" +
                                 "Sử dụng tool khi:\n" +
                                 "- Khách hàng muốn tìm kiếm việc làm (dùng searchJobs).\n" +
                                 "- Khách hàng muốn nộp đơn / apply vào một công việc (dùng applyToJob).\n" +
