@@ -136,7 +136,13 @@ public class JobServiceImpl implements JobService {
 		job.setCompanyLogoUrl(company.getLogo());
 		job.setTitle(request.getTitle().trim());
 		job.setIndustry(normalize(request.getIndustry()));
-		job.setLocation(normalize(request.getAddress()));
+		String province = normalize(request.getProvince());
+		String ward = normalize(request.getWard());
+		String addressDetail = normalize(request.getAddressDetail());
+		String rawAddress = normalize(request.getAddress());
+		job.setProvince(province != null ? province : rawAddress);
+		job.setWard(ward);
+		job.setAddressDetail(addressDetail);
 		job.setJobType(parseJobType(request.getJobType()));
 		job.setExperience(normalizeOrDefault(request.getExperience(), "No experience required"));
 
@@ -194,8 +200,18 @@ public class JobServiceImpl implements JobService {
 		if (request.getIndustry() != null) {
 			job.setIndustry(normalize(request.getIndustry()));
 		}
-		if (request.getAddress() != null) {
-			job.setLocation(normalize(request.getAddress()));
+		String provinceUpdate = request.getProvince() != null ? normalize(request.getProvince()) : null;
+		String wardUpdate = request.getWard() != null ? normalize(request.getWard()) : null;
+		String addressDetailUpdate = request.getAddressDetail() != null ? normalize(request.getAddressDetail()) : null;
+		String rawAddressUpdate = request.getAddress() != null ? normalize(request.getAddress()) : null;
+		boolean hasLocationUpdate = provinceUpdate != null || wardUpdate != null || addressDetailUpdate != null || rawAddressUpdate != null;
+		if (hasLocationUpdate) {
+			String nextProvince = provinceUpdate != null ? provinceUpdate : job.getProvince();
+			String nextWard = wardUpdate != null ? wardUpdate : job.getWard();
+			String nextAddressDetail = addressDetailUpdate != null ? addressDetailUpdate : job.getAddressDetail();
+			job.setProvince(nextProvince);
+			job.setWard(nextWard);
+			job.setAddressDetail(nextAddressDetail);
 		}
 		if (request.getJobType() != null && !request.getJobType().isBlank()) {
 			job.setJobType(parseJobType(request.getJobType()));
@@ -539,7 +555,8 @@ public class JobServiceImpl implements JobService {
 		}
 		return new JobDetailResponse(job.getJobId(), job.getTitle(), job.getDescription(),
 				job.getCandidateRequirements(),
-				job.getSalaryDetail(), job.getBenefitsDetail(), job.getWorkSchedule(), job.getLocation(),
+				job.getSalaryDetail(), job.getBenefitsDetail(), job.getWorkSchedule(), job.getProvince(),
+				job.getProvince(), job.getWard(), job.getAddressDetail(),
 				job.getSalaryMin(), job.getSalaryMax(), job.isSalaryNegotiable(), job.getExperience(),
 				job.getDeadline(), isDeadlineExpired(job.getDeadline()), job.getCreatedAt(), job.getUpdatedAt(), job.getViews(),
 				job.getNumberOfApplications(),
@@ -732,6 +749,7 @@ public class JobServiceImpl implements JobService {
 			throw new RuntimeException("Employer id is required");
 		}
 	}
+
 
 	private StatusJob parseStatus(String status) {
 		if (status == null || status.isBlank()) {
@@ -984,7 +1002,7 @@ public class JobServiceImpl implements JobService {
 				break;
 		}
 
-		Sort sort = Sort.by(Sort.Order.desc("isTop"));
+		Sort sort = Sort.by(Sort.Order.desc("top"));
 		sort = sort.and(Sort.by(new Sort.Order(direction, sortField)));
 		if (!"createdAt".equals(sortField)) {
 			sort = sort.and(Sort.by(Sort.Order.desc("createdAt")));
@@ -1151,7 +1169,7 @@ public class JobServiceImpl implements JobService {
 						.title(job.getTitle())
 						.companyName(job.getCompanyName())
 						.companyLogoUrl(job.getCompanyLogoUrl())
-						.location(job.getLocation())
+						.location(job.getProvince())
 						.salaryMin(job.getSalaryMin())
 						.salaryMax(job.getSalaryMax())
 						.status(job.getStatus())
