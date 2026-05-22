@@ -4,6 +4,7 @@ import iuh.fit.companyservice.dto.request.CompanyMarketingEntitlementRequest;
 import iuh.fit.companyservice.dto.request.CompanyMarketingAssignmentRequest;
 import iuh.fit.companyservice.dto.response.CompanyMarketingAssignmentResponse;
 import iuh.fit.companyservice.dto.response.CompanyMarketingEntitlementResponse;
+import iuh.fit.companyservice.model.Company;
 import iuh.fit.companyservice.model.CompanyMarketingAssignment;
 import iuh.fit.companyservice.model.CompanyMarketingEntitlement;
 import iuh.fit.companyservice.model.MarketingTargetScope;
@@ -37,7 +38,7 @@ public class MarketingEntitlementService {
 
         CompanyMarketingEntitlement entitlement = CompanyMarketingEntitlement.builder()
                 .id(IdGenerator.generatorIdCompanyMarketingEntitlement())
-                .companyId(request.getCompanyId())
+                .company(new Company(request.getCompanyId()))
                 .paymentId(request.getPaymentId())
                 .packageId(request.getPackageId())
                 .packageLabel(request.getPackageLabel())
@@ -59,8 +60,8 @@ public class MarketingEntitlementService {
     public List<CompanyMarketingEntitlementResponse> getByCompanyId(String companyId, String category) {
         List<CompanyMarketingEntitlement> entitlements =
                 category == null || category.isBlank()
-                        ? companyMarketingEntitlementRepository.findByCompanyId(companyId)
-                        : companyMarketingEntitlementRepository.findByCompanyIdAndPackageCategory(companyId, category.trim().toUpperCase());
+                        ? companyMarketingEntitlementRepository.findByCompany_CompanyId(companyId)
+                        : companyMarketingEntitlementRepository.findByCompany_CompanyIdAndPackageCategory(companyId, category.trim().toUpperCase());
 
         return entitlements.stream()
                 .map(this::toResponse)
@@ -86,7 +87,7 @@ public class MarketingEntitlementService {
         CompanyMarketingEntitlement entitlement = companyMarketingEntitlementRepository.findById(entitlementId)
                 .orElseThrow(() -> new RuntimeException("Marketing entitlement not found"));
 
-        if (!entitlement.getCompanyId().equals(request.getCompanyId())) {
+        if (!entitlement.getCompany().getCompanyId().equals(request.getCompanyId())) {
             throw new RuntimeException("Marketing entitlement does not belong to company");
         }
         if (entitlement.getStatus() != StatusMarketingEntitlement.ACTIVE) {
@@ -122,7 +123,7 @@ public class MarketingEntitlementService {
         CompanyMarketingAssignment assignment = CompanyMarketingAssignment.builder()
                 .id(IdGenerator.generatorIdCompanyMarketingAssignment())
                 .entitlementId(entitlement.getId())
-                .companyId(entitlement.getCompanyId())
+                .company(entitlement.getCompany())
                 .targetId(request.getTargetId())
                 .placement(request.getPlacement())
                 .packageId(entitlement.getPackageId())
@@ -142,7 +143,7 @@ public class MarketingEntitlementService {
     }
 
     public CompanyMarketingAssignmentResponse removeAssignment(String assignmentId, String companyId) {
-        CompanyMarketingAssignment assignment = companyMarketingAssignmentRepository.findByIdAndCompanyId(assignmentId, companyId)
+        CompanyMarketingAssignment assignment = companyMarketingAssignmentRepository.findByIdAndCompany_CompanyId(assignmentId, companyId)
                 .orElseThrow(() -> new RuntimeException("Marketing assignment not found"));
 
         if (assignment.getStatus() != StatusMarketingAssignment.ACTIVE) {
@@ -164,8 +165,8 @@ public class MarketingEntitlementService {
 
     public List<CompanyMarketingAssignmentResponse> getAssignments(String companyId, String targetScope, String targetId) {
         List<CompanyMarketingAssignment> assignments = targetScope == null || targetScope.isBlank()
-                ? companyMarketingAssignmentRepository.findByCompanyId(companyId)
-                : companyMarketingAssignmentRepository.findByCompanyIdAndTargetScope(companyId, parseTargetScope(targetScope));
+                ? companyMarketingAssignmentRepository.findByCompany_CompanyId(companyId)
+                : companyMarketingAssignmentRepository.findByCompany_CompanyIdAndTargetScope(companyId, parseTargetScope(targetScope));
 
         return assignments.stream()
                 .filter(assignment -> targetId == null || targetId.isBlank() || targetId.equals(assignment.getTargetId()))
@@ -183,7 +184,7 @@ public class MarketingEntitlementService {
                         parseTargetScope(targetScope),
                         StatusMarketingAssignment.ACTIVE
                 )
-                .filter(assignment -> assignment.getCompanyId().equals(companyId))
+                .filter(assignment -> assignment.getCompany().getCompanyId().equals(companyId))
                 .map(this::toAssignmentResponse)
                 .orElse(null);
     }
@@ -191,7 +192,7 @@ public class MarketingEntitlementService {
     private CompanyMarketingEntitlementResponse toResponse(CompanyMarketingEntitlement entitlement) {
         return CompanyMarketingEntitlementResponse.builder()
                 .id(entitlement.getId())
-                .companyId(entitlement.getCompanyId())
+                .companyId(entitlement.getCompany() != null ? entitlement.getCompany().getCompanyId() : null)
                 .paymentId(entitlement.getPaymentId())
                 .packageId(entitlement.getPackageId())
                 .packageLabel(entitlement.getPackageLabel())
@@ -213,7 +214,7 @@ public class MarketingEntitlementService {
         return CompanyMarketingAssignmentResponse.builder()
                 .id(assignment.getId())
                 .entitlementId(assignment.getEntitlementId())
-                .companyId(assignment.getCompanyId())
+                .companyId(assignment.getCompany() != null ? assignment.getCompany().getCompanyId() : null)
                 .targetId(assignment.getTargetId())
                 .placement(assignment.getPlacement())
                 .packageId(assignment.getPackageId())
@@ -262,7 +263,7 @@ public class MarketingEntitlementService {
                 .distinct()
                 .forEach(entitlementId -> companyMarketingEntitlementRepository.findById(entitlementId)
                         .ifPresent(entitlement -> {
-                            long activeCount = companyMarketingAssignmentRepository.findByCompanyId(entitlement.getCompanyId()).stream()
+                            long activeCount = companyMarketingAssignmentRepository.findByCompany_CompanyId(entitlement.getCompany().getCompanyId()).stream()
                                     .filter(assignment -> entitlementId.equals(assignment.getEntitlementId()))
                                     .filter(assignment -> assignment.getStatus() == StatusMarketingAssignment.ACTIVE)
                                     .count();
