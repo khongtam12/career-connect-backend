@@ -107,8 +107,20 @@ INSERT INTO jobpackage_box_types (package_id, box_type) VALUES
 -- Industries
 INSERT INTO industrys (industry_id, name, description) VALUES
 ('IND001', 'Công nghệ thông tin', 'Phần mềm, mạng, AI'),
-('IND002', 'Tài chính - Ngân hàng', 'Ngân hàng, chứng khoán'),
-('IND003', 'Y tế - Chăm sóc sức khỏe', 'Bệnh viện, dược phẩm');
+('IND002', 'Kinh doanh / Bán hàng', 'Kinh doanh, tư vấn, bán hàng'),
+('IND003', 'Marketing / Truyền thông', 'Marketing, PR, truyền thông'),
+('IND004', 'Kế toán / Tài chính', 'Kế toán, kiểm toán, tài chính'),
+('IND005', 'Hành chính / Nhân sự', 'Hành chính, tuyển dụng, C&B'),
+('IND006', 'Kỹ thuật / Cơ khí', 'Kỹ thuật, cơ khí, bảo trì'),
+('IND007', 'Xây dựng / Kiến trúc', 'Xây dựng, kiến trúc, nội thất'),
+('IND008', 'Giáo dục / Đào tạo', 'Giảng dạy, đào tạo, huấn luyện'),
+('IND009', 'Y tế / Dược phẩm', 'Y tế, điều dưỡng, dược'),
+('IND010', 'Logistics / Vận tải', 'Vận tải, kho bãi, chuỗi cung ứng'),
+('IND011', 'Bất động sản', 'Môi giới, tư vấn, phát triển dự án'),
+('IND012', 'Thiết kế / Đồ họa', 'Thiết kế, UI/UX, đồ họa'),
+('IND013', 'Điện / Điện tử / Viễn thông', 'Điện, điện tử, viễn thông'),
+('IND014', 'Dịch vụ khách hàng', 'CSKH, call center, support'),
+('IND015', 'Khác', 'Các ngành nghề khác');
 
 -- Fields
 INSERT INTO fields (field_id, industry_id, name, description) VALUES

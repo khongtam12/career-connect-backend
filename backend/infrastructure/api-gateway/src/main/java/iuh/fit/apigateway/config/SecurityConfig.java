@@ -76,6 +76,9 @@ public class SecurityConfig {
                                                                 .permitAll()
                                                                 .pathMatchers(HttpMethod.GET, "/api/v1/company/*")
                                                                 .permitAll()
+                                                                .pathMatchers(HttpMethod.GET,
+                                                                                "/api/v1/company/marketing-entitlements/company/**")
+                                                                .permitAll()
                                                                 .pathMatchers(org.springframework.http.HttpMethod.OPTIONS)
                                                                 .permitAll()
 

@@ -30,6 +30,7 @@ import iuh.fit.jobservice.service.JobService;
 import iuh.fit.jobservice.service.JobStatusTransition;
 import iuh.fit.jobservice.service.JobStatusTransition.Role;
 import iuh.fit.jobservice.specification.JobSpecifications;
+import iuh.fit.jobservice.tools.LocationNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
@@ -136,10 +137,10 @@ public class JobServiceImpl implements JobService {
 		job.setCompanyLogoUrl(company.getLogo());
 		job.setTitle(request.getTitle().trim());
 		job.setIndustry(normalize(request.getIndustry()));
-		String province = normalize(request.getProvince());
+		String province = normalizeProvince(request.getProvince());
 		String ward = normalize(request.getWard());
 		String addressDetail = normalize(request.getAddressDetail());
-		String rawAddress = normalize(request.getAddress());
+		String rawAddress = normalizeProvince(request.getAddress());
 		job.setProvince(province != null ? province : rawAddress);
 		job.setWard(ward);
 		job.setAddressDetail(addressDetail);
@@ -200,13 +201,13 @@ public class JobServiceImpl implements JobService {
 		if (request.getIndustry() != null) {
 			job.setIndustry(normalize(request.getIndustry()));
 		}
-		String provinceUpdate = request.getProvince() != null ? normalize(request.getProvince()) : null;
+		String provinceUpdate = request.getProvince() != null ? normalizeProvince(request.getProvince()) : null;
 		String wardUpdate = request.getWard() != null ? normalize(request.getWard()) : null;
 		String addressDetailUpdate = request.getAddressDetail() != null ? normalize(request.getAddressDetail()) : null;
-		String rawAddressUpdate = request.getAddress() != null ? normalize(request.getAddress()) : null;
+		String rawAddressUpdate = request.getAddress() != null ? normalizeProvince(request.getAddress()) : null;
 		boolean hasLocationUpdate = provinceUpdate != null || wardUpdate != null || addressDetailUpdate != null || rawAddressUpdate != null;
 		if (hasLocationUpdate) {
-			String nextProvince = provinceUpdate != null ? provinceUpdate : job.getProvince();
+			String nextProvince = provinceUpdate != null ? provinceUpdate : (rawAddressUpdate != null ? rawAddressUpdate : job.getProvince());
 			String nextWard = wardUpdate != null ? wardUpdate : job.getWard();
 			String nextAddressDetail = addressDetailUpdate != null ? addressDetailUpdate : job.getAddressDetail();
 			job.setProvince(nextProvince);
@@ -584,13 +585,14 @@ public class JobServiceImpl implements JobService {
 			String sortDir,
 			int page,
 			int size) {
+		String normalizedLocation = normalizeProvince(location);
 		String cacheKey = buildSearchCacheKey(
 				keyword,
 				industryId,
 				jobType,
 					marketingPackageCategory,
 					marketingPackageType,
-				location,
+				normalizedLocation,
 				status,
 				experienceMin,
 				experienceMax,
@@ -621,7 +623,6 @@ public class JobServiceImpl implements JobService {
 				buildSort(sortBy, sortDir));
 
 		String normalizedKeyword = normalizeForQuery(keyword);
-		String normalizedLocation = normalizeForQuery(location);
 
 		Specification<Job> spec = Specification.where(JobSpecifications.notDeleted());
 
@@ -834,6 +835,11 @@ public class JobServiceImpl implements JobService {
 		return trimmed.isEmpty() ? null : trimmed;
 	}
 
+	private String normalizeProvince(String value) {
+		String normalized = LocationNormalizer.normalizeLocation(value);
+		return normalize(normalized);
+	}
+
 	private String normalizeForQuery(String value) {
 		return normalize(value);
 	}
@@ -976,10 +982,18 @@ public class JobServiceImpl implements JobService {
 				.map(industry -> new IndustrySummary(industry.getIndustryId(), industry.getName()))
 				.toList();
 
+		List<String> locations = jobRepository.findDistinctLocations().stream()
+				.filter(LocationNormalizer::isRecognizedProvince)
+				.map(LocationNormalizer::toDisplayLabel)
+				.filter(value -> value != null && !value.isBlank())
+				.distinct()
+				.sorted(String.CASE_INSENSITIVE_ORDER)
+				.toList();
+
 		return new JobFilterOptions(
 				List.of(JobType.values()),
 				List.of(StatusJob.values()),
-				jobRepository.findDistinctLocations(),
+				locations,
 				industries);
 	}
 
