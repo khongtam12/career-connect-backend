@@ -11,14 +11,16 @@ import java.util.regex.Pattern;
 
 public class LocationNormalizer {
 
-    private static final String[] ALLOWED_PROVINCES = {
-        "Tuyen Quang", "Lao Cai", "Thai Nguyen", "Phu Tho", "Bac Ninh", 
-        "Hung Yen", "Hai Phong", "Ninh Binh", "Quang Tri", "Da Nang", 
-        "Quang Ngai", "Gia Lai", "Khanh Hoa", "Lam Dong", "Dak Lak", 
-        "HCM", "Dong Nai", "Tay Ninh", "Can Tho", "Vinh Long", 
-        "Dong Thap", "Ca Mau", "An Giang", "Ha Noi", "Hue", 
-        "Lai Chau", "Dien Bien", "Son La", "Lang Son", "Quang Ninh", 
-        "Thanh Hoa", "Nghe An", "Ha Tinh", "Cao Bang"
+    private static final String[] PROVINCES = {
+        "Thành phố Hà Nội", "Tỉnh Cao Bằng", "Tỉnh Tuyên Quang", "Tỉnh Điện Biên", 
+        "Tỉnh Lai Châu", "Tỉnh Sơn La", "Tỉnh Lào Cai", "Tỉnh Thái Nguyên", 
+        "Tỉnh Lạng Sơn", "Tỉnh Quảng Ninh", "Tỉnh Bắc Ninh", "Tỉnh Phú Thọ", 
+        "Thành phố Hải Phòng", "Tỉnh Hưng Yên", "Tỉnh Ninh Bình", "Tỉnh Thanh Hóa", 
+        "Tỉnh Nghệ An", "Tỉnh Hà Tĩnh", "Tỉnh Quảng Trị", "Thành phố Huế", 
+        "Thành phố Đà Nẵng", "Tỉnh Quảng Ngãi", "Tỉnh Gia Lai", "Tỉnh Khánh Hòa", 
+        "Tỉnh Đắk Lắk", "Tỉnh Lâm Đồng", "Tỉnh Đồng Nai", "Thành phố Hồ Chí Minh", 
+        "Tỉnh Tây Ninh", "Tỉnh Đồng Tháp", "Tỉnh Vĩnh Long", "Tỉnh An Giang", 
+        "Thành phố Cần Thơ", "Tỉnh Cà Mau"
     };
 
     private static final Map<String, String> CUSTOM_MAPPINGS = new HashMap<>();
@@ -27,95 +29,60 @@ public class LocationNormalizer {
     private static final Map<String, String> DISPLAY_LABELS = new HashMap<>();
 
     static {
-        // Build basic normalized maps
-        for (String province : ALLOWED_PROVINCES) {
+        for (String province : PROVINCES) {
             String norm = normalizeString(province);
             NORMALIZED_PROVINCE_MAP.put(norm, province);
             NO_SPACE_PROVINCE_MAP.put(stripWhitespace(norm), province);
+            DISPLAY_LABELS.put(province, province);
         }
 
-        DISPLAY_LABELS.put("Tuyen Quang", "Tỉnh Tuyên Quang");
-        DISPLAY_LABELS.put("Lao Cai", "Tỉnh Lào Cai");
-        DISPLAY_LABELS.put("Thai Nguyen", "Tỉnh Thái Nguyên");
-        DISPLAY_LABELS.put("Phu Tho", "Tỉnh Phú Thọ");
-        DISPLAY_LABELS.put("Bac Ninh", "Tỉnh Bắc Ninh");
-        DISPLAY_LABELS.put("Hung Yen", "Tỉnh Hưng Yên");
-        DISPLAY_LABELS.put("Hai Phong", "Thành phố Hải Phòng");
-        DISPLAY_LABELS.put("Ninh Binh", "Tỉnh Ninh Bình");
-        DISPLAY_LABELS.put("Quang Tri", "Tỉnh Quảng Trị");
-        DISPLAY_LABELS.put("Da Nang", "Thành phố Đà Nẵng");
-        DISPLAY_LABELS.put("Quang Ngai", "Tỉnh Quảng Ngãi");
-        DISPLAY_LABELS.put("Gia Lai", "Tỉnh Gia Lai");
-        DISPLAY_LABELS.put("Khanh Hoa", "Tỉnh Khánh Hòa");
-        DISPLAY_LABELS.put("Lam Dong", "Tỉnh Lâm Đồng");
-        DISPLAY_LABELS.put("Dak Lak", "Tỉnh Đắk Lắk");
-        DISPLAY_LABELS.put("HCM", "Thành phố Hồ Chí Minh");
-        DISPLAY_LABELS.put("Dong Nai", "Tỉnh Đồng Nai");
-        DISPLAY_LABELS.put("Tay Ninh", "Tỉnh Tây Ninh");
-        DISPLAY_LABELS.put("Can Tho", "Thành phố Cần Thơ");
-        DISPLAY_LABELS.put("Vinh Long", "Tỉnh Vĩnh Long");
-        DISPLAY_LABELS.put("Dong Thap", "Tỉnh Đồng Tháp");
-        DISPLAY_LABELS.put("Ca Mau", "Tỉnh Cà Mau");
-        DISPLAY_LABELS.put("An Giang", "Tỉnh An Giang");
-        DISPLAY_LABELS.put("Ha Noi", "Thành phố Hà Nội");
-        DISPLAY_LABELS.put("Hue", "Thành phố Huế");
-        DISPLAY_LABELS.put("Lai Chau", "Tỉnh Lai Châu");
-        DISPLAY_LABELS.put("Dien Bien", "Tỉnh Điện Biên");
-        DISPLAY_LABELS.put("Son La", "Tỉnh Sơn La");
-        DISPLAY_LABELS.put("Lang Son", "Tỉnh Lạng Sơn");
-        DISPLAY_LABELS.put("Quang Ninh", "Tỉnh Quảng Ninh");
-        DISPLAY_LABELS.put("Thanh Hoa", "Tỉnh Thanh Hóa");
-        DISPLAY_LABELS.put("Nghe An", "Tỉnh Nghệ An");
-        DISPLAY_LABELS.put("Ha Tinh", "Tỉnh Hà Tĩnh");
-        DISPLAY_LABELS.put("Cao Bang", "Tỉnh Cao Bằng");
-
         // Custom Mappings for cities, abbreviations, and common alternatives
-        CUSTOM_MAPPINGS.put("hcm", "HCM");
-        CUSTOM_MAPPINGS.put("tp hcm", "HCM");
-        CUSTOM_MAPPINGS.put("tphcm", "HCM");
-        CUSTOM_MAPPINGS.put("ho chi minh", "HCM");
-        CUSTOM_MAPPINGS.put("sai gon", "HCM");
-        CUSTOM_MAPPINGS.put("tp ho chi minh", "HCM");
-        CUSTOM_MAPPINGS.put("tpho chi minh", "HCM");
-        CUSTOM_MAPPINGS.put("saigon", "HCM");
+        CUSTOM_MAPPINGS.put("hcm", "Thành phố Hồ Chí Minh");
+        CUSTOM_MAPPINGS.put("tp hcm", "Thành phố Hồ Chí Minh");
+        CUSTOM_MAPPINGS.put("tphcm", "Thành phố Hồ Chí Minh");
+        CUSTOM_MAPPINGS.put("ho chi minh", "Thành phố Hồ Chí Minh");
+        CUSTOM_MAPPINGS.put("sai gon", "Thành phố Hồ Chí Minh");
+        CUSTOM_MAPPINGS.put("tp ho chi minh", "Thành phố Hồ Chí Minh");
+        CUSTOM_MAPPINGS.put("tpho chi minh", "Thành phố Hồ Chí Minh");
+        CUSTOM_MAPPINGS.put("saigon", "Thành phố Hồ Chí Minh");
         
-        CUSTOM_MAPPINGS.put("ha noi", "Ha Noi");
-        CUSTOM_MAPPINGS.put("hn", "Ha Noi");
-        CUSTOM_MAPPINGS.put("tp ha noi", "Ha Noi");
-        CUSTOM_MAPPINGS.put("tphanoi", "Ha Noi");
-        CUSTOM_MAPPINGS.put("thu do ha noi", "Ha Noi");
+        CUSTOM_MAPPINGS.put("ha noi", "Thành phố Hà Nội");
+        CUSTOM_MAPPINGS.put("hn", "Thành phố Hà Nội");
+        CUSTOM_MAPPINGS.put("tp ha noi", "Thành phố Hà Nội");
+        CUSTOM_MAPPINGS.put("tphanoi", "Thành phố Hà Nội");
+        CUSTOM_MAPPINGS.put("thu do ha noi", "Thành phố Hà Nội");
         
-        CUSTOM_MAPPINGS.put("da nang", "Da Nang");
-        CUSTOM_MAPPINGS.put("dn", "Da Nang");
-        CUSTOM_MAPPINGS.put("tp da nang", "Da Nang");
-        CUSTOM_MAPPINGS.put("danang", "Da Nang");
+        CUSTOM_MAPPINGS.put("da nang", "Thành phố Đà Nẵng");
+        CUSTOM_MAPPINGS.put("dn", "Thành phố Đà Nẵng");
+        CUSTOM_MAPPINGS.put("tp da nang", "Thành phố Đà Nẵng");
+        CUSTOM_MAPPINGS.put("danang", "Thành phố Đà Nẵng");
         
-        CUSTOM_MAPPINGS.put("hue", "Hue");
-        CUSTOM_MAPPINGS.put("thua thien hue", "Hue");
-        CUSTOM_MAPPINGS.put("tp hue", "Hue");
-        CUSTOM_MAPPINGS.put("thuathienhue", "Hue");
+        CUSTOM_MAPPINGS.put("hue", "Thành phố Huế");
+        CUSTOM_MAPPINGS.put("thua thien hue", "Thành phố Huế");
+        CUSTOM_MAPPINGS.put("tp hue", "Thành phố Huế");
+        CUSTOM_MAPPINGS.put("thuathienhue", "Thành phố Huế");
         
-        CUSTOM_MAPPINGS.put("hai phong", "Hai Phong");
-        CUSTOM_MAPPINGS.put("hp", "Hai Phong");
-        CUSTOM_MAPPINGS.put("tp hai phong", "Hai Phong");
-        CUSTOM_MAPPINGS.put("haiphong", "Hai Phong");
+        CUSTOM_MAPPINGS.put("hai phong", "Thành phố Hải Phòng");
+        CUSTOM_MAPPINGS.put("hp", "Thành phố Hải Phòng");
+        CUSTOM_MAPPINGS.put("tp hai phong", "Thành phố Hải Phòng");
+        CUSTOM_MAPPINGS.put("haiphong", "Thành phố Hải Phòng");
 
-        CUSTOM_MAPPINGS.put("can tho", "Can Tho");
-        CUSTOM_MAPPINGS.put("ct", "Can Tho");
-        CUSTOM_MAPPINGS.put("tp can tho", "Can Tho");
-        CUSTOM_MAPPINGS.put("cantho", "Can Tho");
+        CUSTOM_MAPPINGS.put("can tho", "Thành phố Cần Thơ");
+        CUSTOM_MAPPINGS.put("ct", "Thành phố Cần Thơ");
+        CUSTOM_MAPPINGS.put("tp can tho", "Thành phố Cần Thơ");
+        CUSTOM_MAPPINGS.put("cantho", "Thành phố Cần Thơ");
 
-        CUSTOM_MAPPINGS.put("nha trang", "Khanh Hoa");
-        CUSTOM_MAPPINGS.put("nhatrang", "Khanh Hoa");
-        CUSTOM_MAPPINGS.put("da lat", "Lam Dong");
-        CUSTOM_MAPPINGS.put("dalat", "Lam Dong");
-        CUSTOM_MAPPINGS.put("buon ma thuot", "Dak Lak");
-        CUSTOM_MAPPINGS.put("bmt", "Dak Lak");
-        CUSTOM_MAPPINGS.put("buonmathuot", "Dak Lak");
-        CUSTOM_MAPPINGS.put("dak lak", "Dak Lak");
-        CUSTOM_MAPPINGS.put("daklak", "Dak Lak");
-        CUSTOM_MAPPINGS.put("dac lac", "Dak Lak");
-        CUSTOM_MAPPINGS.put("daclac", "Dak Lak");
+        CUSTOM_MAPPINGS.put("nha trang", "Tỉnh Khánh Hòa");
+        CUSTOM_MAPPINGS.put("nhatrang", "Tỉnh Khánh Hòa");
+        CUSTOM_MAPPINGS.put("da lat", "Tỉnh Lâm Đồng");
+        CUSTOM_MAPPINGS.put("dalat", "Tỉnh Lâm Đồng");
+        CUSTOM_MAPPINGS.put("buon ma thuot", "Tỉnh Đắk Lắk");
+        CUSTOM_MAPPINGS.put("bmt", "Tỉnh Đắk Lắk");
+        CUSTOM_MAPPINGS.put("buonmathuot", "Tỉnh Đắk Lắk");
+        CUSTOM_MAPPINGS.put("dak lak", "Tỉnh Đắk Lắk");
+        CUSTOM_MAPPINGS.put("daklak", "Tỉnh Đắk Lắk");
+        CUSTOM_MAPPINGS.put("dac lac", "Tỉnh Đắk Lắk");
+        CUSTOM_MAPPINGS.put("daclac", "Tỉnh Đắk Lắk");
     }
 
     public static String removeAccents(String src) {
