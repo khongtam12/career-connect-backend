@@ -89,6 +89,8 @@ public interface JobRepository extends JpaRepository<Job, String>, JpaSpecificat
 
         List<Job> findByCompanySubscriptionIdInAndStatusIn(List<String> subscriptionIds, List<StatusJob> statuses);
 
+        List<Job> findByMarketingAssignmentIdIsNotNullAndStatusIn(List<StatusJob> statuses);
+
         long countByCompanySubscriptionIdAndStatus(String companySubscriptionId, StatusJob status);
 
         // Tăng lượt xem trực tiếp bằng query (hiệu quả hơn load + save toàn bộ entity)

@@ -530,6 +530,40 @@ public class JobServiceImpl implements JobService {
 		return jobs.size();
 	}
 
+	// ── SYSTEM: sync marketing assignments with company-service (expire/remove) ─────────────────
+	@Scheduled(cron = "0 0/15 * * * *") // every 15 minutes
+	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
+	public int syncMarketingAssignments() {
+		List<StatusJob> statuses = List.of(StatusJob.ACTIVE, StatusJob.PENDING, StatusJob.PAUSED);
+		List<Job> jobsWithAssignment = jobRepository.findByMarketingAssignmentIdIsNotNullAndStatusIn(statuses);
+		if (jobsWithAssignment == null || jobsWithAssignment.isEmpty()) {
+			return 0;
+		}
+
+		List<Job> changed = new java.util.ArrayList<>();
+		for (Job job : jobsWithAssignment) {
+			try {
+				CompanyMarketingAssignmentDTO active = companyServiceClient.getActiveMarketingAssignment(
+						job.getCompanyId(), "JOB", job.getJobId());
+				boolean mismatch = (active == null) || (active.getId() == null) || !active.getId().equals(job.getMarketingAssignmentId());
+				if (mismatch) {
+					clearMarketingAssignment(job);
+					job.setUpdatedAt(LocalDateTime.now());
+					changed.add(job);
+				}
+			} catch (Exception ex) {
+				log.warn("Failed to verify marketing assignment for job {}: {}", job.getJobId(), ex.getMessage());
+			}
+		}
+
+		if (!changed.isEmpty()) {
+			jobRepository.saveAll(changed);
+			return changed.size();
+		}
+		return 0;
+	}
+
 	@Override
 	@Transactional
 	public JobDetailResponse getJobDetail(String jobId) {

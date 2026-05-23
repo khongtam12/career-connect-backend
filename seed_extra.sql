@@ -51,3 +51,6 @@ INSERT INTO company_marketing_assignments (
 ('ASGBR002', 'ENTBR002', 'COMP003', 'COMP003', 'HOME_FEATURED_COMPANY', 'BR001', 'Logo thương hiệu', 'BRANDING', 'BRANDING_LOGO', 'COMPANY', NOW() - interval '5 days', NOW() + interval '23 days', 'ACTIVE'),
 ('ASGBR003', 'ENTBR003', 'COMP005', 'COMP005', 'HOME_FEATURED_COMPANY', 'BR001', 'Logo thương hiệu', 'BRANDING', 'BRANDING_LOGO', 'COMPANY', NOW() - interval '1 day', NOW() + interval '27 days', 'ACTIVE')
 ON CONFLICT (id) DO NOTHING;
+
+-- Demo JOB marketing entitlements / assignments are stored in job-service DB
+-- and are reflected directly from `seed_job.sql` updates.
