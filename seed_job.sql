@@ -399,6 +399,38 @@ SET marketing_package_category = 'BRANDING',
     updated_at = NOW()
 WHERE job_id IN ('JOB001', 'JOB003', 'JOB005');
 
+-- Demo marketing labels for candidate home page
+-- Highlight: tăng độ ưu tiên hiển thị
+UPDATE jobs
+SET marketing_package_category = 'HIGHLIGHT',
+    marketing_package_type = 'TRENDING_POST',
+    marketing_package_label = 'TRENDING',
+    is_top = true,
+    updated_at = NOW()
+WHERE job_id IN ('JOB001', 'JOB005');
+
+-- Effect: HOT / bold / frame
+UPDATE jobs
+SET marketing_package_category = 'EFFECT',
+    marketing_package_type = 'EFFECT_HOT',
+    marketing_package_label = 'HOT',
+    updated_at = NOW()
+WHERE job_id = 'JOB003';
+
+UPDATE jobs
+SET marketing_package_category = 'EFFECT',
+    marketing_package_type = 'EFFECT_BOLD',
+    marketing_package_label = 'Chữ đậm',
+    updated_at = NOW()
+WHERE job_id = 'JOB004';
+
+UPDATE jobs
+SET marketing_package_category = 'EFFECT',
+    marketing_package_type = 'EFFECT_FRAME',
+    marketing_package_label = 'Đóng khung',
+    updated_at = NOW()
+WHERE job_id = 'JOB006';
+
 -- =========================================================
 -- JOB ↔ FIELD RELATION
 
