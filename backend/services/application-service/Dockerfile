@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.6
+
 # ===== STAGE 1: BUILD =====
 FROM maven:3.9.6-eclipse-temurin-21 AS builder
 
@@ -7,7 +9,7 @@ COPY .mvn/settings.xml /root/.m2/settings.xml
 
 COPY . .
 
-RUN mvn -pl services/application-service -am clean package -DskipTests
+RUN --mount=type=cache,target=/root/.m2/repository,sharing=locked mvn -pl services/application-service -am clean package -DskipTests
 
 # ===== STAGE 2: RUN =====
 FROM eclipse-temurin:21-jre-alpine
