@@ -672,7 +672,10 @@ public class JobServiceImpl implements JobService {
 			spec = spec.and(JobSpecifications.locationContains(normalizedLocation));
 		}
 		if (industryId != null && !industryId.isBlank()) {
-			spec = spec.and(JobSpecifications.industryEquals(industryId.trim()));
+			Industry industry = industryRepository.getIndustryByIndustryId(industryId.trim());
+			spec = spec.and(JobSpecifications.industryMatches(
+					industryId.trim(),
+					industry != null ? industry.getName() : null));
 		}
 		if (jobType != null && !jobType.isBlank()) {
 			spec = spec.and(JobSpecifications.jobTypeEquals(parseJobType(jobType)));
@@ -766,6 +769,40 @@ public class JobServiceImpl implements JobService {
 		clearMarketingAssignment(job);
 		job.setUpdatedAt(LocalDateTime.now());
 		return JobMapper.toResponse(jobRepository.save(job));
+	}
+
+	@Override
+	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
+	public CompanyMarketingAssignmentDTO applyCompanyMarketingPackage(String employerId, ApplyMarketingPackageRequest request) {
+		validateEmployerId(employerId);
+		if (request == null || request.getEntitlementId() == null || request.getEntitlementId().isBlank()) {
+			throw new RuntimeException("Marketing entitlement is required");
+		}
+
+		String companyId = fetchCompanyIdByEmployerId(employerId);
+
+		return companyServiceClient.assignMarketingEntitlement(
+				request.getEntitlementId(),
+				CompanyMarketingAssignmentRequest.builder()
+						.companyId(companyId)
+						.targetId(companyId) // Target is the company itself
+						.targetScope("COMPANY")
+						.placement(request.getPlacement() != null ? request.getPlacement() : "HOME_FEATURED_COMPANY")
+						.build());
+	}
+
+	@Override
+	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
+	public void removeCompanyMarketingPackage(String employerId, String assignmentId) {
+		validateEmployerId(employerId);
+		if (assignmentId == null || assignmentId.isBlank()) {
+			throw new RuntimeException("Assignment id is required");
+		}
+
+		String companyId = fetchCompanyIdByEmployerId(employerId);
+		companyServiceClient.removeMarketingAssignment(assignmentId, companyId);
 	}
 
 	private Job getJobOrThrow(String jobId) {
@@ -931,9 +968,9 @@ public class JobServiceImpl implements JobService {
 
 		job.setMarketingAssignmentId(assignment.getId());
 		job.setMarketingEntitlementId(assignment.getEntitlementId());
-		job.setMarketingPackageCategory(assignment.getPackageCategory());
-		job.setMarketingPackageType(assignment.getPackageType());
-		job.setMarketingPackageLabel(assignment.getPackageLabel());
+		job.setMarketingPackageCategory(normalize(assignment.getPackageCategory()));
+		job.setMarketingPackageType(normalize(assignment.getPackageType()));
+		job.setMarketingPackageLabel(normalize(assignment.getPackageLabel()));
 
 		if ("HIGHLIGHT".equalsIgnoreCase(assignment.getPackageCategory())) {
 			job.setTop(true);

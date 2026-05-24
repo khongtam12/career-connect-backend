@@ -43,6 +43,14 @@ public class Company {
     @JsonManagedReference
     private List<CompanySubscription> subscriptions = new ArrayList<>();
 
+    @OneToMany(mappedBy = "company", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private List<CompanyMarketingEntitlement> marketingEntitlements = new ArrayList<>();
+
+    @OneToMany(mappedBy = "company", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private List<CompanyMarketingAssignment> marketingAssignments = new ArrayList<>();
+
     public Company() {
     }
 
