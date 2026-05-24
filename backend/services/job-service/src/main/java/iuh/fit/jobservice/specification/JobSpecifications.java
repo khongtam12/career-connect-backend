@@ -57,7 +57,30 @@ public final class JobSpecifications {
             if (industryId == null || industryId.isBlank()) {
                 return cb.conjunction();
             }
-            return cb.equal(root.get("industryId"), industryId);
+            return cb.equal(cb.upper(cb.trim(root.get("industryId"))), industryId.trim().toUpperCase());
+        };
+    }
+
+    public static Specification<Job> industryMatches(String industryId, String industryName) {
+        return (root, query, cb) -> {
+            if ((industryId == null || industryId.isBlank()) &&
+                    (industryName == null || industryName.isBlank())) {
+                return cb.conjunction();
+            }
+
+            List<Predicate> predicates = new ArrayList<>();
+            if (industryId != null && !industryId.isBlank()) {
+                predicates.add(cb.equal(
+                        cb.upper(cb.trim(root.get("industryId"))),
+                        industryId.trim().toUpperCase()));
+            }
+            if (industryName != null && !industryName.isBlank()) {
+                predicates.add(cb.equal(
+                        cb.upper(cb.trim(root.get("industryId"))),
+                        industryName.trim().toUpperCase()));
+            }
+
+            return cb.or(predicates.toArray(new Predicate[0]));
         };
     }
 
@@ -93,7 +116,9 @@ public final class JobSpecifications {
             if (marketingPackageCategory == null || marketingPackageCategory.isBlank()) {
                 return cb.conjunction();
             }
-            return cb.equal(cb.upper(root.get("marketingPackageCategory")), marketingPackageCategory.trim().toUpperCase());
+            return cb.equal(
+                    cb.upper(cb.trim(root.get("marketingPackageCategory"))),
+                    marketingPackageCategory.trim().toUpperCase());
         };
     }
 
@@ -102,7 +127,9 @@ public final class JobSpecifications {
             if (marketingPackageType == null || marketingPackageType.isBlank()) {
                 return cb.conjunction();
             }
-            return cb.equal(cb.upper(root.get("marketingPackageType")), marketingPackageType.trim().toUpperCase());
+            return cb.equal(
+                    cb.upper(cb.trim(root.get("marketingPackageType"))),
+                    marketingPackageType.trim().toUpperCase());
         };
     }
 

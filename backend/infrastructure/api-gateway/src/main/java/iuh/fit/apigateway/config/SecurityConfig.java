@@ -10,21 +10,19 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
-
-import javax.crypto.spec.SecretKeySpec;
-
-import static org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers.pathMatchers;
-
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import org.springframework.web.server.WebFilter;
 
+import javax.crypto.spec.SecretKeySpec;
 import java.util.List;
+
+import static org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers.pathMatchers;
 
 @Configuration
 @EnableWebFluxSecurity
@@ -63,63 +61,53 @@ public class SecurityConfig {
                 return http
                                 .csrf(csrf -> csrf.disable())
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                                .authorizeExchange(
-
-                                                ex -> ex
-
-                                                                .pathMatchers("/api/v1/job/health").permitAll()
-                                                                .pathMatchers("/api/v1/job/chat/stream").permitAll()
-                                                                .pathMatchers(HttpMethod.GET, "/api/v1/job/*")
-                                                                .permitAll()
-                                                                .pathMatchers(HttpMethod.GET, "/api/v1/package/**")
-                                                                .permitAll()
-                                                                .pathMatchers(HttpMethod.GET, "/api/v1/company/*")
-                                                                .permitAll()
-                                                                .pathMatchers(HttpMethod.GET,
-                                                                                "/api/v1/company/marketing-entitlements/company/**")
-                                                                .permitAll()
-                                                                .pathMatchers(org.springframework.http.HttpMethod.OPTIONS)
-                                                                .permitAll()
-
-                                                                .pathMatchers("/api/v1/user/admin/**",
-                                                                                "/api/v1/job/admin/**",
-                                                                                "/api/v1/company/pending-approvals",
-                                                                                "/api/v1/company/approval")
-                                                                .hasAuthority("SCOPE_ADMIN")
-                                                                .pathMatchers(
-                                                                                "/api/v1/company/verification",
-                                                                                "/api/v1/company/save",
-                                                                                "/api/v1/company/verification",
-                                                                                "/api/v1/company/save",
-                                                                                "/api/v1/company/upload/presigned-url",
-                                                                                "/api/v1/package/payments/**",
-                                                                                "/api/v1/job/employer/**")
-                                                                .hasAuthority("SCOPE_EMPLOYER")
-                                                                .pathMatchers(HttpMethod.PUT, "/api/v1/package/**")
-                                                                .hasAuthority("SCOPE_ADMIN")
-                                                                // Job search/detail: cả EMPLOYER và CANDIDATE đều xem
-                                                                // được
-                                                                .pathMatchers("/api/v1/job/**")
-                                                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
-                                                                .pathMatchers("/api/v1/apply/employer/**")
-                                                                .hasAuthority("SCOPE_EMPLOYER")
-                                                                .pathMatchers("/api/v1/apply/**")
-                                                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
-                                                                .pathMatchers("/api/v1/cvs/upload-avatar")
-                                                                .hasAnyAuthority("SCOPE_CANDIDATE", "SCOPE_ADMIN")
-                                                                .pathMatchers("/api/v1/cvs/**")
-                                                                .hasAuthority("SCOPE_CANDIDATE")
-                                                                .pathMatchers("/api/v1/user/auth/me",
-                                                                                "/api/v1/storage/**")
-                                                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE",
-                                                                                "SCOPE_ADMIN")
-                                                                .pathMatchers("/api/v1/notifications/chat/**")
-                                                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
-                                                                .pathMatchers("/api/v1/notifications/**")
-                                                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE",
-                                                                                "SCOPE_ADMIN")
-                                                                .anyExchange().authenticated())
+                                .authorizeExchange(ex -> ex
+                                                .pathMatchers("/api/v1/job/health").permitAll()
+                                                .pathMatchers("/api/v1/job/chat/stream").permitAll()
+                                                .pathMatchers(HttpMethod.GET, "/api/v1/job/*").permitAll()
+                                                .pathMatchers(HttpMethod.GET, "/api/v1/package/**").permitAll()
+                                                .pathMatchers(HttpMethod.GET, "/api/v1/company/*").permitAll()
+                                                .pathMatchers(
+                                                                HttpMethod.GET,
+                                                                "/api/v1/company/marketing-entitlements/company/**")
+                                                .permitAll()
+                                                .pathMatchers(
+                                                                HttpMethod.GET,
+                                                                "/api/v1/company/marketing-entitlements/featured-companies")
+                                                .permitAll()
+                                                .pathMatchers(HttpMethod.OPTIONS).permitAll()
+                                                .pathMatchers(
+                                                                "/api/v1/user/admin/**",
+                                                                "/api/v1/job/admin/**",
+                                                                "/api/v1/company/pending-approvals",
+                                                                "/api/v1/company/approval")
+                                                .hasAuthority("SCOPE_ADMIN")
+                                                .pathMatchers(
+                                                                "/api/v1/company/verification",
+                                                                "/api/v1/company/save",
+                                                                "/api/v1/company/upload/presigned-url",
+                                                                "/api/v1/package/payments/**",
+                                                                "/api/v1/job/employer/**")
+                                                .hasAuthority("SCOPE_EMPLOYER")
+                                                .pathMatchers(HttpMethod.PUT, "/api/v1/package/**")
+                                                .hasAuthority("SCOPE_ADMIN")
+                                                .pathMatchers("/api/v1/job/**")
+                                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
+                                                .pathMatchers("/api/v1/apply/employer/**")
+                                                .hasAuthority("SCOPE_EMPLOYER")
+                                                .pathMatchers("/api/v1/apply/**")
+                                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
+                                                .pathMatchers("/api/v1/cvs/upload-avatar")
+                                                .hasAnyAuthority("SCOPE_CANDIDATE", "SCOPE_ADMIN")
+                                                .pathMatchers("/api/v1/cvs/**")
+                                                .hasAuthority("SCOPE_CANDIDATE")
+                                                .pathMatchers("/api/v1/user/auth/me", "/api/v1/storage/**")
+                                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE", "SCOPE_ADMIN")
+                                                .pathMatchers("/api/v1/notifications/chat/**")
+                                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE")
+                                                .pathMatchers("/api/v1/notifications/**")
+                                                .hasAnyAuthority("SCOPE_EMPLOYER", "SCOPE_CANDIDATE", "SCOPE_ADMIN")
+                                                .anyExchange().authenticated())
                                 .oauth2ResourceServer(oauth2 -> oauth2
                                                 .jwt(jwt -> jwt.jwtDecoder(jwtDecoder())))
                                 .addFilterBefore(cookieToAuthFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
@@ -127,17 +115,13 @@ public class SecurityConfig {
                                 .build();
         }
 
-        //
         @Bean
         public WebFilter cookieToAuthFilter() {
                 return (exchange, chain) -> {
-                        HttpCookie cookie = exchange.getRequest()
-                                        .getCookies()
-                                        .getFirst("access_token");
+                        HttpCookie cookie = exchange.getRequest().getCookies().getFirst("access_token");
 
                         if (cookie != null && !cookie.getValue().isBlank()) {
                                 String token = cookie.getValue();
-
                                 ServerHttpRequest mutatedRequest = exchange.getRequest()
                                                 .mutate()
                                                 .header("Authorization", "Bearer " + token)
@@ -154,9 +138,7 @@ public class SecurityConfig {
         public WebFilter userHeaderFilter() {
                 return (exchange, chain) -> exchange.getPrincipal()
                                 .flatMap(principal -> {
-
                                         String userId = principal.getName();
-
                                         ServerHttpRequest request = exchange.getRequest()
                                                         .mutate()
                                                         .header("X-User-Id", userId)
@@ -171,21 +153,20 @@ public class SecurityConfig {
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration config = new CorsConfiguration();
 
-                config.setAllowedOrigins(List.of(
+                config.setAllowedOriginPatterns(List.of(
                                 "http://localhost:5173",
                                 "http://localhost:5174",
-                                "http://localhost:3000"));
-
+                                "http://localhost:3000",
+                                "https://career-connect-frontend-zeta.vercel.app",
+                                "https://career-connect-frontend-git-deloy-test-khng-tams-projects.vercel.app",
+                                "https://*.vercel.app"));
                 config.setAllowedMethods(List.of("*"));
                 config.setAllowedHeaders(List.of("*"));
-
-                // QUAN TRỌNG cho cookie
+                config.setExposedHeaders(List.of("Set-Cookie", "Authorization"));
                 config.setAllowCredentials(true);
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-
                 source.registerCorsConfiguration("/**", config);
-
                 return source;
         }
 

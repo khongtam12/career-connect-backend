@@ -163,6 +163,15 @@ public class MarketingEntitlementService {
         return toAssignmentResponse(saved);
     }
 
+    public List<String> getFeaturedCompanyIds() {
+        return companyMarketingAssignmentRepository
+                .findByTargetScopeAndStatus(MarketingTargetScope.COMPANY, StatusMarketingAssignment.ACTIVE)
+                .stream()
+                .map(CompanyMarketingAssignment::getTargetId)
+                .distinct()
+                .toList();
+    }
+
     public List<CompanyMarketingAssignmentResponse> getAssignments(String companyId, String targetScope, String targetId) {
         List<CompanyMarketingAssignment> assignments = targetScope == null || targetScope.isBlank()
                 ? companyMarketingAssignmentRepository.findByCompany_CompanyId(companyId)

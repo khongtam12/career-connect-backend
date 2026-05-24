@@ -139,6 +139,23 @@ public class JobController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/employer/marketing/company")
+    public ResponseEntity<?> applyCompanyMarketingPackage(
+            @RequestHeader("X-User-Id") String employerId,
+            @RequestBody ApplyMarketingPackageRequest request
+    ) {
+        return ResponseEntity.ok(jobService.applyCompanyMarketingPackage(employerId, request));
+    }
+
+    @DeleteMapping("/employer/marketing/shared")
+    public ResponseEntity<?> removeCompanyMarketingPackage(
+            @RequestHeader("X-User-Id") String employerId,
+            @RequestParam("assignmentId") String assignmentId
+    ) {
+        jobService.removeCompanyMarketingPackage(employerId, assignmentId);
+        return ResponseEntity.ok(Map.of("message", "Marketing assignment removed"));
+    }
+
     // ===== ADMIN =====
     @PutMapping("/admin/{jobId}/status")
     public ResponseEntity<?> adminChangeStatus(

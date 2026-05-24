@@ -20,6 +20,8 @@ public class JobMapper {
     public static JobCardResponse toCardResponse(Job job) {
         return JobCardResponse.builder()
                 .jobId(job.getJobId())
+                .companyId(job.getCompanyId())
+                .industryId(job.getIndustry())
                 .companyName(job.getCompanyName())
                 .logo(job.getCompanyLogoUrl())
                 .title(job.getTitle())
