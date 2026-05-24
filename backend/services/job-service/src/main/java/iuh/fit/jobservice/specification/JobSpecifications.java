@@ -3,6 +3,7 @@ package iuh.fit.jobservice.specification;
 import iuh.fit.jobservice.model.Job;
 import iuh.fit.jobservice.model.JobType;
 import iuh.fit.jobservice.model.StatusJob;
+import iuh.fit.jobservice.tools.LocationNormalizer;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -35,8 +36,19 @@ public final class JobSpecifications {
             if (location == null || location.isBlank()) {
                 return cb.conjunction();
             }
-            String like = "%" + location.toLowerCase() + "%";
-            return cb.like(cb.lower(root.get("province")), like);
+
+            List<String> terms = LocationNormalizer.getSearchTerms(location);
+            if (terms.isEmpty()) {
+                return cb.conjunction();
+            }
+
+            List<Predicate> predicates = new ArrayList<>();
+            for (String term : terms) {
+                String like = "%" + term.toLowerCase() + "%";
+                predicates.add(cb.like(cb.lower(root.get("province")), like));
+            }
+
+            return cb.or(predicates.toArray(new Predicate[0]));
         };
     }
 
