@@ -38,7 +38,7 @@ public class LlmMatchAnalysisService {
             @Value("${OPENAI_API_KEY:}") String openAiApiKey,
             @Value("${OPENROUTER_API_KEY:}") String openRouterApiKey,
             @Value("${OPENAI_BASE_URL:}") String configuredBaseUrl,
-            @Value("${OPENAI_MODEL:arcee-ai/trinity-large-thinking:free}") String model,
+            @Value("${OPENAI_MODEL}") String model,
             @Value("${FRONTEND_URL:http://localhost:5173}") String appUrl,
             @Value("${spring.application.name:application-service}") String appName
     ) {
