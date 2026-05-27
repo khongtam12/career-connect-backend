@@ -20,6 +20,9 @@ public class JobCardResponse {
     private String logo;
     private String title;
     private String location;
+    private String province;
+    private String ward;
+    private String addressDetail;
     private double salaryMin;
     private double salaryMax;
     private boolean salaryNegotiable;
