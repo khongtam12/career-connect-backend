@@ -20,6 +20,6 @@ Get-Content -Path seed_payment.sql -Encoding UTF8 | docker exec -i postgres-serv
 
 # 4. Job Service
 Write-Host "Importing Job Service data..." -ForegroundColor Yellow
-Get-Content -Path seed_job.sql -Encoding UTF8 | docker exec -i postgres-server psql -U postgres -d job-service
+Get-Content -Path seed_job_filters.sql -Encoding UTF8 | docker exec -i postgres-server psql -U postgres -d job-service
 
 Write-Host "Data import completed successfully!" -ForegroundColor Green

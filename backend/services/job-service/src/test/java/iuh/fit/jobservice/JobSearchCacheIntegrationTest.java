@@ -101,6 +101,9 @@ class JobSearchCacheIntegrationTest {
                 null,
                 null,
                 null,
+            null,
+            null,
+            null,
                 null,
                 1,
                 10
@@ -119,6 +122,9 @@ class JobSearchCacheIntegrationTest {
                 null,
                 null,
                 null,
+            null,
+            null,
+            null,
                 null,
                 1,
                 10

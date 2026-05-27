@@ -102,6 +102,37 @@ public final class JobSpecifications {
         };
     }
 
+    public static Specification<Job> rankEquals(String rank) {
+        return (root, query, cb) -> {
+            if (rank == null || rank.isBlank()) {
+                return cb.conjunction();
+            }
+            return cb.equal(
+                    cb.upper(cb.trim(root.get("rank"))),
+                    rank.trim().toUpperCase());
+        };
+    }
+
+    public static Specification<Job> educationEquals(String education) {
+        return (root, query, cb) -> {
+            if (education == null || education.isBlank()) {
+                return cb.conjunction();
+            }
+            return cb.equal(
+                    cb.upper(cb.trim(root.get("education"))),
+                    education.trim().toUpperCase());
+        };
+    }
+
+    public static Specification<Job> salaryNegotiableEquals(Boolean salaryNegotiable) {
+        return (root, query, cb) -> {
+            if (salaryNegotiable == null) {
+                return cb.conjunction();
+            }
+            return cb.equal(root.get("salaryNegotiable"), salaryNegotiable);
+        };
+    }
+
     public static Specification<Job> statusEquals(StatusJob status) {
         return (root, query, cb) -> {
             if (status == null) {
@@ -138,7 +169,7 @@ public final class JobSpecifications {
             if (min == null) {
                 return cb.conjunction();
             }
-            return cb.greaterThanOrEqualTo(root.get("experienceRequired"), min);
+            return cb.greaterThanOrEqualTo(root.get("experience"), String.valueOf(min));
         };
     }
 
@@ -147,7 +178,7 @@ public final class JobSpecifications {
             if (max == null) {
                 return cb.conjunction();
             }
-            return cb.lessThanOrEqualTo(root.get("experienceRequired"), max);
+            return cb.lessThanOrEqualTo(root.get("experience"), String.valueOf(max));
         };
     }
 
