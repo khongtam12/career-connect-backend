@@ -58,6 +58,7 @@ public class MarketingEntitlementService {
     }
 
     public List<CompanyMarketingEntitlementResponse> getByCompanyId(String companyId, String category) {
+        refreshExpiredData();
         List<CompanyMarketingEntitlement> entitlements =
                 category == null || category.isBlank()
                         ? companyMarketingEntitlementRepository.findByCompany_CompanyId(companyId)
@@ -164,6 +165,7 @@ public class MarketingEntitlementService {
     }
 
     public List<String> getFeaturedCompanyIds() {
+        refreshExpiredData();
         return companyMarketingAssignmentRepository
                 .findByTargetScopeAndStatus(MarketingTargetScope.COMPANY, StatusMarketingAssignment.ACTIVE)
                 .stream()
@@ -173,6 +175,7 @@ public class MarketingEntitlementService {
     }
 
     public List<CompanyMarketingAssignmentResponse> getAssignments(String companyId, String targetScope, String targetId) {
+        refreshExpiredData();
         List<CompanyMarketingAssignment> assignments = targetScope == null || targetScope.isBlank()
                 ? companyMarketingAssignmentRepository.findByCompany_CompanyId(companyId)
                 : companyMarketingAssignmentRepository.findByCompany_CompanyIdAndTargetScope(companyId, parseTargetScope(targetScope));
@@ -184,6 +187,7 @@ public class MarketingEntitlementService {
     }
 
     public CompanyMarketingAssignmentResponse getActiveAssignmentForTarget(String companyId, String targetScope, String targetId) {
+        refreshExpiredData();
         if (targetId == null || targetId.isBlank()) {
             return null;
         }
@@ -242,6 +246,10 @@ public class MarketingEntitlementService {
             return MarketingTargetScope.COMPANY;
         }
         return MarketingTargetScope.JOB;
+    }
+
+    private void refreshExpiredData() {
+        expireEntitlements();
     }
 
     private MarketingTargetScope parseTargetScope(String targetScope) {
