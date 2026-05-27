@@ -615,6 +615,9 @@ public class JobServiceImpl implements JobService {
 			Integer experienceMax,
 			Double salaryMin,
 			Double salaryMax,
+			String rank,
+			String education,
+			Boolean salaryNegotiable,
 			String sortBy,
 			String sortDir,
 			int page,
@@ -632,6 +635,9 @@ public class JobServiceImpl implements JobService {
 				experienceMax,
 				salaryMin,
 				salaryMax,
+				rank,
+				education,
+				salaryNegotiable,
 				sortBy,
 				sortDir,
 				page,
@@ -691,6 +697,15 @@ public class JobServiceImpl implements JobService {
 		}
 		if (salaryMax != null) {
 			spec = spec.and(JobSpecifications.salaryMax(salaryMax));
+		}
+		if (rank != null && !rank.isBlank()) {
+			spec = spec.and(JobSpecifications.rankEquals(rank));
+		}
+		if (education != null && !education.isBlank()) {
+			spec = spec.and(JobSpecifications.educationEquals(education));
+		}
+		if (salaryNegotiable != null) {
+			spec = spec.and(JobSpecifications.salaryNegotiableEquals(salaryNegotiable));
 		}
 		if (experienceMin != null) {
 			spec = spec.and(JobSpecifications.experienceMin(experienceMin));
@@ -1053,6 +1068,18 @@ public class JobServiceImpl implements JobService {
 				.map(industry -> new IndustrySummary(industry.getIndustryId(), industry.getName()))
 				.toList();
 
+		List<String> ranks = jobRepository.findDistinctRanks().stream()
+				.filter(value -> value != null && !value.isBlank())
+				.distinct()
+				.sorted(String.CASE_INSENSITIVE_ORDER)
+				.toList();
+
+		List<String> educations = jobRepository.findDistinctEducations().stream()
+				.filter(value -> value != null && !value.isBlank())
+				.distinct()
+				.sorted(String.CASE_INSENSITIVE_ORDER)
+				.toList();
+
 		List<String> locations = jobRepository.findDistinctLocations().stream()
 				.filter(LocationNormalizer::isRecognizedProvince)
 				.map(LocationNormalizer::toDisplayLabel)
@@ -1065,7 +1092,9 @@ public class JobServiceImpl implements JobService {
 				List.of(JobType.values()),
 				List.of(StatusJob.values()),
 				locations,
-				industries);
+				industries,
+				ranks,
+				educations);
 	}
 
 	private Sort buildSort(String sortBy, String sortDir) {
@@ -1323,6 +1352,9 @@ public class JobServiceImpl implements JobService {
 			Integer experienceMax,
 			Double salaryMin,
 			Double salaryMax,
+			String rank,
+			String education,
+			Boolean salaryNegotiable,
 			String sortBy,
 			String sortDir,
 			int page,
@@ -1339,6 +1371,9 @@ public class JobServiceImpl implements JobService {
 				.append("|experienceMax=").append(experienceMax != null ? experienceMax : "")
 				.append("|salaryMin=").append(salaryMin != null ? salaryMin : "")
 				.append("|salaryMax=").append(salaryMax != null ? salaryMax : "")
+				.append("|rank=").append(normalizeForKey(rank))
+				.append("|education=").append(normalizeForKey(education))
+				.append("|salaryNegotiable=").append(salaryNegotiable != null ? salaryNegotiable : "")
 				.append("|sortBy=").append(normalizeForKey(sortBy))
 				.append("|sortDir=").append(normalizeForKey(sortDir))
 				.append("|page=").append(page)

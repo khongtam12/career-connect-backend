@@ -46,6 +46,7 @@ public class JobTools {
                     keyword, null, null, null, null,
                     normalizedLocation, "ACTIVE",
                     null, null, salaryMin, null,
+                    null, null, null,
                     "createdAt", "desc", 1, 10
             );
         } catch (Exception e) {

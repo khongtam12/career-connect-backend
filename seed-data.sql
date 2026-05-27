@@ -129,8 +129,58 @@ INSERT INTO fields (field_id, industry_id, name, description) VALUES
 ('FLD003', 'IND002', 'Accountant', 'Kế toán tổng hợp');
 
 -- Jobs
-INSERT INTO jobs (job_id, company_id, company_name, employer_id, title, description, location, salary_min, salary_max, salary_negotiable, experience, deadline, created_at, status, job_type, industry_id) VALUES
-('JOB001', 'COMP001', 'FPT Software', 'EMP001', 'Java Senior Developer', 'Yêu cầu 5 năm KN Java', 'Ha Noi', 2000, 3500, false, '5 years', NOW() + interval '30 days', NOW(), 'OPEN', 'FULL_TIME', 'IND001'),
-('JOB002', 'COMP002', 'VNG Corp', 'EMP002', 'React Developer', 'Yêu cầu ReactJS, Redux', 'HCM', 1500, 2500, true, '2 years', NOW() + interval '15 days', NOW(), 'OPEN', 'FULL_TIME', 'IND001');
+INSERT INTO jobs (
+	job_id,
+	company_id,
+	company_name,
+	employer_id,
+	title,
+	description,
+	candidate_requirements,
+	salary_detail,
+	benefits_detail,
+	work_schedule,
+	province,
+	ward,
+	address_detail,
+	salary_min,
+	salary_max,
+	salary_negotiable,
+	experience_required,
+	deadline,
+	created_at,
+	updated_at,
+	views,
+	number_of_applications,
+	is_top,
+	company_subscription_id,
+	package_id,
+	package_label,
+	marketing_assignment_id,
+	marketing_entitlement_id,
+	marketing_package_category,
+	marketing_package_type,
+	marketing_package_label,
+	rank,
+	education,
+	quantity,
+	age_range,
+	industry_id,
+	status,
+	job_type,
+	requirement_tags,
+	benefit_tags,
+	specialties,
+	related_categories,
+	skills,
+	company_logo_url
+) VALUES
+('JOB001', 'COMP001', 'FPT Software', 'EMP001', 'Senior Java Backend Developer', 'Phat trien backend Java, Spring Boot, Microservices', 'Java, Spring Boot, REST API, SQL, Docker', 'Luong theo nang luc', 'BHXH day du, laptop, review luong', 'Thu 2 - Thu 6', 'Thành phố Hà Nội', 'Cầu Giấy', '88 Duy Tan', 25000000, 40000000, false, '5 năm', NOW() + interval '30 days', NOW(), NOW(), 120, 0, true, NULL, 'HP001', 'Trending Post', NULL, NULL, 'HIGHLIGHT', 'TRENDING_POST', 'TRENDING', 'Senior', 'Đại học', 5, '3-5 năm', 'IND001', 'ACTIVE', 'FULL_TIME', '[]', '[]', '[]', '[]', '[]', 'https://fpt.png'),
+('JOB002', 'COMP002', 'VNG Corp', 'EMP002', 'Frontend React Developer', 'Xay dung giao dien ReactJS va TypeScript', 'React, TypeScript, HTML, CSS', 'Luong canh tranh', 'Remote linh hoat, phu cap an trua', 'Thu 2 - Thu 6', 'Thành phố Hồ Chí Minh', 'Quận 7', '123 Nguyen Van Linh', 18000000, 30000000, true, '2 năm', NOW() + interval '20 days', NOW(), NOW(), 95, 0, false, NULL, 'JP001', 'Basic Job', NULL, NULL, NULL, NULL, NULL, 'Middle', 'Đại học', 3, '1-3 năm', 'IND001', 'ACTIVE', 'FULL_TIME', '[]', '[]', '[]', '[]', '[]', 'https://vng.png'),
+('JOB003', 'COMP003', 'Viettel', 'EMP003', 'DevOps Engineer', 'Quan ly CI/CD, Docker, Kubernetes, AWS', 'Docker, Kubernetes, CI/CD, Linux', 'Thuong KPI', 'Bao hiem, dao tao, phu cap onsite', 'Thu 2 - Thu 6', 'Thành phố Hà Nội', 'Nam Từ Liêm', '1 Giang Vo', 30000000, 50000000, false, '4 năm', NOW() + interval '25 days', NOW(), NOW(), 160, 0, true, NULL, 'EF001', 'Hot Effect', NULL, NULL, 'EFFECT', 'EFFECT_HOT', 'HOT', 'Senior', 'Thạc sĩ', 2, '3-5 năm', 'IND001', 'ACTIVE', 'FULL_TIME', '[]', '[]', '[]', '[]', '[]', 'https://viettel.png'),
+('JOB004', 'COMP004', 'Momo', 'EMP004', 'Product Owner', 'Quan ly backlog, phoi hop team san pham', 'Agile, Scrum, Product Thinking', 'Luong va thuong du an', 'BHXH, budget hoc tap, team building', 'Thu 2 - Thu 6', 'Thành phố Hồ Chí Minh', 'Quận 1', '53 Nguyen Hue', 28000000, 45000000, true, '3 năm', NOW() + interval '28 days', NOW(), NOW(), 110, 0, false, NULL, 'EF002', 'Bold Effect', NULL, NULL, 'EFFECT', 'EFFECT_BOLD', 'Chữ đậm', 'Trưởng nhóm', 'Đại học', 1, '3-5 năm', 'IND001', 'ACTIVE', 'FULL_TIME', '[]', '[]', '[]', '[]', '[]', 'https://momo.png'),
+('JOB005', 'COMP005', 'Tiki', 'EMP005', 'Business Analyst', 'Phan tich nghiep vu, viet tai lieu yeu cau', 'BA, SQL, UAT, Communication', 'Luong co ban + thuong', 'BHXH, phu cap com', 'Thu 2 - Thu 6', 'Thành phố Hồ Chí Minh', 'Quận 3', 'Lau 2, 52 Le Dai Hanh', 16000000, 28000000, true, '2 năm', NOW() + interval '18 days', NOW(), NOW(), 88, 0, true, NULL, 'HP002', 'Industry Priority', NULL, NULL, 'HIGHLIGHT', 'INDUSTRY_PRIORITY', 'BEST SELLER', 'Middle', 'Đại học', 2, '1-3 năm', 'IND001', 'ACTIVE', 'FULL_TIME', '[]', '[]', '[]', '[]', '[]', 'https://tiki.png'),
+('JOB006', 'COMP012', 'VinFast', 'EMP012', 'Embedded Software Engineer', 'Phat trien phan mem nhung cho he thong xe dien', 'C, C++, Embedded Linux', 'Luong theo nang luc', 'BHXH, xe dua don, moi truong R&D', 'Thu 2 - Thu 6', 'Thành phố Hải Phòng', 'Hải An', 'Dinh Vu Cat Hai', 22000000, 38000000, false, '5 năm', NOW() + interval '24 days', NOW(), NOW(), 130, 0, true, NULL, 'EF003', 'Frame Effect', NULL, NULL, 'EFFECT', 'EFFECT_FRAME', 'Đóng khung', 'Senior', 'Đại học', 4, '3-5 năm', 'IND001', 'ACTIVE', 'FULL_TIME', '[]', '[]', '[]', '[]', '[]', 'https://vinfast.png')
+ON CONFLICT (job_id) DO NOTHING;
 
 
