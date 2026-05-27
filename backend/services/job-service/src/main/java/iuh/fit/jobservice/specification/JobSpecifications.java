@@ -18,6 +18,15 @@ public final class JobSpecifications {
         return (root, query, cb) -> cb.isNull(root.get("deletedAt"));
     }
 
+    public static Specification<Job> excludeStatus(StatusJob status) {
+        return (root, query, cb) -> {
+            if (status == null) {
+                return cb.conjunction();
+            }
+            return cb.notEqual(root.get("status"), status);
+        };
+    }
+
     public static Specification<Job> keywordContains(String keyword) {
         return (root, query, cb) -> {
             if (keyword == null || keyword.isBlank()) {
@@ -206,6 +215,7 @@ public final class JobSpecifications {
 
             // Không lấy job đã bị xóa mềm
             predicates.add(cb.isNull(root.get("deletedAt")));
+            predicates.add(cb.notEqual(root.get("status"), StatusJob.DRAFT));
 
             // search theo title hoặc companyName
             if (!search.equals("*")) {

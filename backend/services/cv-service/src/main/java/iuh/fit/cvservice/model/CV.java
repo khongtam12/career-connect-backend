@@ -47,6 +47,7 @@ public class CV {
     private String dob; // ISO string (yyyy-MM-dd)
     private String jobTitle;
     private String linkedin;
+    @Column(columnDefinition = "TEXT")
     private String summary;
 
     // Relationships to other sections

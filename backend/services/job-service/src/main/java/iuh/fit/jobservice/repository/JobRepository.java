@@ -32,6 +32,10 @@ public interface JobRepository extends JpaRepository<Job, String>, JpaSpecificat
 
         long countByStatus(StatusJob status);
 
+        long countByDeletedAtIsNullAndStatusNot(StatusJob status);
+
+        long countByDeletedAtIsNullAndStatus(StatusJob status);
+
         long countByCreatedAtAfter(LocalDateTime createdAt);
 
         long countByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
