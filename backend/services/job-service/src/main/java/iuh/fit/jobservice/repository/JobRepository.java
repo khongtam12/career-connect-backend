@@ -24,6 +24,12 @@ public interface JobRepository extends JpaRepository<Job, String>, JpaSpecificat
         @Query("select distinct j.province from Job j where j.province is not null and j.province <> ''")
         List<String> findDistinctLocations();
 
+        @Query("select distinct j.rank from Job j where j.rank is not null and j.rank <> ''")
+        List<String> findDistinctRanks();
+
+        @Query("select distinct j.education from Job j where j.education is not null and j.education <> ''")
+        List<String> findDistinctEducations();
+
         long countByStatus(StatusJob status);
 
         long countByCreatedAtAfter(LocalDateTime createdAt);
