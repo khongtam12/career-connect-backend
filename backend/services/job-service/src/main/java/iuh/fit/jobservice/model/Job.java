@@ -100,7 +100,13 @@ public class Job {
 
     private String ageRange;
 
+    @Column(name = "industry_id")
     private String industryId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "industry_id", referencedColumnName = "industryId", insertable = false, updatable = false)
+    @JsonIgnore
+    private Industry industry;
 
     @Enumerated(EnumType.STRING)
     private StatusJob status;
