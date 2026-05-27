@@ -15,6 +15,7 @@ import java.net.URLEncoder;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.springframework.util.StringUtils.cleanPath;
@@ -59,27 +60,10 @@ private  String bucketName ;
         s3Client.deleteObject(request);
     }
 
-    public boolean doesObjectExist(String key) {
-        try {
-            s3Client.headObject(HeadObjectRequest.builder()
-                    .bucket(bucketName)
-                    .key(key)
-                    .build());
-            return true;
-        } catch (NoSuchKeyException e) {
-            return false;
-        }
-    }
-
     public Map<String, String> uploadFile(MultipartFile file) {
         String originalFilename = file.getOriginalFilename() != null ?
                cleanPath(file.getOriginalFilename()) : "file";
-        String objectKey = "applications/" + originalFilename;
-
-        if (doesObjectExist(objectKey)) {
-            deleteFile(objectKey);
-            System.out.println("Deleted existing file: " + objectKey);
-        }
+        String objectKey = buildApplicationObjectKey(originalFilename);
 
         String contentType = hasText(file.getContentType())
                 ? file.getContentType()
@@ -112,5 +96,14 @@ private  String bucketName ;
             "url", fileUrl,
             "fileName", originalFilename
         );
+    }
+
+    private String buildApplicationObjectKey(String originalFilename) {
+        String extension = "";
+        int extensionIndex = originalFilename.lastIndexOf('.');
+        if (extensionIndex >= 0 && extensionIndex < originalFilename.length() - 1) {
+            extension = originalFilename.substring(extensionIndex);
+        }
+        return "applications/" + UUID.randomUUID() + extension;
     }
 }

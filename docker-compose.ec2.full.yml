@@ -1,0 +1,312 @@
+networks:
+  career-net:
+    external: true
+
+volumes:
+  postgres-data-main:
+  redis-data:
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - career-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - career-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - career-net
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list > /dev/null 2>&1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+
+  postgres-server:
+    image: postgres:16-alpine
+    container_name: postgres-server
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    volumes:
+      - postgres-data-main:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5434:5432"
+    networks:
+      - career-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  eureka-server:
+    image: ghcr.io/${GHCR_OWNER:-khongtam12}/career-connect-backend-eureka-server:${IMAGE_TAG:-develop}
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      JAVA_OPTS: "-Xmx256m -Xms128m"
+    networks:
+      - career-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  user-service:
+    image: ghcr.io/${GHCR_OWNER:-khongtam12}/career-connect-backend-user-service:${IMAGE_TAG:-develop}
+    container_name: user-service
+    env_file:
+      - ./backend/.env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/user-service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JAVA_OPTS: "-Xmx384m -Xms256m"
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  company-service:
+    image: ghcr.io/${GHCR_OWNER:-khongtam12}/career-connect-backend-company-service:${IMAGE_TAG:-develop}
+    container_name: company-service
+    env_file:
+      - ./backend/.env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/company-service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_CONSUMER_GROUP_ID: company-group
+      JAVA_OPTS: "-Xmx384m -Xms256m"
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  job-service:
+    image: ghcr.io/${GHCR_OWNER:-khongtam12}/career-connect-backend-job-service:${IMAGE_TAG:-develop}
+    container_name: job-service
+    env_file:
+      - ./backend/.env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/job-service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAVA_OPTS: "-Xmx384m -Xms256m"
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  application-service:
+    image: ghcr.io/${GHCR_OWNER:-khongtam12}/career-connect-backend-application-service:${IMAGE_TAG:-develop}
+    container_name: application-service
+    env_file:
+      - ./backend/.env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/application-service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      AI_MATCHING_SERVICE_URL: http://ai-service:8090
+      JAVA_OPTS: "-Xmx384m -Xms256m"
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  payment-service:
+    image: ghcr.io/${GHCR_OWNER:-khongtam12}/career-connect-backend-payment-service:${IMAGE_TAG:-develop}
+    container_name: payment-service
+    env_file:
+      - ./backend/.env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/payment-service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      FRONTEND_URL: http://localhost:3000
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JAVA_OPTS: "-Xmx384m -Xms256m"
+    ports:
+      - "8086:8086"
+    depends_on:
+      postgres-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  notification-service:
+    image: ghcr.io/${GHCR_OWNER:-khongtam12}/career-connect-backend-notification-service:${IMAGE_TAG:-develop}
+    container_name: notification-service
+    env_file:
+      - ./backend/.env
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_CONSUMER_GROUP_ID: notification-group-v3
+      JAVA_OPTS: "-Xmx256m -Xms128m"
+    ports:
+      - "8085:8085"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  cv-service:
+    image: ghcr.io/${GHCR_OWNER:-khongtam12}/career-connect-backend-cv-service:${IMAGE_TAG:-develop}
+    container_name: cv-service
+    env_file:
+      - ./backend/.env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-server:5432/cv-service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      APP_FRONTEND_URL: http://frontend
+      JAVA_OPTS: "-Xmx384m -Xms256m"
+    ports:
+      - "8087:8087"
+    depends_on:
+      postgres-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  storage-service:
+    image: ghcr.io/${GHCR_OWNER:-khongtam12}/career-connect-backend-storage-service:${IMAGE_TAG:-develop}
+    container_name: storage-service
+    env_file:
+      - ./backend/.env
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms256m"
+    ports:
+      - "8088:8088"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - career-net
+    restart: on-failure
+
+  api-gateway:
+    image: ghcr.io/${GHCR_OWNER:-khongtam12}/career-connect-backend-api-gateway:${IMAGE_TAG:-develop}
+    container_name: api-gateway
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+      JAVA_OPTS: "-Xmx384m -Xms256m"
+      REDIS_HOST: redis
+    ports:
+      - "8080:8080"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      company-service:
+        condition: service_started
+      job-service:
+        condition: service_started
+      application-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      cv-service:
+        condition: service_started
+      storage-service:
+        condition: service_started
+    networks:
+      - career-net
+    restart: on-failure

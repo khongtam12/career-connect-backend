@@ -8,20 +8,26 @@ import iuh.fit.applicationservice.dto.response.CvDetailClientResponse;
 import iuh.fit.applicationservice.dto.response.JobDetailClientResponse;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 public class CandidateMatchingService {
+    private static final String ANALYSIS_VERSION = "candidate-match-v4-hybrid";
 
     private static final Pattern YEAR_PATTERN = Pattern.compile("(\\d+(?:[.,]\\d+)?)");
     private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]+>");
@@ -30,6 +36,7 @@ public class CandidateMatchingService {
             "the", "can", "yeu", "cau", "kinh", "nghiem", "lam", "viec", "ung", "vien",
             "job", "developer", "engineer", "staff", "nhan", "su", "vi", "tri"
     );
+    private static final Map<String, String> TERM_ALIASES = buildTermAliases();
 
     private final ObjectMapper objectMapper;
     private final PdfTextExtractionService pdfTextExtractionService;
@@ -105,11 +112,11 @@ public class CandidateMatchingService {
                 ? aiResult.getSemanticScore()
                 : keywordScore;
 
-        double overallScore = (skillScore * 0.40D)
-                + (experienceScore * 0.20D)
+        double overallScore = (skillScore * 0.34D)
+                + (experienceScore * 0.18D)
                 + (educationScore * 0.10D)
                 + (keywordScore * 0.10D)
-                + (semanticScore * 0.20D);
+                + (semanticScore * 0.28D);
 
         insight.setMatchScore(round(overallScore));
         insight.setSkillScore(round(skillScore));
@@ -132,6 +139,33 @@ public class CandidateMatchingService {
         );
 
         return insight;
+    }
+
+    public String buildAnalysisFingerprint(JobDetailClientResponse job, CvDetailClientResponse cv, String candidateExperienceYear) {
+        StringJoiner joiner = new StringJoiner("|");
+        joiner.add(ANALYSIS_VERSION);
+        joiner.add(nullToEmpty(llmMatchAnalysisService.getModel()));
+        joiner.add(nullToEmpty(job != null ? job.getJobId() : null));
+        joiner.add(nullToEmpty(job != null ? job.getTitle() : null));
+        joiner.add(nullToEmpty(job != null ? job.getDescription() : null));
+        joiner.add(nullToEmpty(job != null ? job.getCandidateRequirements() : null));
+        joiner.add(nullToEmpty(job != null ? job.getExperience() : null));
+        joiner.add(nullToEmpty(job != null ? job.getEducation() : null));
+        joiner.add(nullToEmpty(job != null ? job.getRequirementTags() : null));
+        joiner.add(nullToEmpty(job != null ? job.getSkills() : null));
+        joiner.add(nullToEmpty(job != null ? job.getStatus() : null));
+        joiner.add(String.valueOf(job != null ? job.getDeadline() : null));
+        joiner.add(String.valueOf(job != null ? job.getDeletedAt() : null));
+        joiner.add(nullToEmpty(cv != null ? cv.getId() : null));
+        joiner.add(nullToEmpty(cv != null ? cv.getFullName() : null));
+        joiner.add(nullToEmpty(cv != null ? cv.getJobTitle() : null));
+        joiner.add(nullToEmpty(cv != null ? cv.getSummary() : null));
+        joiner.add(nullToEmpty(cv != null ? cv.getFileUrl() : null));
+        joiner.add(nullToEmpty(candidateExperienceYear));
+        joiner.add(joinSkillData(cv));
+        joiner.add(joinExperienceData(cv));
+        joiner.add(joinEducationData(cv));
+        return sha256(joiner.toString());
     }
 
     private List<String> extractJobSkills(JobDetailClientResponse job) {
@@ -185,7 +219,7 @@ public class CandidateMatchingService {
     }
 
     private double calculateEducationScore(JobDetailClientResponse job, CvDetailClientResponse cv) {
-        String requiredEducation = normalize(job.getEducation());
+        String requiredEducation = canonicalizeNormalized(normalize(job.getEducation()));
         if (requiredEducation == null) {
             return cv.getEducations() == null || cv.getEducations().isEmpty() ? 60D : 100D;
         }
@@ -200,7 +234,7 @@ public class CandidateMatchingService {
                         valueOrEmpty(education.getMajor()),
                         valueOrEmpty(education.getDescription())))
                 .collect(Collectors.joining(" "));
-        String normalizedCvEducation = normalize(cvEducationText);
+        String normalizedCvEducation = canonicalizeNormalized(normalize(cvEducationText));
 
         if (normalizedCvEducation == null) {
             return 50D;
@@ -210,12 +244,16 @@ public class CandidateMatchingService {
             return 100D;
         }
 
-        if (requiredEducation.contains("dai hoc") || requiredEducation.contains("cu nhan")) {
-            return normalizedCvEducation.contains("dai hoc") || normalizedCvEducation.contains("cu nhan") ? 100D : 50D;
+        if (requiredEducation.contains("bachelor")) {
+            return normalizedCvEducation.contains("bachelor") ? 100D : 50D;
         }
 
-        if (requiredEducation.contains("cao dang")) {
-            return normalizedCvEducation.contains("cao dang") || normalizedCvEducation.contains("dai hoc") ? 100D : 50D;
+        if (requiredEducation.contains("college")) {
+            return normalizedCvEducation.contains("college") || normalizedCvEducation.contains("bachelor") ? 100D : 50D;
+        }
+
+        if (requiredEducation.contains("master")) {
+            return normalizedCvEducation.contains("master") ? 100D : 50D;
         }
 
         return 60D;
@@ -236,14 +274,21 @@ public class CandidateMatchingService {
         Set<String> cvKeywords = new LinkedHashSet<>();
         cvKeywords.addAll(extractKeywords(cv.getJobTitle()));
         cvKeywords.addAll(extractKeywords(cv.getSummary()));
-        cvKeywords.addAll(cvSkills.stream().map(this::normalize).filter(value -> value != null && !value.isBlank()).toList());
+        cvKeywords.addAll(cvSkills.stream()
+                .map(this::normalize)
+                .map(this::canonicalizeNormalized)
+                .filter(value -> value != null && !value.isBlank())
+                .toList());
         cvKeywords.addAll(extractKeywords(cvPdfText));
 
         if (jobKeywords.isEmpty()) {
             return matchedSkills.isEmpty() ? 60D : 90D;
         }
 
-        long overlap = jobKeywords.stream().filter(cvKeywords::contains).count();
+        long overlap = jobKeywords.stream()
+                .map(this::canonicalizeNormalized)
+                .filter(value -> value != null && cvKeywords.contains(value))
+                .count();
         return Math.min(((double) overlap / jobKeywords.size()) * 100D, 100D);
     }
 
@@ -298,28 +343,28 @@ public class CandidateMatchingService {
 
     private String buildRecommendation(double overallScore, double semanticScore, int matchedSkillCount, int missingSkillCount, double requiredYears, double candidateYears) {
         if (overallScore >= 80D) {
-            return "Rat phu hop de uu tien shortlist. Ky nang khop tot va semantic matching cao.";
+            return "Rất phù hợp để ưu tiên shortlist. Kỹ năng khớp tốt và semantic matching cao.";
         }
         if (overallScore >= 65D || semanticScore >= 75D) {
-            return "Kha phu hop. Nen review sau hon phan du an, kinh nghiem va CV goc truoc khi quyet dinh.";
+            return "Khá phù hợp. Nên review sâu hơn phần dự án, kinh nghiệm và CV gốc trước khi quyết định.";
         }
         if (missingSkillCount > matchedSkillCount) {
-            return "Muc do phu hop chua cao do thieu nhieu ky nang theo JD. Nen can nhac cho pipeline du phong.";
+            return "Mức độ phù hợp chưa cao do thiếu nhiều kỹ năng theo JD. Nên cân nhắc cho pipeline dự phòng.";
         }
         if (requiredYears > 0 && candidateYears < requiredYears) {
-            return "Ky nang co diem sang nhung kinh nghiem con thap hon yeu cau. Phu hop neu job chap nhan ung vien tiem nang.";
+            return "Kỹ năng có điểm sáng nhưng kinh nghiệm còn thấp hơn yêu cầu. Phù hợp nếu job chấp nhận ứng viên tiềm năng.";
         }
-        return "Muc do phu hop trung binh. Can recruiter doc CV chi tiet de xac nhan them.";
+        return "Mức độ phù hợp trung bình. Cần recruiter đọc CV chi tiết để xác nhận thêm.";
     }
 
     private boolean containsNormalized(List<String> values, String target) {
-        String normalizedTarget = normalize(target);
+        String normalizedTarget = canonicalizeNormalized(normalize(target));
         if (normalizedTarget == null) {
             return false;
         }
 
         for (String value : values) {
-            String normalizedValue = normalize(value);
+            String normalizedValue = canonicalizeNormalized(normalize(value));
             if (normalizedValue == null) {
                 continue;
             }
@@ -364,12 +409,21 @@ public class CandidateMatchingService {
             return Collections.emptyList();
         }
 
-        return Arrays.stream(normalized.split("[^a-z0-9+#.]"))
+        Set<String> keywords = new LinkedHashSet<>(Arrays.stream(normalized.split("[^a-z0-9+#.]"))
                 .map(String::trim)
                 .filter(token -> token.length() >= 2)
                 .filter(token -> !STOP_WORDS.contains(token))
-                .distinct()
-                .toList();
+                .map(this::canonicalizeNormalized)
+                .filter(token -> token != null && !token.isBlank())
+                .toList());
+
+        TERM_ALIASES.forEach((phrase, canonical) -> {
+            if (normalized.contains(phrase)) {
+                keywords.add(canonical);
+            }
+        });
+
+        return new ArrayList<>(keywords);
     }
 
     private double parseYears(String raw) {
@@ -401,6 +455,11 @@ public class CandidateMatchingService {
     }
 
     private boolean skillsEquivalent(String left, String right) {
+        left = canonicalizeNormalized(left);
+        right = canonicalizeNormalized(right);
+        if (left == null || right == null) {
+            return false;
+        }
         if (left.equals(right)) {
             return true;
         }
@@ -498,5 +557,120 @@ public class CandidateMatchingService {
                 .replaceAll("\\s+", " ")
                 .trim();
         return cleaned.isBlank() ? null : cleaned;
+    }
+    private String joinSkillData(CvDetailClientResponse cv) {
+        if (cv == null || cv.getSkills() == null) {
+            return "";
+        }
+        return cv.getSkills().stream()
+                .map(skill -> nullToEmpty(skill.getName()) + ":" + nullToEmpty(skill.getLevel()))
+                .collect(Collectors.joining(","));
+    }
+
+    private String joinExperienceData(CvDetailClientResponse cv) {
+        if (cv == null || cv.getExperiences() == null) {
+            return "";
+        }
+        return cv.getExperiences().stream()
+                .map(exp -> nullToEmpty(exp.getCompany()) + ":" + nullToEmpty(exp.getRole()) + ":" + nullToEmpty(exp.getStartDate()) + ":" + nullToEmpty(exp.getEndDate()) + ":" + nullToEmpty(exp.getDescription()))
+                .collect(Collectors.joining(","));
+    }
+
+    private String joinEducationData(CvDetailClientResponse cv) {
+        if (cv == null || cv.getEducations() == null) {
+            return "";
+        }
+        return cv.getEducations().stream()
+                .map(edu -> nullToEmpty(edu.getSchool()) + ":" + nullToEmpty(edu.getMajor()) + ":" + nullToEmpty(edu.getStartDate()) + ":" + nullToEmpty(edu.getEndDate()) + ":" + nullToEmpty(edu.getDescription()))
+                .collect(Collectors.joining(","));
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String canonicalizeNormalized(String normalized) {
+        if (normalized == null || normalized.isBlank()) {
+            return null;
+        }
+        String exact = TERM_ALIASES.get(normalized);
+        if (exact != null) {
+            return exact;
+        }
+        for (Map.Entry<String, String> entry : TERM_ALIASES.entrySet()) {
+            if (normalized.contains(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        return normalized;
+    }
+
+    private static Map<String, String> buildTermAliases() {
+        Map<String, String> aliases = new LinkedHashMap<>();
+        addAlias(aliases, "project management", "project management", "project manager", "pm", "quan ly du an");
+        addAlias(aliases, "communication", "communication", "giao tiep", "ky nang giao tiep");
+        addAlias(aliases, "teamwork", "teamwork", "lam viec nhom");
+        addAlias(aliases, "problem solving", "problem solving", "giai quyet van de");
+        addAlias(aliases, "customer service", "customer service", "cham soc khach hang", "dich vu khach hang");
+        addAlias(aliases, "sales", "sales", "ban hang", "kinh doanh");
+        addAlias(aliases, "marketing", "marketing", "tiep thi");
+        addAlias(aliases, "business analysis", "business analysis", "phan tich nghiep vu");
+        addAlias(aliases, "product management", "product management", "quan ly san pham");
+        addAlias(aliases, "data analysis", "data analysis", "phan tich du lieu");
+        addAlias(aliases, "recruitment", "recruitment", "tuyen dung");
+        addAlias(aliases, "human resources", "human resources", "nhan su");
+        addAlias(aliases, "accounting", "accounting", "ke toan");
+        addAlias(aliases, "testing", "testing", "kiem thu", "quality assurance", "quality control");
+        addAlias(aliases, "manual testing", "manual testing", "kiem thu thu cong");
+        addAlias(aliases, "automation testing", "automation testing", "kiem thu tu dong", "test automation");
+        addAlias(aliases, "frontend", "frontend", "front end");
+        addAlias(aliases, "backend", "backend", "back end");
+        addAlias(aliases, "full stack", "full stack", "fullstack");
+        addAlias(aliases, "ui ux", "ui ux", "ui ux design", "ui/ux", "thiet ke ui ux", "thiet ke giao dien");
+        addAlias(aliases, "english", "english", "tieng anh");
+        addAlias(aliases, "vietnamese", "vietnamese", "tieng viet");
+        addAlias(aliases, "leadership", "leadership", "lanh dao");
+        addAlias(aliases, "negotiation", "negotiation", "dam phan");
+        addAlias(aliases, "presentation", "presentation", "thuyet trinh");
+        addAlias(aliases, "bachelor", "bachelor", "cu nhan", "dai hoc", "bachelor degree", "bachelor s degree");
+        addAlias(aliases, "college", "college", "cao dang", "associate degree");
+        addAlias(aliases, "master", "master", "thac si", "master degree");
+        return aliases;
+    }
+
+    private static void addAlias(Map<String, String> aliases, String canonical, String... variants) {
+        for (String variant : variants) {
+            String normalized = normalizeStatic(variant);
+            if (normalized != null) {
+                aliases.put(normalized, canonical);
+            }
+        }
+    }
+
+    private static String normalizeStatic(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9+#.\\s]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashed = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder(hashed.length * 2);
+            for (byte b : hashed) {
+                builder.append(String.format("%02x", b));
+            }
+            return builder.toString();
+        } catch (Exception ex) {
+            return Integer.toHexString(value.hashCode());
+        }
     }
 }

@@ -3,6 +3,7 @@ package iuh.fit.jobservice.specification;
 import iuh.fit.jobservice.model.Job;
 import iuh.fit.jobservice.model.JobType;
 import iuh.fit.jobservice.model.StatusJob;
+import iuh.fit.jobservice.tools.LocationNormalizer;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -35,8 +36,19 @@ public final class JobSpecifications {
             if (location == null || location.isBlank()) {
                 return cb.conjunction();
             }
-            String like = "%" + location.toLowerCase() + "%";
-            return cb.like(cb.lower(root.get("location")), like);
+
+            List<String> terms = LocationNormalizer.getSearchTerms(location);
+            if (terms.isEmpty()) {
+                return cb.conjunction();
+            }
+
+            List<Predicate> predicates = new ArrayList<>();
+            for (String term : terms) {
+                String like = "%" + term.toLowerCase() + "%";
+                predicates.add(cb.like(cb.lower(root.get("province")), like));
+            }
+
+            return cb.or(predicates.toArray(new Predicate[0]));
         };
     }
 
@@ -45,7 +57,30 @@ public final class JobSpecifications {
             if (industryId == null || industryId.isBlank()) {
                 return cb.conjunction();
             }
-            return cb.equal(root.get("industryId"), industryId);
+            return cb.equal(cb.upper(cb.trim(root.get("industryId"))), industryId.trim().toUpperCase());
+        };
+    }
+
+    public static Specification<Job> industryMatches(String industryId, String industryName) {
+        return (root, query, cb) -> {
+            if ((industryId == null || industryId.isBlank()) &&
+                    (industryName == null || industryName.isBlank())) {
+                return cb.conjunction();
+            }
+
+            List<Predicate> predicates = new ArrayList<>();
+            if (industryId != null && !industryId.isBlank()) {
+                predicates.add(cb.equal(
+                        cb.upper(cb.trim(root.get("industryId"))),
+                        industryId.trim().toUpperCase()));
+            }
+            if (industryName != null && !industryName.isBlank()) {
+                predicates.add(cb.equal(
+                        cb.upper(cb.trim(root.get("industryId"))),
+                        industryName.trim().toUpperCase()));
+            }
+
+            return cb.or(predicates.toArray(new Predicate[0]));
         };
     }
 
@@ -73,6 +108,28 @@ public final class JobSpecifications {
                 return cb.conjunction();
             }
             return cb.equal(root.get("status"), status);
+        };
+    }
+
+    public static Specification<Job> marketingPackageCategoryEquals(String marketingPackageCategory) {
+        return (root, query, cb) -> {
+            if (marketingPackageCategory == null || marketingPackageCategory.isBlank()) {
+                return cb.conjunction();
+            }
+            return cb.equal(
+                    cb.upper(cb.trim(root.get("marketingPackageCategory"))),
+                    marketingPackageCategory.trim().toUpperCase());
+        };
+    }
+
+    public static Specification<Job> marketingPackageTypeEquals(String marketingPackageType) {
+        return (root, query, cb) -> {
+            if (marketingPackageType == null || marketingPackageType.isBlank()) {
+                return cb.conjunction();
+            }
+            return cb.equal(
+                    cb.upper(cb.trim(root.get("marketingPackageType"))),
+                    marketingPackageType.trim().toUpperCase());
         };
     }
 

@@ -21,7 +21,7 @@ public interface JobRepository extends JpaRepository<Job, String>, JpaSpecificat
 
         // ===== HEAD (giữ lại) =====
 
-        @Query("select distinct j.location from Job j where j.location is not null and j.location <> ''")
+        @Query("select distinct j.province from Job j where j.province is not null and j.province <> ''")
         List<String> findDistinctLocations();
 
         long countByStatus(StatusJob status);
@@ -67,14 +67,14 @@ public interface JobRepository extends JpaRepository<Job, String>, JpaSpecificat
                         "AND (:search IS NULL OR j.title LIKE CONCAT('%', :search, '%')) " +
                         "AND (:industry IS NULL OR j.industry = :industry) " +
                         "AND (:jobType IS NULL OR j.job_type = :jobType) " +
-                        "AND (:location IS NULL OR j.location LIKE CONCAT('%', :location, '%')) " +
+                        "AND (:location IS NULL OR j.province LIKE CONCAT('%', :location, '%')) " +
                         "ORDER BY j.created_at DESC", countQuery = "SELECT count(*) FROM jobs j WHERE j.status = 'ACTIVE' "
                                         +
                                         "AND j.deleted_at IS NULL " +
                                         "AND (:search IS NULL OR j.title ILIKE CONCAT('%', :search, '%')) " +
                                         "AND (:industry IS NULL OR j.industry = :industry) " +
                                         "AND (:jobType IS NULL OR j.job_type = :jobType) " +
-                                        "AND (:location IS NULL OR j.location ILIKE CONCAT('%', :location, '%'))", nativeQuery = true)
+                                        "AND (:location IS NULL OR j.province ILIKE CONCAT('%', :location, '%'))", nativeQuery = true)
         Page<Job> searchActiveJobs(
                         @Param("search") String search,
                         @Param("industry") String industry,
@@ -88,6 +88,8 @@ public interface JobRepository extends JpaRepository<Job, String>, JpaSpecificat
                         @Param("date") LocalDate date);
 
         List<Job> findByCompanySubscriptionIdInAndStatusIn(List<String> subscriptionIds, List<StatusJob> statuses);
+
+        List<Job> findByMarketingAssignmentIdIsNotNullAndStatusIn(List<StatusJob> statuses);
 
         long countByCompanySubscriptionIdAndStatus(String companySubscriptionId, StatusJob status);
 

@@ -16,6 +16,7 @@ import iuh.fit.jobservice.dto.request.EmployerStatsRequest;
 import iuh.fit.jobservice.dto.request.RenewJobRequest;
 import iuh.fit.jobservice.dto.request.UpdateJobRequest;
 import iuh.fit.jobservice.dto.response.*;
+import iuh.fit.jobservice.event.EmployerJobStatusChangedEvent;
 import iuh.fit.jobservice.exception.JobStatusException;
 import iuh.fit.jobservice.mapper.JobMapper;
 import iuh.fit.jobservice.model.Industry;
@@ -29,6 +30,7 @@ import iuh.fit.jobservice.service.JobService;
 import iuh.fit.jobservice.service.JobStatusTransition;
 import iuh.fit.jobservice.service.JobStatusTransition.Role;
 import iuh.fit.jobservice.specification.JobSpecifications;
+import iuh.fit.jobservice.tools.LocationNormalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
@@ -38,6 +40,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,6 +68,7 @@ public class JobServiceImpl implements JobService {
 	private final IndustryRepository industryRepository;
 	private final CompanyServiceClient companyServiceClient;
 	private final UserServiceClient userServiceClient;
+	private final KafkaTemplate<String, Object> kafkaTemplate;
 	private final CacheManager cacheManager;
 
 	public JobServiceImpl(
@@ -72,11 +76,13 @@ public class JobServiceImpl implements JobService {
 			IndustryRepository industryRepository,
 			CompanyServiceClient companyServiceClient,
 			UserServiceClient userServiceClient,
+			KafkaTemplate<String, Object> kafkaTemplate,
 			CacheManager cacheManager) {
 		this.jobRepository = jobRepository;
 		this.industryRepository = industryRepository;
 		this.companyServiceClient = companyServiceClient;
 		this.userServiceClient = userServiceClient;
+		this.kafkaTemplate = kafkaTemplate;
 		this.cacheManager = cacheManager;
 	}
 
@@ -131,7 +137,13 @@ public class JobServiceImpl implements JobService {
 		job.setCompanyLogoUrl(company.getLogo());
 		job.setTitle(request.getTitle().trim());
 		job.setIndustry(normalize(request.getIndustry()));
-		job.setLocation(normalize(request.getAddress()));
+		String province = normalizeProvince(request.getProvince());
+		String ward = normalize(request.getWard());
+		String addressDetail = normalize(request.getAddressDetail());
+		String rawAddress = normalizeProvince(request.getAddress());
+		job.setProvince(province != null ? province : rawAddress);
+		job.setWard(ward);
+		job.setAddressDetail(addressDetail);
 		job.setJobType(parseJobType(request.getJobType()));
 		job.setExperience(normalizeOrDefault(request.getExperience(), "No experience required"));
 
@@ -189,8 +201,18 @@ public class JobServiceImpl implements JobService {
 		if (request.getIndustry() != null) {
 			job.setIndustry(normalize(request.getIndustry()));
 		}
-		if (request.getAddress() != null) {
-			job.setLocation(normalize(request.getAddress()));
+		String provinceUpdate = request.getProvince() != null ? normalizeProvince(request.getProvince()) : null;
+		String wardUpdate = request.getWard() != null ? normalize(request.getWard()) : null;
+		String addressDetailUpdate = request.getAddressDetail() != null ? normalize(request.getAddressDetail()) : null;
+		String rawAddressUpdate = request.getAddress() != null ? normalizeProvince(request.getAddress()) : null;
+		boolean hasLocationUpdate = provinceUpdate != null || wardUpdate != null || addressDetailUpdate != null || rawAddressUpdate != null;
+		if (hasLocationUpdate) {
+			String nextProvince = provinceUpdate != null ? provinceUpdate : (rawAddressUpdate != null ? rawAddressUpdate : job.getProvince());
+			String nextWard = wardUpdate != null ? wardUpdate : job.getWard();
+			String nextAddressDetail = addressDetailUpdate != null ? addressDetailUpdate : job.getAddressDetail();
+			job.setProvince(nextProvince);
+			job.setWard(nextWard);
+			job.setAddressDetail(nextAddressDetail);
 		}
 		if (request.getJobType() != null && !request.getJobType().isBlank()) {
 			job.setJobType(parseJobType(request.getJobType()));
@@ -421,7 +443,11 @@ public class JobServiceImpl implements JobService {
 
 		job.setStatus(updated);
 		job.setUpdatedAt(LocalDateTime.now());
-		return JobMapper.toResponse(jobRepository.save(job));
+		Job saved = jobRepository.save(job);
+		if (updated == StatusJob.ACTIVE || updated == StatusJob.REJECTED) {
+			notifyEmployerAboutStatusChange(saved, updated);
+		}
+		return JobMapper.toResponse(saved);
 	}
 
 	// ── ADMIN: duyệt / từ chối ────────────────────────────────────────────────
@@ -452,14 +478,31 @@ public class JobServiceImpl implements JobService {
 
 		job.setStatus(updated);
 		job.setUpdatedAt(LocalDateTime.now());
-		return JobMapper.toResponse(jobRepository.save(job));
+		Job saved = jobRepository.save(job);
+		if (updated == StatusJob.ACTIVE || updated == StatusJob.REJECTED) {
+			notifyEmployerAboutStatusChange(saved, updated);
+		}
+		return JobMapper.toResponse(saved);
 	}
 
 	// ── SYSTEM: tự động expire khi hết hạn ───────────────────────────────────
 	@Override
 	public int expireOverdueJobs() {
-		// Deadline chỉ dùng để hiển thị trạng thái, không đổi StatusJob.
-		return 0;
+		LocalDate today = LocalDate.now();
+		List<Job> overdueJobs = jobRepository.findByStatusAndDeadlineBefore(
+				StatusJob.ACTIVE, today);
+
+		LocalDateTime now = LocalDateTime.now();
+		for (Job job : overdueJobs) {
+			job.setStatus(StatusJob.EXPIRED);
+			job.setUpdatedAt(now);
+		}
+		if (!overdueJobs.isEmpty()) {
+			jobRepository.saveAll(overdueJobs);
+			overdueJobs.forEach(job -> notifyEmployerAboutStatusChange(job, StatusJob.EXPIRED));
+		}
+		return overdueJobs.size();
+
 	}
 
 	// ── SYSTEM: tự động đóng job khi gói tin hết hạn ──────────────────────────
@@ -485,6 +528,40 @@ public class JobServiceImpl implements JobService {
 		});
 		jobRepository.saveAll(jobs);
 		return jobs.size();
+	}
+
+	// ── SYSTEM: sync marketing assignments with company-service (expire/remove) ─────────────────
+	@Scheduled(cron = "0 0/15 * * * *") // every 15 minutes
+	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
+	public int syncMarketingAssignments() {
+		List<StatusJob> statuses = List.of(StatusJob.ACTIVE, StatusJob.PENDING, StatusJob.PAUSED);
+		List<Job> jobsWithAssignment = jobRepository.findByMarketingAssignmentIdIsNotNullAndStatusIn(statuses);
+		if (jobsWithAssignment == null || jobsWithAssignment.isEmpty()) {
+			return 0;
+		}
+
+		List<Job> changed = new java.util.ArrayList<>();
+		for (Job job : jobsWithAssignment) {
+			try {
+				CompanyMarketingAssignmentDTO active = companyServiceClient.getActiveMarketingAssignment(
+						job.getCompanyId(), "JOB", job.getJobId());
+				boolean mismatch = (active == null) || (active.getId() == null) || !active.getId().equals(job.getMarketingAssignmentId());
+				if (mismatch) {
+					clearMarketingAssignment(job);
+					job.setUpdatedAt(LocalDateTime.now());
+					changed.add(job);
+				}
+			} catch (Exception ex) {
+				log.warn("Failed to verify marketing assignment for job {}: {}", job.getJobId(), ex.getMessage());
+			}
+		}
+
+		if (!changed.isEmpty()) {
+			jobRepository.saveAll(changed);
+			return changed.size();
+		}
+		return 0;
 	}
 
 	@Override
@@ -513,7 +590,8 @@ public class JobServiceImpl implements JobService {
 		}
 		return new JobDetailResponse(job.getJobId(), job.getTitle(), job.getDescription(),
 				job.getCandidateRequirements(),
-				job.getSalaryDetail(), job.getBenefitsDetail(), job.getWorkSchedule(), job.getLocation(),
+				job.getSalaryDetail(), job.getBenefitsDetail(), job.getWorkSchedule(), job.getProvince(),
+				job.getProvince(), job.getWard(), job.getAddressDetail(),
 				job.getSalaryMin(), job.getSalaryMax(), job.isSalaryNegotiable(), job.getExperience(),
 				job.getDeadline(), isDeadlineExpired(job.getDeadline()), job.getCreatedAt(), job.getUpdatedAt(), job.getViews(),
 				job.getNumberOfApplications(),
@@ -529,6 +607,8 @@ public class JobServiceImpl implements JobService {
 			String keyword,
 			String industryId,
 			String jobType,
+			String marketingPackageCategory,
+			String marketingPackageType,
 			String location,
 			String status,
 			Integer experienceMin,
@@ -539,11 +619,14 @@ public class JobServiceImpl implements JobService {
 			String sortDir,
 			int page,
 			int size) {
+		String normalizedLocation = normalizeProvince(location);
 		String cacheKey = buildSearchCacheKey(
 				keyword,
 				industryId,
 				jobType,
-				location,
+					marketingPackageCategory,
+					marketingPackageType,
+				normalizedLocation,
 				status,
 				experienceMin,
 				experienceMax,
@@ -574,7 +657,6 @@ public class JobServiceImpl implements JobService {
 				buildSort(sortBy, sortDir));
 
 		String normalizedKeyword = normalizeForQuery(keyword);
-		String normalizedLocation = normalizeForQuery(location);
 
 		Specification<Job> spec = Specification.where(JobSpecifications.notDeleted());
 
@@ -590,16 +672,31 @@ public class JobServiceImpl implements JobService {
 			spec = spec.and(JobSpecifications.locationContains(normalizedLocation));
 		}
 		if (industryId != null && !industryId.isBlank()) {
-			spec = spec.and(JobSpecifications.industryEquals(industryId.trim()));
+			Industry industry = industryRepository.getIndustryByIndustryId(industryId.trim());
+			spec = spec.and(JobSpecifications.industryMatches(
+					industryId.trim(),
+					industry != null ? industry.getName() : null));
 		}
 		if (jobType != null && !jobType.isBlank()) {
 			spec = spec.and(JobSpecifications.jobTypeEquals(parseJobType(jobType)));
+		}
+		if (marketingPackageCategory != null && !marketingPackageCategory.isBlank()) {
+			spec = spec.and(JobSpecifications.marketingPackageCategoryEquals(marketingPackageCategory));
+		}
+		if (marketingPackageType != null && !marketingPackageType.isBlank()) {
+			spec = spec.and(JobSpecifications.marketingPackageTypeEquals(marketingPackageType));
 		}
 		if (salaryMin != null) {
 			spec = spec.and(JobSpecifications.salaryMin(salaryMin));
 		}
 		if (salaryMax != null) {
 			spec = spec.and(JobSpecifications.salaryMax(salaryMax));
+		}
+		if (experienceMin != null) {
+			spec = spec.and(JobSpecifications.experienceMin(experienceMin));
+		}
+		if (experienceMax != null) {
+			spec = spec.and(JobSpecifications.experienceMax(experienceMax));
 		}
 
 		Page<Job> jobsPage = jobRepository.findAll(spec, pageable);
@@ -674,6 +771,40 @@ public class JobServiceImpl implements JobService {
 		return JobMapper.toResponse(jobRepository.save(job));
 	}
 
+	@Override
+	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
+	public CompanyMarketingAssignmentDTO applyCompanyMarketingPackage(String employerId, ApplyMarketingPackageRequest request) {
+		validateEmployerId(employerId);
+		if (request == null || request.getEntitlementId() == null || request.getEntitlementId().isBlank()) {
+			throw new RuntimeException("Marketing entitlement is required");
+		}
+
+		String companyId = fetchCompanyIdByEmployerId(employerId);
+
+		return companyServiceClient.assignMarketingEntitlement(
+				request.getEntitlementId(),
+				CompanyMarketingAssignmentRequest.builder()
+						.companyId(companyId)
+						.targetId(companyId) // Target is the company itself
+						.targetScope("COMPANY")
+						.placement(request.getPlacement() != null ? request.getPlacement() : "HOME_FEATURED_COMPANY")
+						.build());
+	}
+
+	@Override
+	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
+	public void removeCompanyMarketingPackage(String employerId, String assignmentId) {
+		validateEmployerId(employerId);
+		if (assignmentId == null || assignmentId.isBlank()) {
+			throw new RuntimeException("Assignment id is required");
+		}
+
+		String companyId = fetchCompanyIdByEmployerId(employerId);
+		companyServiceClient.removeMarketingAssignment(assignmentId, companyId);
+	}
+
 	private Job getJobOrThrow(String jobId) {
 		return jobRepository.findActiveById(jobId)
 				.orElseThrow(() -> new RuntimeException("Job not found"));
@@ -690,6 +821,7 @@ public class JobServiceImpl implements JobService {
 			throw new RuntimeException("Employer id is required");
 		}
 	}
+
 
 	private StatusJob parseStatus(String status) {
 		if (status == null || status.isBlank()) {
@@ -774,6 +906,11 @@ public class JobServiceImpl implements JobService {
 		return trimmed.isEmpty() ? null : trimmed;
 	}
 
+	private String normalizeProvince(String value) {
+		String normalized = LocationNormalizer.normalizeLocation(value);
+		return normalize(normalized);
+	}
+
 	private String normalizeForQuery(String value) {
 		return normalize(value);
 	}
@@ -831,9 +968,9 @@ public class JobServiceImpl implements JobService {
 
 		job.setMarketingAssignmentId(assignment.getId());
 		job.setMarketingEntitlementId(assignment.getEntitlementId());
-		job.setMarketingPackageCategory(assignment.getPackageCategory());
-		job.setMarketingPackageType(assignment.getPackageType());
-		job.setMarketingPackageLabel(assignment.getPackageLabel());
+		job.setMarketingPackageCategory(normalize(assignment.getPackageCategory()));
+		job.setMarketingPackageType(normalize(assignment.getPackageType()));
+		job.setMarketingPackageLabel(normalize(assignment.getPackageLabel()));
 
 		if ("HIGHLIGHT".equalsIgnoreCase(assignment.getPackageCategory())) {
 			job.setTop(true);
@@ -867,6 +1004,41 @@ public class JobServiceImpl implements JobService {
 		}
 	}
 
+	private void notifyEmployerAboutStatusChange(Job job, StatusJob status) {
+		if (job == null || status == null || job.getCompanyId() == null || job.getCompanyId().isBlank()) {
+			return;
+		}
+
+		try {
+			CompanyDTO company = companyServiceClient.getCompanyById(job.getCompanyId());
+			EmployerCompanyResponse employer = null;
+			if (job.getEmployerId() != null && !job.getEmployerId().isBlank()) {
+				employer = userServiceClient.getEmployerById(job.getEmployerId());
+			}
+			EmployerJobStatusChangedEvent event = EmployerJobStatusChangedEvent.builder()
+					.companyId(job.getCompanyId())
+					.companyName(company != null && company.getName() != null ? company.getName() : job.getCompanyName())
+					.employerEmail(employer != null ? employer.getEmail() : null)
+					.jobId(job.getJobId())
+					.jobTitle(job.getTitle())
+					.status(status.name())
+					.build();
+			log.info(
+					"Publishing employer job status event for job {} with status {} to employerId {} and email {}",
+					job.getJobId(),
+					status,
+					job.getEmployerId(),
+					event.getEmployerEmail());
+			kafkaTemplate.send("job-status-changed", event);
+		} catch (Exception ex) {
+			log.warn(
+					"Failed to publish employer job status event for job {} with status {}: {}",
+					job.getJobId(),
+					status,
+					ex.getMessage());
+		}
+	}
+
 	private int safePage(int page) {
 		return Math.max(page, 1) - 1;
 	}
@@ -881,10 +1053,18 @@ public class JobServiceImpl implements JobService {
 				.map(industry -> new IndustrySummary(industry.getIndustryId(), industry.getName()))
 				.toList();
 
+		List<String> locations = jobRepository.findDistinctLocations().stream()
+				.filter(LocationNormalizer::isRecognizedProvince)
+				.map(LocationNormalizer::toDisplayLabel)
+				.filter(value -> value != null && !value.isBlank())
+				.distinct()
+				.sorted(String.CASE_INSENSITIVE_ORDER)
+				.toList();
+
 		return new JobFilterOptions(
 				List.of(JobType.values()),
 				List.of(StatusJob.values()),
-				jobRepository.findDistinctLocations(),
+				locations,
 				industries);
 	}
 
@@ -907,7 +1087,7 @@ public class JobServiceImpl implements JobService {
 				break;
 		}
 
-		Sort sort = Sort.by(Sort.Order.desc("isTop"));
+		Sort sort = Sort.by(Sort.Order.desc("top"));
 		sort = sort.and(Sort.by(new Sort.Order(direction, sortField)));
 		if (!"createdAt".equals(sortField)) {
 			sort = sort.and(Sort.by(Sort.Order.desc("createdAt")));
@@ -1074,7 +1254,7 @@ public class JobServiceImpl implements JobService {
 						.title(job.getTitle())
 						.companyName(job.getCompanyName())
 						.companyLogoUrl(job.getCompanyLogoUrl())
-						.location(job.getLocation())
+						.location(job.getProvince())
 						.salaryMin(job.getSalaryMin())
 						.salaryMax(job.getSalaryMax())
 						.status(job.getStatus())
@@ -1129,10 +1309,14 @@ public class JobServiceImpl implements JobService {
 		jobRepository.save(job);
 	}
 
+
+
 	public String buildSearchCacheKey(
 			String keyword,
 			String industryId,
 			String jobType,
+			String marketingPackageCategory,
+			String marketingPackageType,
 			String location,
 			String status,
 			Integer experienceMin,
@@ -1147,6 +1331,8 @@ public class JobServiceImpl implements JobService {
 		key.append("keyword=").append(normalizeForKey(keyword))
 				.append("|industryId=").append(normalizeForKey(industryId))
 				.append("|jobType=").append(normalizeForKey(jobType))
+				.append("|marketingPackageCategory=").append(normalizeForKey(marketingPackageCategory))
+				.append("|marketingPackageType=").append(normalizeForKey(marketingPackageType))
 				.append("|location=").append(normalizeForKey(location))
 				.append("|status=").append(normalizeForKey(status))
 				.append("|experienceMin=").append(experienceMin != null ? experienceMin : "")

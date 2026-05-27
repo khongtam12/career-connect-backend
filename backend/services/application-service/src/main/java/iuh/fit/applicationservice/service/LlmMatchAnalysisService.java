@@ -38,7 +38,7 @@ public class LlmMatchAnalysisService {
             @Value("${OPENAI_API_KEY:}") String openAiApiKey,
             @Value("${OPENROUTER_API_KEY:}") String openRouterApiKey,
             @Value("${OPENAI_BASE_URL:}") String configuredBaseUrl,
-            @Value("${OPENAI_MODEL:gpt-4.1-mini}") String model,
+            @Value("${OPENAI_MODEL:arcee-ai/trinity-large-thinking:free}") String model,
             @Value("${FRONTEND_URL:http://localhost:5173}") String appUrl,
             @Value("${spring.application.name:application-service}") String appName
     ) {
@@ -52,6 +52,10 @@ public class LlmMatchAnalysisService {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
+    }
+
+    public String getModel() {
+        return model;
     }
 //
     public AiSemanticMatchResult analyze(
@@ -71,7 +75,7 @@ public class LlmMatchAnalysisService {
         try {
             ObjectNode payload = objectMapper.createObjectNode();
             payload.put("model", model);
-            payload.put("temperature", 0.2);
+            payload.put("temperature", 0.1);
             payload.put("max_tokens", 900);
 
             ArrayNode messages = payload.putArray("messages");
@@ -85,6 +89,9 @@ public class LlmMatchAnalysisService {
                             Scores must be numbers from 0 to 100.
                             Always write summary, recommendation, strengths, concerns, and interviewFocus in natural Vietnamese with full diacritics.
                             You may analyze Vietnamese or English CV content, but the final writing must be in Vietnamese.
+                            Treat Vietnamese and English terms as equivalent when they refer to the same skill, education level, responsibility, or domain concept.
+                            Infer transferable evidence across languages from the JD and CV instead of relying on exact word overlap only.
+                            If the JD skill list is in Vietnamese and the CV evidence is in English, or vice versa, map the evidence back to the JD skill wording.
                             Keep the writing concise and recruiter-friendly.
                             """);
             messages.addObject()
@@ -168,6 +175,8 @@ public class LlmMatchAnalysisService {
                 - strengths, concerns, interviewFocus should each have 2-4 concise bullet-style strings.
                 - summary and recommendation should each be 1-2 short sentences.
                 - All natural-language output must be in Vietnamese with full diacritics.
+                - Understand both Vietnamese and English wording, and bridge equivalent concepts across the two languages.
+                - Prefer semantic evidence from the whole CV context when explicit keyword overlap is weak.
 
                 Job title: %s
                 Job requirements: %s

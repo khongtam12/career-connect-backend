@@ -1,5 +1,6 @@
 package iuh.fit.jobservice.service;
 
+import iuh.fit.jobservice.dto.CompanyMarketingAssignmentDTO;
 import iuh.fit.jobservice.dto.JobFilterOptions;
 import iuh.fit.jobservice.dto.JobStats;
 import iuh.fit.jobservice.dto.request.ApplyMarketingPackageRequest;
@@ -32,6 +33,10 @@ public interface JobService {
 
     JobResponse removeMarketingPackage(String employerId, String jobId);
 
+    CompanyMarketingAssignmentDTO applyCompanyMarketingPackage(String employerId, ApplyMarketingPackageRequest request);
+
+    void removeCompanyMarketingPackage(String employerId, String assignmentId);
+
     // ===== ADMIN =====
     JobResponse adminChangeStatus(String adminId, String jobId, String newStatus);
 
@@ -53,6 +58,8 @@ public interface JobService {
             String keyword,
             String industryId,
             String jobType,
+            String marketingPackageCategory,
+            String marketingPackageType,
             String location,
             String status,
             Integer experienceMin,

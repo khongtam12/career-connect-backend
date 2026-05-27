@@ -66,7 +66,7 @@ class JobSearchCacheIntegrationTest {
         job.setSalaryMin(1000);
         job.setSalaryMax(2000);
         job.setSalaryNegotiable(false);
-        job.setLocation("hcm");
+        job.setProvince("hcm");
         job.setExperience("1 year");
         job.setDeadline(LocalDate.now().plusDays(30));
         job.setCreatedAt(LocalDateTime.now());
@@ -92,6 +92,8 @@ class JobSearchCacheIntegrationTest {
                 keyword,
                 "ind-1",
                 "FULL_TIME",
+                null,
+                null,
                 "hcm",
                 "ACTIVE",
                 null,
@@ -108,6 +110,8 @@ class JobSearchCacheIntegrationTest {
                 keyword,
                 "ind-1",
                 "FULL_TIME",
+                null,
+                null,
                 "hcm",
                 "ACTIVE",
                 null,

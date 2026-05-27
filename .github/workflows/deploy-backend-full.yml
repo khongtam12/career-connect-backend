@@ -1,0 +1,33 @@
+name: Deploy Backend Full To EC2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-full:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy full stack to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 120s
+          command_timeout: 60m
+          script: |
+            set -e
+
+            cd ${{ secrets.APP_DIR }}
+
+            git fetch origin
+            git checkout develop
+            git pull origin develop
+
+            docker network create career-net || true
+
+            docker compose -f docker-compose.ec2.full.yml pull
+            docker compose -f docker-compose.ec2.full.yml up -d --remove-orphans
+
+            docker image prune -f

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -23,8 +24,10 @@ public class JobPackageController {
     }
 
     @GetMapping
-    public ResponseEntity<List<JobPackageResponseDTO>> getAllJobPackage(){
-        List<JobPackageResponseDTO> list= jobPackageService.getAllJobPackage();
+    public ResponseEntity<List<JobPackageResponseDTO>> getAllJobPackage(
+            @RequestParam(value = "includeInactive", defaultValue = "false") boolean includeInactive
+    ){
+        List<JobPackageResponseDTO> list= jobPackageService.getAllJobPackage(includeInactive);
         return ResponseEntity.ok(list);
     }
 

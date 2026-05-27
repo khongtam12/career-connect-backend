@@ -67,6 +67,11 @@ public class MarketingEntitlementController {
         return ResponseEntity.ok(marketingEntitlementService.removeAssignment(assignmentId, companyId));
     }
 
+    @GetMapping("/featured-companies")
+    public ResponseEntity<List<String>> getFeaturedCompanyIds() {
+        return ResponseEntity.ok(marketingEntitlementService.getFeaturedCompanyIds());
+    }
+
     @PostMapping("/expire")
     public ResponseEntity<List<String>> expireEntitlements() {
         return ResponseEntity.ok(marketingEntitlementService.expireEntitlements());

@@ -1,0 +1,39 @@
+name: Deploy Backend to EC2
+
+on:
+  workflow_run:
+    workflows:
+      - Build And Push Backend Images
+    types:
+      - completed
+    branches:
+      - deloy-test
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 120s
+          command_timeout: 40m
+          script: |
+            set -e
+
+            cd ${{ secrets.APP_DIR }}
+
+            git fetch origin
+            git checkout deloy-test
+            git pull origin deloy-test
+
+            docker network create career-net || true
+
+            docker compose -f docker-compose.ec2.core.yml pull
+            docker compose -f docker-compose.ec2.core.yml up -d --remove-orphans
+
+            docker image prune -f

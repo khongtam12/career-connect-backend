@@ -37,6 +37,11 @@ public class JobApplication {
     private String interviewTime;
     private String interviewLocation;
     private String rejectionReason;
+    @Column(columnDefinition = "TEXT")
+    private String matchInsightJson;
+    private LocalDateTime analyzedAt;
+    @Column(columnDefinition = "TEXT")
+    private String analysisFingerprint;
 
     public JobApplication() {
     }
@@ -173,5 +178,29 @@ public class JobApplication {
 
     public void setRejectionReason(String rejectionReason) {
         this.rejectionReason = rejectionReason;
+    }
+
+    public String getMatchInsightJson() {
+        return matchInsightJson;
+    }
+
+    public void setMatchInsightJson(String matchInsightJson) {
+        this.matchInsightJson = matchInsightJson;
+    }
+
+    public LocalDateTime getAnalyzedAt() {
+        return analyzedAt;
+    }
+
+    public void setAnalyzedAt(LocalDateTime analyzedAt) {
+        this.analyzedAt = analyzedAt;
+    }
+
+    public String getAnalysisFingerprint() {
+        return analysisFingerprint;
+    }
+
+    public void setAnalysisFingerprint(String analysisFingerprint) {
+        this.analysisFingerprint = analysisFingerprint;
     }
 }

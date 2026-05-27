@@ -139,6 +139,23 @@ public class JobController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/employer/marketing/company")
+    public ResponseEntity<?> applyCompanyMarketingPackage(
+            @RequestHeader("X-User-Id") String employerId,
+            @RequestBody ApplyMarketingPackageRequest request
+    ) {
+        return ResponseEntity.ok(jobService.applyCompanyMarketingPackage(employerId, request));
+    }
+
+    @DeleteMapping("/employer/marketing/shared")
+    public ResponseEntity<?> removeCompanyMarketingPackage(
+            @RequestHeader("X-User-Id") String employerId,
+            @RequestParam("assignmentId") String assignmentId
+    ) {
+        jobService.removeCompanyMarketingPackage(employerId, assignmentId);
+        return ResponseEntity.ok(Map.of("message", "Marketing assignment removed"));
+    }
+
     // ===== ADMIN =====
     @PutMapping("/admin/{jobId}/status")
     public ResponseEntity<?> adminChangeStatus(
@@ -201,6 +218,8 @@ public class JobController {
             @RequestParam(value = "industry", required = false) String industry,
             @RequestParam(value = "industryId", required = false) String industryId,
             @RequestParam(value = "jobType", required = false) String jobType,
+            @RequestParam(value = "marketingPackageCategory", required = false) String marketingPackageCategory,
+            @RequestParam(value = "marketingPackageType", required = false) String marketingPackageType,
             @RequestParam(value = "location", required = false) String location,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "experienceMin", required = false) Integer experienceMin,
@@ -219,6 +238,8 @@ public class JobController {
             resolvedKeyword,
             resolvedIndustry,
             jobType,
+            marketingPackageCategory,
+            marketingPackageType,
             location,
             status,
             experienceMin,
