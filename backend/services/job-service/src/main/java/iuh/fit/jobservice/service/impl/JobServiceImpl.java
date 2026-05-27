@@ -136,7 +136,7 @@ public class JobServiceImpl implements JobService {
 		job.setCompanyName(company.getName());
 		job.setCompanyLogoUrl(company.getLogo());
 		job.setTitle(request.getTitle().trim());
-		job.setIndustry(normalize(request.getIndustry()));
+		job.setIndustry(resolveIndustryId(request.getIndustry()));
 		String province = normalizeProvince(request.getProvince());
 		String ward = normalize(request.getWard());
 		String addressDetail = normalize(request.getAddressDetail());
@@ -199,7 +199,7 @@ public class JobServiceImpl implements JobService {
 			job.setTitle(request.getTitle().trim());
 		}
 		if (request.getIndustry() != null) {
-			job.setIndustry(normalize(request.getIndustry()));
+			job.setIndustry(resolveIndustryId(request.getIndustry()));
 		}
 		String provinceUpdate = request.getProvince() != null ? normalizeProvince(request.getProvince()) : null;
 		String wardUpdate = request.getWard() != null ? normalize(request.getWard()) : null;
@@ -1126,11 +1126,11 @@ public class JobServiceImpl implements JobService {
 
 	@Override
 	public JobStats getStats() {
-		long totalJobs = jobRepository.count();
-		long activeJobs = jobRepository.countByStatus(StatusJob.ACTIVE);
+		long totalJobs = jobRepository.countByDeletedAtIsNullAndStatusNot(StatusJob.DRAFT);
+		long activeJobs = jobRepository.countByDeletedAtIsNullAndStatus(StatusJob.ACTIVE);
 		long newJobs24h = jobRepository.countByCreatedAtAfter(LocalDateTime.now().minusHours(24));
-		long pendingJobs = jobRepository.countByStatus(StatusJob.PENDING);
-		long rejectedJobs = jobRepository.countByStatus(StatusJob.REJECTED);
+		long pendingJobs = jobRepository.countByDeletedAtIsNullAndStatus(StatusJob.PENDING);
+		long rejectedJobs = jobRepository.countByDeletedAtIsNullAndStatus(StatusJob.REJECTED);
 
 		return new JobStats(totalJobs, activeJobs, newJobs24h, pendingJobs, rejectedJobs);
 	}
@@ -1389,6 +1389,7 @@ public class JobServiceImpl implements JobService {
 		java.util.Map<String, CompanyDTO> companyCache = new java.util.HashMap<>();
 		return jobs.stream().map(job -> {
 			JobResponse response = JobMapper.toResponse(job);
+			response.setIndustry(resolveIndustryDisplayName(job.getIndustry()));
 			if (job.getCompanyId() != null) {
 				if (!companyCache.containsKey(job.getCompanyId())) {
 					try {
@@ -1413,6 +1414,7 @@ public class JobServiceImpl implements JobService {
 		java.util.Map<String, CompanyDTO> companyCache = new java.util.HashMap<>();
 		return jobs.stream().map(job -> {
 			JobCardResponse response = JobMapper.toCardResponse(job);
+			response.setIndustryId(resolveIndustryId(job.getIndustry()));
 			if (job.getCompanyId() != null) {
 				if (!companyCache.containsKey(job.getCompanyId())) {
 					try {
@@ -1431,6 +1433,35 @@ public class JobServiceImpl implements JobService {
 			}
 			return response;
 		}).toList();
+	}
+
+	private String resolveIndustryId(String industryValue) {
+		String normalizedIndustry = normalize(industryValue);
+		if (normalizedIndustry == null) {
+			return null;
+		}
+
+		Industry byId = industryRepository.getIndustryByIndustryId(normalizedIndustry);
+		if (byId != null) {
+			return byId.getIndustryId();
+		}
+
+		Industry byName = industryRepository.findByNameIgnoreCase(normalizedIndustry);
+		if (byName != null) {
+			return byName.getIndustryId();
+		}
+
+		return normalizedIndustry;
+	}
+
+	private String resolveIndustryDisplayName(String industryValue) {
+		String resolvedIndustryId = resolveIndustryId(industryValue);
+		if (resolvedIndustryId == null) {
+			return null;
+		}
+
+		Industry industry = industryRepository.getIndustryByIndustryId(resolvedIndustryId);
+		return industry != null ? industry.getName() : industryValue;
 	}
 
 }
