@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import iuh.fit.applicationservice.dto.response.AiSemanticMatchResult;
 import iuh.fit.applicationservice.dto.response.CvDetailClientResponse;
 import iuh.fit.applicationservice.dto.response.JobDetailClientResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +25,7 @@ public class LlmMatchAnalysisService {
 
     private static final String OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
     private static final int MAX_PROMPT_TEXT_LENGTH = 6000;
+    private static final Logger log = LoggerFactory.getLogger(LlmMatchAnalysisService.class);
 
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
@@ -37,8 +40,8 @@ public class LlmMatchAnalysisService {
             ObjectMapper objectMapper,
             @Value("${OPENAI_API_KEY:}") String openAiApiKey,
             @Value("${OPENROUTER_API_KEY:}") String openRouterApiKey,
-            @Value("${OPENAI_BASE_URL:}") String configuredBaseUrl,
-            @Value("${OPENAI_MODEL}") String model,
+            @Value("${app.ai.openai-base-url:}") String configuredBaseUrl,
+            @Value("${app.ai.openai-model}") String model,
             @Value("${FRONTEND_URL:http://localhost:5173}") String appUrl,
             @Value("${spring.application.name:application-service}") String appName
     ) {
@@ -51,6 +54,7 @@ public class LlmMatchAnalysisService {
         this.appName = appName;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
+                .version(HttpClient.Version.HTTP_1_1)
                 .build();
     }
 
@@ -69,10 +73,14 @@ public class LlmMatchAnalysisService {
     ) {
         String apiKey = resolveApiKey();
         if (apiKey.isBlank()) {
+            log.warn("AI matching skipped because no API key is configured. model={}, baseUrl={}", model, resolveBaseUrl());
             return null;
         }
 
         try {
+            String resolvedBaseUrl = resolveBaseUrl();
+            String requestUri = resolvedBaseUrl + "/chat/completions";
+
             ObjectNode payload = objectMapper.createObjectNode();
             payload.put("model", model);
             payload.put("temperature", 0.1);
@@ -99,9 +107,11 @@ public class LlmMatchAnalysisService {
                     .put("content", buildUserPrompt(job, cv, candidateExperienceYear, jobSkills, cvSkills, jobContextText, cvContextText));
 
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(resolveBaseUrl() + "/chat/completions"))
+                    .uri(URI.create(requestUri))
                     .timeout(Duration.ofSeconds(30))
                     .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .header("User-Agent", appName + "/1.0")
                     .header("Authorization", "Bearer " + apiKey);
 
             if (isUsingOpenRouter()) {
@@ -115,17 +125,38 @@ public class LlmMatchAnalysisService {
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                log.warn(
+                        "AI matching request failed. provider={}, model={}, baseUrl={}, requestUri={}, status={}, body={}",
+                        getProviderName(),
+                        model,
+                        resolvedBaseUrl,
+                        requestUri,
+                        response.statusCode(),
+                        abbreviate(response.body(), 600)
+                );
                 return null;
             }
 
             JsonNode root = objectMapper.readTree(response.body());
             JsonNode contentNode = root.path("choices").path(0).path("message").path("content");
             if (contentNode.isMissingNode() || contentNode.isNull() || contentNode.asText().isBlank()) {
+                log.warn(
+                        "AI matching response missing content. provider={}, model={}, body={}",
+                        getProviderName(),
+                        model,
+                        abbreviate(response.body(), 600)
+                );
                 return null;
             }
 
             JsonNode analysisNode = extractJsonNode(contentNode.asText());
             if (analysisNode == null || !analysisNode.isObject()) {
+                log.warn(
+                        "AI matching response is not valid JSON. provider={}, model={}, content={}",
+                        getProviderName(),
+                        model,
+                        abbreviate(contentNode.asText(), 600)
+                );
                 return null;
             }
 
@@ -140,8 +171,23 @@ public class LlmMatchAnalysisService {
             result.setInterviewFocus(stringList(analysisNode.get("interviewFocus")));
             result.setLlmModel(model);
             result.setAnalysisSource(isUsingOpenRouter() ? "llm-openrouter" : "llm-openai");
+            log.info(
+                    "AI matching succeeded. provider={}, model={}, semanticScore={}, matchedSkills={}, missingSkills={}",
+                    getProviderName(),
+                    model,
+                    result.getSemanticScore(),
+                    result.getMatchedSkills().size(),
+                    result.getMissingSkills().size()
+            );
             return result;
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            log.warn(
+                    "AI matching threw an exception. provider={}, model={}, message={}",
+                    getProviderName(),
+                    model,
+                    ex.getMessage(),
+                    ex
+            );
             return null;
         }
     }
@@ -264,6 +310,20 @@ public class LlmMatchAnalysisService {
 
     private boolean isUsingOpenRouter() {
         return openAiApiKey.isBlank() && !openRouterApiKey.isBlank();
+    }
+
+    private String getProviderName() {
+        return isUsingOpenRouter() ? "openrouter" : "openai-compatible";
+    }
+
+    private String abbreviate(String value, int maxLength) {
+        if (value == null) {
+            return "";
+        }
+        String cleaned = value.replaceAll("\\s+", " ").trim();
+        return cleaned.length() > maxLength
+                ? cleaned.substring(0, maxLength) + "..."
+                : cleaned;
     }
 
     private String truncate(String value) {
