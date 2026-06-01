@@ -22,12 +22,12 @@ jobs:
             cd ${{ secrets.APP_DIR }}
 
             git fetch origin
-            git checkout develop
-            git pull origin develop
+            git checkout deloy-test
+            git pull origin deloy-test
 
             docker network create career-net || true
 
-            docker compose -f docker-compose.ec2.full.yml pull
-            docker compose -f docker-compose.ec2.full.yml up -d --remove-orphans
+            IMAGE_TAG=deloy-test docker compose -f docker-compose.ec2.full.yml pull
+            IMAGE_TAG=deloy-test docker compose -f docker-compose.ec2.full.yml up -d --remove-orphans
 
             docker image prune -f

@@ -9,7 +9,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: career-connect-backend
-  IMAGE_TAG: develop
+  IMAGE_TAG: deloy-test
 
 jobs:
   build-and-push:

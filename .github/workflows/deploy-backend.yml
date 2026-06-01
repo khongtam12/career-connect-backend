@@ -33,7 +33,7 @@ jobs:
 
             docker network create career-net || true
 
-            docker compose -f docker-compose.ec2.core.yml pull
-            docker compose -f docker-compose.ec2.core.yml up -d --remove-orphans
+            IMAGE_TAG=deloy-test docker compose -f docker-compose.ec2.core.yml pull
+            IMAGE_TAG=deloy-test docker compose -f docker-compose.ec2.core.yml up -d --remove-orphans
 
             docker image prune -f
