@@ -22,9 +22,8 @@ public class JobAdminResponse {
     private double salaryMax;
     private StatusJob status;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private boolean deadlineExpired;
     private int views;
     private int numberOfApplications;
-
-
 }

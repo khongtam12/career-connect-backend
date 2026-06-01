@@ -38,8 +38,10 @@ public class VnpayConfig {
         vnpParamsMap.put("vnp_Locale", "vn");
         vnpParamsMap.put("vnp_ReturnUrl", vnpReturnUrl);
 
-        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
+        TimeZone vietnamTimeZone = TimeZone.getTimeZone("Asia/Ho_Chi_Minh");
+        Calendar calendar = Calendar.getInstance(vietnamTimeZone);
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+        formatter.setTimeZone(vietnamTimeZone);
         vnpParamsMap.put("vnp_CreateDate", formatter.format(calendar.getTime()));
         calendar.add(Calendar.MINUTE, 10);
         vnpParamsMap.put("vnp_ExpireDate", formatter.format(calendar.getTime()));

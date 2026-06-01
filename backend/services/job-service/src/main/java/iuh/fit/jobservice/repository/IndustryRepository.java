@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface IndustryRepository extends JpaRepository<Industry, String> {
     Industry getIndustryByIndustryId(String industryId);
+    Industry findByNameIgnoreCase(String name);
 }

@@ -14,10 +14,15 @@ import java.util.List;
 @NoArgsConstructor
 public class JobCardResponse {
     private String jobId;
+    private String companyId;
+    private String industryId;
     private String companyName;
     private String logo;
     private String title;
     private String location;
+    private String province;
+    private String ward;
+    private String addressDetail;
     private double salaryMin;
     private double salaryMax;
     private boolean salaryNegotiable;

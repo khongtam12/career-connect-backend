@@ -18,6 +18,15 @@ public final class JobSpecifications {
         return (root, query, cb) -> cb.isNull(root.get("deletedAt"));
     }
 
+    public static Specification<Job> excludeStatus(StatusJob status) {
+        return (root, query, cb) -> {
+            if (status == null) {
+                return cb.conjunction();
+            }
+            return cb.notEqual(root.get("status"), status);
+        };
+    }
+
     public static Specification<Job> keywordContains(String keyword) {
         return (root, query, cb) -> {
             if (keyword == null || keyword.isBlank()) {
@@ -57,7 +66,30 @@ public final class JobSpecifications {
             if (industryId == null || industryId.isBlank()) {
                 return cb.conjunction();
             }
-            return cb.equal(root.get("industryId"), industryId);
+            return cb.equal(cb.upper(cb.trim(root.get("industryId"))), industryId.trim().toUpperCase());
+        };
+    }
+
+    public static Specification<Job> industryMatches(String industryId, String industryName) {
+        return (root, query, cb) -> {
+            if ((industryId == null || industryId.isBlank()) &&
+                    (industryName == null || industryName.isBlank())) {
+                return cb.conjunction();
+            }
+
+            List<Predicate> predicates = new ArrayList<>();
+            if (industryId != null && !industryId.isBlank()) {
+                predicates.add(cb.equal(
+                        cb.upper(cb.trim(root.get("industryId"))),
+                        industryId.trim().toUpperCase()));
+            }
+            if (industryName != null && !industryName.isBlank()) {
+                predicates.add(cb.equal(
+                        cb.upper(cb.trim(root.get("industryId"))),
+                        industryName.trim().toUpperCase()));
+            }
+
+            return cb.or(predicates.toArray(new Predicate[0]));
         };
     }
 
@@ -79,6 +111,37 @@ public final class JobSpecifications {
         };
     }
 
+    public static Specification<Job> rankEquals(String rank) {
+        return (root, query, cb) -> {
+            if (rank == null || rank.isBlank()) {
+                return cb.conjunction();
+            }
+            return cb.equal(
+                    cb.upper(cb.trim(root.get("rank"))),
+                    rank.trim().toUpperCase());
+        };
+    }
+
+    public static Specification<Job> educationEquals(String education) {
+        return (root, query, cb) -> {
+            if (education == null || education.isBlank()) {
+                return cb.conjunction();
+            }
+            return cb.equal(
+                    cb.upper(cb.trim(root.get("education"))),
+                    education.trim().toUpperCase());
+        };
+    }
+
+    public static Specification<Job> salaryNegotiableEquals(Boolean salaryNegotiable) {
+        return (root, query, cb) -> {
+            if (salaryNegotiable == null) {
+                return cb.conjunction();
+            }
+            return cb.equal(root.get("salaryNegotiable"), salaryNegotiable);
+        };
+    }
+
     public static Specification<Job> statusEquals(StatusJob status) {
         return (root, query, cb) -> {
             if (status == null) {
@@ -93,7 +156,9 @@ public final class JobSpecifications {
             if (marketingPackageCategory == null || marketingPackageCategory.isBlank()) {
                 return cb.conjunction();
             }
-            return cb.equal(cb.upper(root.get("marketingPackageCategory")), marketingPackageCategory.trim().toUpperCase());
+            return cb.equal(
+                    cb.upper(cb.trim(root.get("marketingPackageCategory"))),
+                    marketingPackageCategory.trim().toUpperCase());
         };
     }
 
@@ -102,7 +167,9 @@ public final class JobSpecifications {
             if (marketingPackageType == null || marketingPackageType.isBlank()) {
                 return cb.conjunction();
             }
-            return cb.equal(cb.upper(root.get("marketingPackageType")), marketingPackageType.trim().toUpperCase());
+            return cb.equal(
+                    cb.upper(cb.trim(root.get("marketingPackageType"))),
+                    marketingPackageType.trim().toUpperCase());
         };
     }
 
@@ -111,7 +178,7 @@ public final class JobSpecifications {
             if (min == null) {
                 return cb.conjunction();
             }
-            return cb.greaterThanOrEqualTo(root.get("experienceRequired"), min);
+            return cb.greaterThanOrEqualTo(root.get("experience"), String.valueOf(min));
         };
     }
 
@@ -120,7 +187,7 @@ public final class JobSpecifications {
             if (max == null) {
                 return cb.conjunction();
             }
-            return cb.lessThanOrEqualTo(root.get("experienceRequired"), max);
+            return cb.lessThanOrEqualTo(root.get("experience"), String.valueOf(max));
         };
     }
 
@@ -148,6 +215,7 @@ public final class JobSpecifications {
 
             // Không lấy job đã bị xóa mềm
             predicates.add(cb.isNull(root.get("deletedAt")));
+            predicates.add(cb.notEqual(root.get("status"), StatusJob.DRAFT));
 
             // search theo title hoặc companyName
             if (!search.equals("*")) {

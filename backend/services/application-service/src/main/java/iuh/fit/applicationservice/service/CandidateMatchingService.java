@@ -6,6 +6,8 @@ import iuh.fit.applicationservice.dto.response.AiSemanticMatchResult;
 import iuh.fit.applicationservice.dto.response.CandidateMatchInsight;
 import iuh.fit.applicationservice.dto.response.CvDetailClientResponse;
 import iuh.fit.applicationservice.dto.response.JobDetailClientResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -27,7 +29,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class CandidateMatchingService {
-    private static final String ANALYSIS_VERSION = "candidate-match-v4-hybrid";
+    private static final String ANALYSIS_VERSION = "candidate-match-v6-hybrid";
+    private static final Logger log = LoggerFactory.getLogger(CandidateMatchingService.class);
 
     private static final Pattern YEAR_PATTERN = Pattern.compile("(\\d+(?:[.,]\\d+)?)");
     private static final Pattern HTML_TAG_PATTERN = Pattern.compile("<[^>]+>");
@@ -93,6 +96,36 @@ public class CandidateMatchingService {
                 cvContextText
         );
 
+        if (aiResult == null) {
+            log.warn(
+                    "AI matching fell back to rule-based scoring. jobId={}, cvId={}, candidateExperienceYear={}, extractedJobSkills={}, extractedCvSkills={}",
+                    job.getJobId(),
+                    cv.getId(),
+                    candidateExperienceYear,
+                    jobSkills,
+                    cvSkills
+            );
+        }
+
+        if (aiResult != null) {
+            List<String> aiMatchedSkills = alignSkillsToCatalog(aiResult.getMatchedSkills(), jobSkills);
+            List<String> aiMissingSkills = alignSkillsToCatalog(aiResult.getMissingSkills(), jobSkills);
+
+            if (!aiMatchedSkills.isEmpty() || !aiMissingSkills.isEmpty()) {
+                matchedSkills.clear();
+                matchedSkills.addAll(aiMatchedSkills);
+
+                missingSkills.clear();
+                if (!aiMissingSkills.isEmpty()) {
+                    missingSkills.addAll(aiMissingSkills);
+                } else {
+                    jobSkills.stream()
+                            .filter(skill -> !containsNormalized(new ArrayList<>(matchedSkills), skill))
+                            .forEach(missingSkills::add);
+                }
+            }
+        }
+
         double skillScore = jobSkills.isEmpty()
                 ? 80D
                 : ((double) matchedSkills.size() / jobSkills.size()) * 100D;
@@ -112,11 +145,21 @@ public class CandidateMatchingService {
                 ? aiResult.getSemanticScore()
                 : keywordScore;
 
-        double overallScore = (skillScore * 0.34D)
-                + (experienceScore * 0.18D)
-                + (educationScore * 0.10D)
-                + (keywordScore * 0.10D)
-                + (semanticScore * 0.28D);
+        double overallScore;
+        if (aiResult != null && aiResult.getSemanticScore() != null) {
+            overallScore = (skillScore * 0.40D)
+                    + (experienceScore * 0.15D)
+                    + (educationScore * 0.10D)
+                    + (keywordScore * 0.15D)
+                    + (semanticScore * 0.20D);
+        } else {
+            // When the LLM falls back, avoid letting an inferred semantic score
+            // drag the result down too aggressively.
+            overallScore = (skillScore * 0.45D)
+                    + (experienceScore * 0.20D)
+                    + (educationScore * 0.10D)
+                    + (keywordScore * 0.25D);
+        }
 
         insight.setMatchScore(round(overallScore));
         insight.setSkillScore(round(skillScore));
@@ -169,21 +212,40 @@ public class CandidateMatchingService {
     }
 
     private List<String> extractJobSkills(JobDetailClientResponse job) {
-        Set<String> result = new LinkedHashSet<>();
-        result.addAll(parseJsonArray(job.getSkills()));
-        result.addAll(parseCsv(job.getRequirementTags()));
+        Set<String> explicitCandidates = new LinkedHashSet<>();
+        explicitCandidates.addAll(parseJsonArray(job.getSkills()));
+        explicitCandidates.addAll(parseCsv(job.getRequirementTags()));
 
-        // Keep the visible skill list focused on explicit skills/tags only.
-        // Rich requirement prose is still used for keyword/semantic scoring,
-        // but it should not appear as "matched/missing skills" chips.
-        if (result.isEmpty()) {
-            result.addAll(parseCsv(job.getCandidateRequirements()));
-        }
-
-        return result.stream()
+        List<String> filteredSkills = explicitCandidates.stream()
                 .map(String::trim)
                 .filter(value -> !value.isBlank())
                 .filter(this::isLikelySkill)
+                .toList();
+
+        List<String> explicitConcreteSkills = filteredSkills.stream()
+                .filter(this::hasConcreteSkillSignal)
+                .distinct()
+                .limit(12)
+                .toList();
+
+        if (!explicitConcreteSkills.isEmpty()) {
+            return explicitConcreteSkills;
+        }
+
+        Set<String> inferredSkills = new LinkedHashSet<>();
+        inferredSkills.addAll(extractAliasSkillsFromText(job.getTitle()));
+        inferredSkills.addAll(extractAliasSkillsFromText(job.getRequirementTags()));
+        inferredSkills.addAll(extractAliasSkillsFromText(job.getCandidateRequirements()));
+
+        if (!inferredSkills.isEmpty()) {
+            return inferredSkills.stream()
+                .filter(this::hasConcreteSkillSignal)
+                .limit(12)
+                .toList();
+        }
+
+        return filteredSkills.stream()
+                .distinct()
                 .limit(12)
                 .toList();
     }
@@ -224,16 +286,10 @@ public class CandidateMatchingService {
             return cv.getEducations() == null || cv.getEducations().isEmpty() ? 60D : 100D;
         }
 
-        if (cv.getEducations() == null || cv.getEducations().isEmpty()) {
+        String cvEducationText = buildCvEducationText(cv);
+        if (cvEducationText == null) {
             return 0D;
         }
-
-        String cvEducationText = cv.getEducations().stream()
-                .map(education -> String.join(" ",
-                        valueOrEmpty(education.getSchool()),
-                        valueOrEmpty(education.getMajor()),
-                        valueOrEmpty(education.getDescription())))
-                .collect(Collectors.joining(" "));
         String normalizedCvEducation = canonicalizeNormalized(normalize(cvEducationText));
 
         if (normalizedCvEducation == null) {
@@ -245,7 +301,10 @@ public class CandidateMatchingService {
         }
 
         if (requiredEducation.contains("bachelor")) {
-            return normalizedCvEducation.contains("bachelor") ? 100D : 50D;
+            return normalizedCvEducation.contains("bachelor")
+                    || normalizedCvEducation.contains("university")
+                    || normalizedCvEducation.contains("dai hoc")
+                    ? 100D : 50D;
         }
 
         if (requiredEducation.contains("college")) {
@@ -254,6 +313,10 @@ public class CandidateMatchingService {
 
         if (requiredEducation.contains("master")) {
             return normalizedCvEducation.contains("master") ? 100D : 50D;
+        }
+
+        if (educationLikelyMatchesMajor(requiredEducation, normalizedCvEducation)) {
+            return 100D;
         }
 
         return 60D;
@@ -426,6 +489,21 @@ public class CandidateMatchingService {
         return new ArrayList<>(keywords);
     }
 
+    private List<String> extractAliasSkillsFromText(String text) {
+        String normalized = normalize(stripHtml(text));
+        if (normalized == null) {
+            return Collections.emptyList();
+        }
+
+        Set<String> aliases = new LinkedHashSet<>();
+        TERM_ALIASES.forEach((phrase, canonical) -> {
+            if (normalized.contains(phrase) && hasConcreteSkillSignal(canonical)) {
+                aliases.add(canonical);
+            }
+        });
+        return new ArrayList<>(aliases);
+    }
+
     private double parseYears(String raw) {
         if (raw == null || raw.isBlank()) {
             return 0D;
@@ -509,7 +587,102 @@ public class CandidateMatchingService {
             return false;
         }
 
+        if (normalized.contains("chuyen nganh")
+                || normalized.contains("nganh hoc")
+                || normalized.contains("do chuyen mon")
+                || normalized.contains("trinh do chuyen mon")
+                || normalized.contains("khoa hoc may tinh")
+                || normalized.contains("phan mem cntt")
+                || normalized.contains("cong nghe thong tin")
+                || normalized.contains("software engineering")
+                || normalized.contains("information technology")
+                || normalized.contains("sinh vien")
+                || normalized.contains("thu gioi thieu")
+                || normalized.contains("luu y quan trong")
+                || normalized.contains("cam ket")
+                || normalized.contains("toan thoi gian")
+                || normalized.contains("ky nang giao tiep")
+                || normalized.contains("dai hoc")
+                || normalized.contains("cao dang")) {
+            return false;
+        }
+
         return !normalized.matches(".*\\b(co|can|yeu|uu|toi|lam|viec|kinh|nghiem|thoi|gian|duoi|ap|luc)\\b.*");
+    }
+
+    private boolean hasConcreteSkillSignal(String value) {
+        String normalized = canonicalizeNormalized(normalize(value));
+        if (normalized == null || normalized.isBlank()) {
+            return false;
+        }
+
+        return normalized.equals("java")
+                || normalized.equals("javascript")
+                || normalized.equals("typescript")
+                || normalized.equals("nodejs")
+                || normalized.equals("python")
+                || normalized.equals("django")
+                || normalized.equals("react")
+                || normalized.equals("angular")
+                || normalized.equals(".net")
+                || normalized.equals("spring boot")
+                || normalized.equals("html")
+                || normalized.equals("css")
+                || normalized.equals("jwt")
+                || normalized.equals("microservices")
+                || normalized.equals("mysql")
+                || normalized.equals("postgresql")
+                || normalized.equals("mongodb")
+                || normalized.equals("redis")
+                || normalized.equals("docker")
+                || normalized.equals("git")
+                || normalized.equals("aws")
+                || normalized.equals("kafka")
+                || normalized.equals("rest api");
+    }
+
+    private String buildCvEducationText(CvDetailClientResponse cv) {
+        List<String> sections = new ArrayList<>();
+
+        if (cv.getEducations() != null && !cv.getEducations().isEmpty()) {
+            sections.add(cv.getEducations().stream()
+                    .map(education -> String.join(" ",
+                            valueOrEmpty(education.getSchool()),
+                            valueOrEmpty(education.getMajor()),
+                            valueOrEmpty(education.getDescription())))
+                    .collect(Collectors.joining(" ")));
+        }
+
+        sections.add(valueOrEmpty(cv.getSummary()));
+        sections.add(valueOrEmpty(cv.getJobTitle()));
+
+        String pdfText = pdfTextExtractionService.extractText(cv.getFileUrl());
+        if (pdfText != null && !pdfText.isBlank()) {
+            sections.add(pdfText);
+        }
+
+        String combined = sections.stream()
+                .filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.joining(" "));
+        return combined.isBlank() ? null : combined;
+    }
+
+    private boolean educationLikelyMatchesMajor(String requiredEducation, String normalizedCvEducation) {
+        String normalizedRequired = canonicalizeNormalized(requiredEducation);
+        if (normalizedRequired == null || normalizedCvEducation == null) {
+            return false;
+        }
+
+        if (normalizedRequired.contains("lien quan")) {
+            return normalizedCvEducation.contains("software engineering")
+                    || normalizedCvEducation.contains("information technology")
+                    || normalizedCvEducation.contains("computer science")
+                    || normalizedCvEducation.contains("ky thuat phan mem")
+                    || normalizedCvEducation.contains("cong nghe thong tin")
+                    || normalizedCvEducation.contains("khoa hoc may tinh");
+        }
+
+        return normalizedCvEducation.contains(normalizedRequired);
     }
 
     private double round(double value) {
@@ -605,8 +778,58 @@ public class CandidateMatchingService {
         return normalized;
     }
 
+    private List<String> alignSkillsToCatalog(List<String> aiSkills, List<String> jobSkills) {
+        if (aiSkills == null || aiSkills.isEmpty() || jobSkills == null || jobSkills.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<String> aligned = new LinkedHashSet<>();
+        for (String aiSkill : aiSkills) {
+            if (aiSkill == null || aiSkill.isBlank()) {
+                continue;
+            }
+            for (String jobSkill : jobSkills) {
+                if (skillsEquivalent(aiSkill, jobSkill)) {
+                    aligned.add(jobSkill);
+                    break;
+                }
+            }
+        }
+        return new ArrayList<>(aligned);
+    }
+
     private static Map<String, String> buildTermAliases() {
         Map<String, String> aliases = new LinkedHashMap<>();
+        addAlias(aliases, "java", "java");
+        addAlias(aliases, "javascript", "javascript", "js");
+        addAlias(aliases, "typescript", "typescript", "ts");
+        addAlias(aliases, "nodejs", "nodejs", "node js", "node.js", "express", "expressjs", "express js");
+        addAlias(aliases, "python", "python");
+        addAlias(aliases, "django", "django");
+        addAlias(aliases, "react", "react", "reactjs", "react js");
+        addAlias(aliases, "angular", "angular", "angularjs", "angular js");
+        addAlias(aliases, ".net", ".net", "dotnet", "net");
+        addAlias(aliases, "spring boot", "spring boot", "springboot", "spring");
+        addAlias(aliases, "rest api", "rest api", "restful api", "restful apis", "rest api");
+        addAlias(aliases, "jwt", "jwt");
+        addAlias(aliases, "microservices", "microservices", "microservice");
+        addAlias(aliases, "html", "html");
+        addAlias(aliases, "css", "css");
+        addAlias(aliases, "tailwind css", "tailwind css", "tailwind");
+        addAlias(aliases, "redux", "redux", "redux toolkit");
+        addAlias(aliases, "postgresql", "postgresql", "postgres");
+        addAlias(aliases, "mysql", "mysql");
+        addAlias(aliases, "mariadb", "mariadb", "maria db");
+        addAlias(aliases, "mongodb", "mongodb", "mongo db");
+        addAlias(aliases, "redis", "redis");
+        addAlias(aliases, "docker", "docker");
+        addAlias(aliases, "aws", "aws", "amazon web services");
+        addAlias(aliases, "kafka", "kafka");
+        addAlias(aliases, "openfeign", "openfeign", "feign");
+        addAlias(aliases, "eureka", "eureka");
+        addAlias(aliases, "resilience4j", "resilience4j");
+        addAlias(aliases, "git", "git");
+        addAlias(aliases, "github", "github");
         addAlias(aliases, "project management", "project management", "project manager", "pm", "quan ly du an");
         addAlias(aliases, "communication", "communication", "giao tiep", "ky nang giao tiep");
         addAlias(aliases, "teamwork", "teamwork", "lam viec nhom");
@@ -635,6 +858,9 @@ public class CandidateMatchingService {
         addAlias(aliases, "bachelor", "bachelor", "cu nhan", "dai hoc", "bachelor degree", "bachelor s degree");
         addAlias(aliases, "college", "college", "cao dang", "associate degree");
         addAlias(aliases, "master", "master", "thac si", "master degree");
+        addAlias(aliases, "software engineering", "software engineering", "software engineer", "ky thuat phan mem", "phan mem");
+        addAlias(aliases, "information technology", "information technology", "cntt", "cong nghe thong tin", "phan mem cntt");
+        addAlias(aliases, "computer science", "computer science", "khoa hoc may tinh");
         return aliases;
     }
 

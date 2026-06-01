@@ -17,7 +17,6 @@ public class AdminCandidateController {
     public AdminCandidateController(AdminCandidateService adminCandidateService) {
         this.adminCandidateService = adminCandidateService;
     }
-
     @GetMapping
     public ResponseEntity<Page<Candidate>> getCandidates(
             @RequestParam(required = false) String keyword,
@@ -77,14 +76,12 @@ public class AdminCandidateController {
             this.newPassword = newPassword;
         }
     }
-
+//
     static class UpdateStatusRequest {
         private Status status;
-
         public Status getStatus() {
             return status;
         }
-
         public void setStatus(Status status) {
             this.status = status;
         }

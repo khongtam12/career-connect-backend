@@ -16,4 +16,5 @@ public interface CompanyMarketingAssignmentRepository extends JpaRepository<Comp
     Optional<CompanyMarketingAssignment> findByIdAndCompany_CompanyId(String id, String companyId);
     Optional<CompanyMarketingAssignment> findByEntitlementIdAndTargetIdAndStatus(String entitlementId, String targetId, StatusMarketingAssignment status);
     Optional<CompanyMarketingAssignment> findByTargetIdAndTargetScopeAndStatus(String targetId, MarketingTargetScope targetScope, StatusMarketingAssignment status);
+    List<CompanyMarketingAssignment> findByTargetScopeAndStatus(MarketingTargetScope targetScope, StatusMarketingAssignment status);
 }

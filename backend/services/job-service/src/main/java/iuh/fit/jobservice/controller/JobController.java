@@ -139,6 +139,23 @@ public class JobController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/employer/marketing/company")
+    public ResponseEntity<?> applyCompanyMarketingPackage(
+            @RequestHeader("X-User-Id") String employerId,
+            @RequestBody ApplyMarketingPackageRequest request
+    ) {
+        return ResponseEntity.ok(jobService.applyCompanyMarketingPackage(employerId, request));
+    }
+
+    @DeleteMapping("/employer/marketing/shared")
+    public ResponseEntity<?> removeCompanyMarketingPackage(
+            @RequestHeader("X-User-Id") String employerId,
+            @RequestParam("assignmentId") String assignmentId
+    ) {
+        jobService.removeCompanyMarketingPackage(employerId, assignmentId);
+        return ResponseEntity.ok(Map.of("message", "Marketing assignment removed"));
+    }
+
     // ===== ADMIN =====
     @PutMapping("/admin/{jobId}/status")
     public ResponseEntity<?> adminChangeStatus(
@@ -209,6 +226,9 @@ public class JobController {
             @RequestParam(value = "experienceMax", required = false) Integer experienceMax,
             @RequestParam(value = "salaryMin", required = false) Double salaryMin,
             @RequestParam(value = "salaryMax", required = false) Double salaryMax,
+                @RequestParam(value = "rank", required = false) String rank,
+                @RequestParam(value = "education", required = false) String education,
+                @RequestParam(value = "salaryNegotiable", required = false) Boolean salaryNegotiable,
             @RequestParam(value = "sortBy", required = false) String sortBy,
             @RequestParam(value = "sortDir", required = false) String sortDir,
             @RequestParam(value = "page", defaultValue = "1") int page,
@@ -229,6 +249,9 @@ public class JobController {
             experienceMax,
             salaryMin,
             salaryMax,
+            rank,
+            education,
+            salaryNegotiable,
             sortBy,
             sortDir,
             page,

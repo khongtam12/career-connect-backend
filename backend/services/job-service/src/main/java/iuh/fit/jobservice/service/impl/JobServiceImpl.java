@@ -136,7 +136,7 @@ public class JobServiceImpl implements JobService {
 		job.setCompanyName(company.getName());
 		job.setCompanyLogoUrl(company.getLogo());
 		job.setTitle(request.getTitle().trim());
-		job.setIndustry(normalize(request.getIndustry()));
+		job.setIndustry(resolveIndustryId(request.getIndustry()));
 		String province = normalizeProvince(request.getProvince());
 		String ward = normalize(request.getWard());
 		String addressDetail = normalize(request.getAddressDetail());
@@ -199,7 +199,7 @@ public class JobServiceImpl implements JobService {
 			job.setTitle(request.getTitle().trim());
 		}
 		if (request.getIndustry() != null) {
-			job.setIndustry(normalize(request.getIndustry()));
+			job.setIndustry(resolveIndustryId(request.getIndustry()));
 		}
 		String provinceUpdate = request.getProvince() != null ? normalizeProvince(request.getProvince()) : null;
 		String wardUpdate = request.getWard() != null ? normalize(request.getWard()) : null;
@@ -615,6 +615,9 @@ public class JobServiceImpl implements JobService {
 			Integer experienceMax,
 			Double salaryMin,
 			Double salaryMax,
+			String rank,
+			String education,
+			Boolean salaryNegotiable,
 			String sortBy,
 			String sortDir,
 			int page,
@@ -632,6 +635,9 @@ public class JobServiceImpl implements JobService {
 				experienceMax,
 				salaryMin,
 				salaryMax,
+				rank,
+				education,
+				salaryNegotiable,
 				sortBy,
 				sortDir,
 				page,
@@ -672,7 +678,10 @@ public class JobServiceImpl implements JobService {
 			spec = spec.and(JobSpecifications.locationContains(normalizedLocation));
 		}
 		if (industryId != null && !industryId.isBlank()) {
-			spec = spec.and(JobSpecifications.industryEquals(industryId.trim()));
+			Industry industry = industryRepository.getIndustryByIndustryId(industryId.trim());
+			spec = spec.and(JobSpecifications.industryMatches(
+					industryId.trim(),
+					industry != null ? industry.getName() : null));
 		}
 		if (jobType != null && !jobType.isBlank()) {
 			spec = spec.and(JobSpecifications.jobTypeEquals(parseJobType(jobType)));
@@ -688,6 +697,15 @@ public class JobServiceImpl implements JobService {
 		}
 		if (salaryMax != null) {
 			spec = spec.and(JobSpecifications.salaryMax(salaryMax));
+		}
+		if (rank != null && !rank.isBlank()) {
+			spec = spec.and(JobSpecifications.rankEquals(rank));
+		}
+		if (education != null && !education.isBlank()) {
+			spec = spec.and(JobSpecifications.educationEquals(education));
+		}
+		if (salaryNegotiable != null) {
+			spec = spec.and(JobSpecifications.salaryNegotiableEquals(salaryNegotiable));
 		}
 		if (experienceMin != null) {
 			spec = spec.and(JobSpecifications.experienceMin(experienceMin));
@@ -766,6 +784,40 @@ public class JobServiceImpl implements JobService {
 		clearMarketingAssignment(job);
 		job.setUpdatedAt(LocalDateTime.now());
 		return JobMapper.toResponse(jobRepository.save(job));
+	}
+
+	@Override
+	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
+	public CompanyMarketingAssignmentDTO applyCompanyMarketingPackage(String employerId, ApplyMarketingPackageRequest request) {
+		validateEmployerId(employerId);
+		if (request == null || request.getEntitlementId() == null || request.getEntitlementId().isBlank()) {
+			throw new RuntimeException("Marketing entitlement is required");
+		}
+
+		String companyId = fetchCompanyIdByEmployerId(employerId);
+
+		return companyServiceClient.assignMarketingEntitlement(
+				request.getEntitlementId(),
+				CompanyMarketingAssignmentRequest.builder()
+						.companyId(companyId)
+						.targetId(companyId) // Target is the company itself
+						.targetScope("COMPANY")
+						.placement(request.getPlacement() != null ? request.getPlacement() : "HOME_FEATURED_COMPANY")
+						.build());
+	}
+
+	@Override
+	@Transactional
+	@CacheEvict(cacheNames = "job-search", allEntries = true)
+	public void removeCompanyMarketingPackage(String employerId, String assignmentId) {
+		validateEmployerId(employerId);
+		if (assignmentId == null || assignmentId.isBlank()) {
+			throw new RuntimeException("Assignment id is required");
+		}
+
+		String companyId = fetchCompanyIdByEmployerId(employerId);
+		companyServiceClient.removeMarketingAssignment(assignmentId, companyId);
 	}
 
 	private Job getJobOrThrow(String jobId) {
@@ -931,9 +983,9 @@ public class JobServiceImpl implements JobService {
 
 		job.setMarketingAssignmentId(assignment.getId());
 		job.setMarketingEntitlementId(assignment.getEntitlementId());
-		job.setMarketingPackageCategory(assignment.getPackageCategory());
-		job.setMarketingPackageType(assignment.getPackageType());
-		job.setMarketingPackageLabel(assignment.getPackageLabel());
+		job.setMarketingPackageCategory(normalize(assignment.getPackageCategory()));
+		job.setMarketingPackageType(normalize(assignment.getPackageType()));
+		job.setMarketingPackageLabel(normalize(assignment.getPackageLabel()));
 
 		if ("HIGHLIGHT".equalsIgnoreCase(assignment.getPackageCategory())) {
 			job.setTop(true);
@@ -1016,6 +1068,18 @@ public class JobServiceImpl implements JobService {
 				.map(industry -> new IndustrySummary(industry.getIndustryId(), industry.getName()))
 				.toList();
 
+		List<String> ranks = jobRepository.findDistinctRanks().stream()
+				.filter(value -> value != null && !value.isBlank())
+				.distinct()
+				.sorted(String.CASE_INSENSITIVE_ORDER)
+				.toList();
+
+		List<String> educations = jobRepository.findDistinctEducations().stream()
+				.filter(value -> value != null && !value.isBlank())
+				.distinct()
+				.sorted(String.CASE_INSENSITIVE_ORDER)
+				.toList();
+
 		List<String> locations = jobRepository.findDistinctLocations().stream()
 				.filter(LocationNormalizer::isRecognizedProvince)
 				.map(LocationNormalizer::toDisplayLabel)
@@ -1028,7 +1092,9 @@ public class JobServiceImpl implements JobService {
 				List.of(JobType.values()),
 				List.of(StatusJob.values()),
 				locations,
-				industries);
+				industries,
+				ranks,
+				educations);
 	}
 
 	private Sort buildSort(String sortBy, String sortDir) {
@@ -1060,11 +1126,11 @@ public class JobServiceImpl implements JobService {
 
 	@Override
 	public JobStats getStats() {
-		long totalJobs = jobRepository.count();
-		long activeJobs = jobRepository.countByStatus(StatusJob.ACTIVE);
+		long totalJobs = jobRepository.countByDeletedAtIsNullAndStatusNot(StatusJob.DRAFT);
+		long activeJobs = jobRepository.countByDeletedAtIsNullAndStatus(StatusJob.ACTIVE);
 		long newJobs24h = jobRepository.countByCreatedAtAfter(LocalDateTime.now().minusHours(24));
-		long pendingJobs = jobRepository.countByStatus(StatusJob.PENDING);
-		long rejectedJobs = jobRepository.countByStatus(StatusJob.REJECTED);
+		long pendingJobs = jobRepository.countByDeletedAtIsNullAndStatus(StatusJob.PENDING);
+		long rejectedJobs = jobRepository.countByDeletedAtIsNullAndStatus(StatusJob.REJECTED);
 
 		return new JobStats(totalJobs, activeJobs, newJobs24h, pendingJobs, rejectedJobs);
 	}
@@ -1222,6 +1288,7 @@ public class JobServiceImpl implements JobService {
 						.salaryMax(job.getSalaryMax())
 						.status(job.getStatus())
 						.createdAt(job.getCreatedAt())
+						.updatedAt(job.getUpdatedAt())
 						.deadlineExpired(isDeadlineExpired(job.getDeadline()))
 						.views(job.getViews())
 						.numberOfApplications(job.getNumberOfApplications())
@@ -1286,6 +1353,9 @@ public class JobServiceImpl implements JobService {
 			Integer experienceMax,
 			Double salaryMin,
 			Double salaryMax,
+			String rank,
+			String education,
+			Boolean salaryNegotiable,
 			String sortBy,
 			String sortDir,
 			int page,
@@ -1302,6 +1372,9 @@ public class JobServiceImpl implements JobService {
 				.append("|experienceMax=").append(experienceMax != null ? experienceMax : "")
 				.append("|salaryMin=").append(salaryMin != null ? salaryMin : "")
 				.append("|salaryMax=").append(salaryMax != null ? salaryMax : "")
+				.append("|rank=").append(normalizeForKey(rank))
+				.append("|education=").append(normalizeForKey(education))
+				.append("|salaryNegotiable=").append(salaryNegotiable != null ? salaryNegotiable : "")
 				.append("|sortBy=").append(normalizeForKey(sortBy))
 				.append("|sortDir=").append(normalizeForKey(sortDir))
 				.append("|page=").append(page)
@@ -1317,6 +1390,7 @@ public class JobServiceImpl implements JobService {
 		java.util.Map<String, CompanyDTO> companyCache = new java.util.HashMap<>();
 		return jobs.stream().map(job -> {
 			JobResponse response = JobMapper.toResponse(job);
+			response.setIndustry(resolveIndustryDisplayName(job.getIndustry()));
 			if (job.getCompanyId() != null) {
 				if (!companyCache.containsKey(job.getCompanyId())) {
 					try {
@@ -1341,6 +1415,7 @@ public class JobServiceImpl implements JobService {
 		java.util.Map<String, CompanyDTO> companyCache = new java.util.HashMap<>();
 		return jobs.stream().map(job -> {
 			JobCardResponse response = JobMapper.toCardResponse(job);
+			response.setIndustryId(resolveIndustryId(job.getIndustry()));
 			if (job.getCompanyId() != null) {
 				if (!companyCache.containsKey(job.getCompanyId())) {
 					try {
@@ -1359,6 +1434,35 @@ public class JobServiceImpl implements JobService {
 			}
 			return response;
 		}).toList();
+	}
+
+	private String resolveIndustryId(String industryValue) {
+		String normalizedIndustry = normalize(industryValue);
+		if (normalizedIndustry == null) {
+			return null;
+		}
+
+		Industry byId = industryRepository.getIndustryByIndustryId(normalizedIndustry);
+		if (byId != null) {
+			return byId.getIndustryId();
+		}
+
+		Industry byName = industryRepository.findByNameIgnoreCase(normalizedIndustry);
+		if (byName != null) {
+			return byName.getIndustryId();
+		}
+
+		return normalizedIndustry;
+	}
+
+	private String resolveIndustryDisplayName(String industryValue) {
+		String resolvedIndustryId = resolveIndustryId(industryValue);
+		if (resolvedIndustryId == null) {
+			return null;
+		}
+
+		Industry industry = industryRepository.getIndustryByIndustryId(resolvedIndustryId);
+		return industry != null ? industry.getName() : industryValue;
 	}
 
 }
