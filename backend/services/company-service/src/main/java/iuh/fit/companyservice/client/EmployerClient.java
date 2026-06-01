@@ -6,7 +6,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "user-service",url = "http://localhost:8083")
+@FeignClient(name = "user-service")
 public interface EmployerClient {
     @PostMapping("/api/v1/user/employer/save")
     EmployerResponse saveEmployerCompany(@RequestBody EmployerCompanyRequest request);
