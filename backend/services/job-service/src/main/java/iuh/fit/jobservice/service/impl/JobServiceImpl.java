@@ -1288,6 +1288,7 @@ public class JobServiceImpl implements JobService {
 						.salaryMax(job.getSalaryMax())
 						.status(job.getStatus())
 						.createdAt(job.getCreatedAt())
+						.updatedAt(job.getUpdatedAt())
 						.deadlineExpired(isDeadlineExpired(job.getDeadline()))
 						.views(job.getViews())
 						.numberOfApplications(job.getNumberOfApplications())
